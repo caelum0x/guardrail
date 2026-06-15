@@ -1,0 +1,39 @@
+[app]
+name = "guardrail-alpha"
+mode = "paper"
+database_url = "sqlite://data/guardrail_alpha.db"
+
+[chain]
+chain_id = 56
+name = "bsc"
+
+[cmc]
+use_rest = false
+use_mcp = false
+use_x402 = false
+request_timeout_ms = 8000
+use_mock = true
+
+[twak]
+mode = "mock"
+quote_before_swap = true
+competition_register_enabled = true
+
+[strategy]
+loop_interval_seconds = 900
+rebalance_threshold_pct = 3
+max_positions = 5
+min_score_to_enter = 0.55
+min_score_to_hold = 0.45
+stop_loss_pct = 12
+take_profit_pct = 25
+target_stable_reserve_pct = 15
+allocation_method = "score_proportional"
+
+[risk]
+policy_path = "configs/risk_policy.paper.json"
+
+[reporting]
+daily_report_enabled = true
+publish_report_hash = false
+

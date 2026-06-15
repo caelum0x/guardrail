@@ -1,0 +1,220 @@
+{
+  "uid": "guardrail-alerts",
+  "title": "Guardrail Alpha — Alerts & Overview",
+  "tags": ["guardrail", "alerts", "overview"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "templating": {
+    "list": [
+      {
+        "name": "datasource",
+        "type": "datasource",
+        "query": "prometheus",
+        "label": "Data source",
+        "current": { "text": "prometheus", "value": "prometheus" },
+        "hide": 0
+      },
+      {
+        "name": "severity",
+        "type": "custom",
+        "label": "Alert severity",
+        "query": "info,warning,critical",
+        "current": { "text": "warning", "value": "warning" },
+        "options": [
+          { "text": "info", "value": "info", "selected": false },
+          { "text": "warning", "value": "warning", "selected": true },
+          { "text": "critical", "value": "critical", "selected": false }
+        ],
+        "includeAll": false,
+        "multi": false,
+        "hide": 0
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Net Asset Value (USD)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "targets": [
+        { "expr": "guardrail_nav_usd", "legendFormat": "NAV", "refId": "A" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Total Drawdown (%)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background", "graphMode": "area" },
+      "targets": [
+        { "expr": "guardrail_total_drawdown_pct", "legendFormat": "drawdown", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Confirmed Trades",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "targets": [
+        { "expr": "guardrail_trades_total", "legendFormat": "trades", "refId": "A" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "stat",
+      "title": "Kill Switch",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "ARMED", "color": "green" } } },
+            { "type": "value", "options": { "1": { "text": "ENGAGED", "color": "red" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background" },
+      "targets": [
+        { "expr": "guardrail_kill_switch", "legendFormat": "kill_switch", "refId": "A" }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "NAV (USD) over time",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "targets": [
+        { "expr": "guardrail_nav_usd", "legendFormat": "NAV", "refId": "A" }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Drawdown (%) over time",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "guardrail_total_drawdown_pct", "legendFormat": "drawdown", "refId": "A" }
+      ]
+    },
+    {
+      "id": 7,
+      "type": "timeseries",
+      "title": "Market Regime (placeholder metric)",
+      "description": "Numeric regime code emitted by the agent (e.g. 0=calm, 1=volatile, 2=stress). NOTE: guardrail_market_regime is a PLACEHOLDER — the exporter does not yet expose a regime gauge. See infra/grafana/README.md.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 14 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "calm", "color": "green" } } },
+            { "type": "value", "options": { "1": { "text": "volatile", "color": "yellow" } } },
+            { "type": "value", "options": { "2": { "text": "stress", "color": "red" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "guardrail_market_regime", "legendFormat": "regime", "refId": "A" }
+      ]
+    },
+    {
+      "id": 8,
+      "type": "timeseries",
+      "title": "Active Alert Counts by Severity (placeholder metric)",
+      "description": "Number of currently-active alerts, labelled by severity. NOTE: guardrail_active_alerts is a PLACEHOLDER — the exporter does not yet expose an alert-count gauge; the /alerts API surfaces these counts today. Filtered by the $severity template var. See infra/grafana/README.md.",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 14 },
+      "targets": [
+        {
+          "expr": "guardrail_active_alerts{severity=~\"$severity\"}",
+          "legendFormat": "{{severity}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "id": 9,
+      "type": "timeseries",
+      "title": "Risk Rejections (cumulative)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 22 },
+      "targets": [
+        { "expr": "guardrail_risk_rejections_total", "legendFormat": "rejections", "refId": "A" }
+      ]
+    },
+    {
+      "id": 10,
+      "type": "stat",
+      "title": "Snapshot Age (s)",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 12, "y": 22 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 120 },
+              { "color": "red", "value": 300 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "options": { "colorMode": "background" },
+      "targets": [
+        { "expr": "guardrail_report_age_seconds", "legendFormat": "age", "refId": "A" }
+      ]
+    },
+    {
+      "id": 11,
+      "type": "stat",
+      "title": "Open Positions",
+      "datasource": { "type": "prometheus", "uid": "${datasource}" },
+      "gridPos": { "h": 8, "w": 6, "x": 18, "y": 22 },
+      "targets": [
+        { "expr": "guardrail_positions", "legendFormat": "positions", "refId": "A" }
+      ]
+    }
+  ]
+}

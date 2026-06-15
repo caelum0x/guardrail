@@ -1,0 +1,51 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "_note": "TEMPLATE example — breakout deploys the largest risk budget (1.1x). Even here, per-name cap 17% and the >=15% reserve floor bound exposure; surplus over caps falls back to USDT.",
+  "inputs": {
+    "fear_greed": { "value": 71, "value_classification": "greed" },
+    "market_breadth": { "breadth_pct": 70.0, "median_24h_return": 3.6 }
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 70 >= 65 AND median_24h_return 3.6 > 2 AND fear_greed 71 >= 60 -> breakout",
+    "exposure_multiplier": 1.1,
+    "asset_scores": [
+      { "symbol": "AVAX", "base_score": 0.81, "tilt": 1.0, "score": 0.95, "security_penalty": 0.05 },
+      { "symbol": "CAKE", "base_score": 0.85, "tilt": 0.9, "score": 0.90, "security_penalty": 0.04 },
+      { "symbol": "WBNB", "base_score": 0.78, "tilt": 0.85, "score": 0.81, "security_penalty": 0.02 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "CAKE", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 49.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter score >= 0.65, max 5, ordered by score; breakout deploys a 1.1x risk budget.",
+        "Per-name cap 17%; surplus over caps falls back to the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when score < 0.50; force-exit at stop_loss 12% or take_profit 25%.",
+        "Rotate to USDT on a downgrade to chop (0.5x) or risk_off (0.2x)."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.95 >= 0.65; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.90 >= 0.65; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.81 >= 0.65; per-name cap 17", "execution": "twap" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 3 }
+  }
+}

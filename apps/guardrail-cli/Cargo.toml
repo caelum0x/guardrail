@@ -1,0 +1,24 @@
+[package]
+name = "guardrail-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common.workspace = true
+policy-compiler.workspace = true
+backtester.workspace = true
+market-data.workspace = true
+cmc-client.workspace = true
+strategy-engine.workspace = true
+risk-engine.workspace = true
+bnb-agent.workspace = true
+twak-client.workspace = true
+indicators = { path = "../../crates/indicators" }
+clap.workspace = true
+anyhow.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rust_decimal.workspace = true
+tokio.workspace = true
+

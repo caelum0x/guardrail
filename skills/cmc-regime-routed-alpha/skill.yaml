@@ -1,0 +1,41 @@
+name: regime-routed-bsc-alpha
+version: 2.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that turns BSC market, OHLCV, DEX liquidity, token-security,
+  sentiment, trending, global, and Fear & Greed data into a regime-routed,
+  backtestable crypto trading strategy over 20 eligible BSC tokens. It is a
+  strategy specification, not an executor — the Rust risk engine is the final
+  authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes          # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_ohlcv           # candles for RSI(14), MACD(12,26,9), volatility
+  - cmc_fear_greed      # market-wide sentiment (0..100)
+  - cmc_dex_liquidity   # on-chain depth -> liquidity + execution quality
+  - cmc_token_security  # safety score + flags -> security penalty
+  - cmc_trending        # soft participation confirmation
+  - cmc_global          # total market cap, BTC dominance
+  - eligible_asset_list # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime       # risk_on | risk_off | chop | breakout
+  - asset_scores        # per-asset 0..1 alpha score + component breakdown
+  - target_portfolio    # weights summing to ~100, USDT reserve
+  - actions             # entry | exit | rebalance | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

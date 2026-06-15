@@ -1,0 +1,35 @@
+{
+  "name": "Guardrail Alpha",
+  "description": "Rust-native autonomous trading agent for BNB Smart Chain with TWAK self-custody execution, CMC market intelligence, and BNB Agent SDK identity/commerce surfaces.",
+  "image": "",
+  "chain_id": 56,
+  "identity_registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "agent_id_hint": 8004,
+  "supported_trust": ["twak-self-custody", "risk-gated-execution", "erc8183-optimistic-settlement"],
+  "endpoints": [
+    {
+      "name": "A2A",
+      "endpoint": "http://localhost:8080/.well-known/agent-card.json",
+      "version": "0.3.0",
+      "capabilities": ["market-analysis", "risk-audit", "submission-evidence"]
+    },
+    {
+      "name": "ERC-8183",
+      "endpoint": "http://localhost:8080/agent-services",
+      "version": "1.0.0",
+      "capabilities": ["negotiate", "deliverable-manifest", "optimistic-settlement"]
+    },
+    {
+      "name": "MCP",
+      "endpoint": "http://localhost:8080/skill",
+      "version": "0.1.0",
+      "capabilities": ["cmc-regime-routed-alpha"]
+    },
+    {
+      "name": "web",
+      "endpoint": "http://localhost:3000",
+      "version": "0.1.0",
+      "capabilities": ["operator-dashboard", "read-only-evidence"]
+    }
+  ]
+}

@@ -1,0 +1,58 @@
+{
+  "uid": "guardrail-pnl",
+  "title": "Guardrail Alpha — PnL & NAV",
+  "tags": ["guardrail", "pnl"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Net Asset Value (USD)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD" }, "overrides": [] },
+      "targets": [
+        { "expr": "guardrail_nav_usd", "legendFormat": "NAV", "refId": "A" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Open Positions",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
+      "targets": [
+        { "expr": "guardrail_positions", "legendFormat": "positions", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Confirmed Trades (cumulative)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 9 },
+      "targets": [
+        { "expr": "guardrail_trades_total", "legendFormat": "trades", "refId": "A" }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "bargauge",
+      "title": "Allocation by Asset (% of NAV)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 9 },
+      "fieldConfig": { "defaults": { "unit": "percent", "min": 0, "max": 100 }, "overrides": [] },
+      "options": { "orientation": "horizontal", "displayMode": "gradient" },
+      "targets": [
+        {
+          "expr": "guardrail_position_weight_pct",
+          "legendFormat": "{{symbol}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

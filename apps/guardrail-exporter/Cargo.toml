@@ -1,0 +1,19 @@
+[package]
+name = "guardrail-exporter"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[[bin]]
+name = "guardrail-exporter"
+path = "src/main.rs"
+
+[dependencies]
+event-store.workspace = true
+axum.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+serde_json.workspace = true
+chrono.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true

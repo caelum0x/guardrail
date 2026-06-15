@@ -1,0 +1,274 @@
+# Guardrail Alpha API -- REST Client requests
+# VS Code REST Client / JetBrains HTTP Client compatible.
+# One GET per route from docs/api/openapi.yaml. All endpoints are read-only.
+#
+# Set @baseUrl to your server. Click "Send Request" above each request
+# (VS Code REST Client) or use the gutter run icon (JetBrains).
+
+@baseUrl = http://localhost:8080
+
+###############################################################################
+# readiness/competition
+###############################################################################
+
+### /readiness
+GET {{baseUrl}}/readiness
+Accept: application/json
+
+### /audit-manifest
+GET {{baseUrl}}/audit-manifest
+Accept: application/json
+
+### /prizes
+GET {{baseUrl}}/prizes
+Accept: application/json
+
+### /briefing
+GET {{baseUrl}}/briefing
+Accept: application/json
+
+### /scorecard
+GET {{baseUrl}}/scorecard
+Accept: application/json
+
+### /compete
+GET {{baseUrl}}/compete
+Accept: application/json
+
+###############################################################################
+# market data
+###############################################################################
+
+### /universe
+GET {{baseUrl}}/universe
+Accept: application/json
+
+### /assets
+GET {{baseUrl}}/assets
+Accept: application/json
+
+### /costs
+# optional query params: amount_usd
+GET {{baseUrl}}/costs
+Accept: application/json
+
+### /indicators
+# optional query params: symbol (default WBNB), steps (default 60)
+GET {{baseUrl}}/indicators
+Accept: application/json
+
+### /liquidity
+GET {{baseUrl}}/liquidity
+Accept: application/json
+
+### /trending
+GET {{baseUrl}}/trending
+Accept: application/json
+
+### /watchlist
+# optional query params: limit (default 12)
+GET {{baseUrl}}/watchlist
+Accept: application/json
+
+### /quotes
+# optional query params: amount_usd
+GET {{baseUrl}}/quotes
+Accept: application/json
+
+### /regime
+GET {{baseUrl}}/regime
+Accept: application/json
+
+### /funding
+GET {{baseUrl}}/funding
+Accept: application/json
+
+###############################################################################
+# strategy/backtest
+###############################################################################
+
+### /policy
+GET {{baseUrl}}/policy
+Accept: application/json
+
+### /policy/compile
+GET {{baseUrl}}/policy/compile?mandate=Trade%20CAKE%20max%20drawdown%2020%25%20kill%20switch%2025%25
+Accept: application/json
+
+### /backtest
+# optional query params: steps (default 60), fear_greed (default 60), preset (default balanced)
+GET {{baseUrl}}/backtest
+Accept: application/json
+
+### /walkforward
+# optional query params: windows (default 6), steps (default 30), preset (default balanced)
+GET {{baseUrl}}/walkforward
+Accept: application/json
+
+### /sweep
+# optional query params: steps (default 40), fear_greed (default 20,40,60,80), preset (default balanced)
+GET {{baseUrl}}/sweep
+Accept: application/json
+
+### /job-simulator
+GET {{baseUrl}}/job-simulator
+Accept: application/json
+
+### /mandates
+GET {{baseUrl}}/mandates
+Accept: application/json
+
+### /optimize
+# optional query params: symbols (default CAKE,WBNB,BTCB), scores, vols
+GET {{baseUrl}}/optimize
+Accept: application/json
+
+### /experiments
+GET {{baseUrl}}/experiments
+Accept: application/json
+
+### /rebalance
+# optional query params: preset (default balanced), nav_usd
+GET {{baseUrl}}/rebalance
+Accept: application/json
+
+### /scenarios
+GET {{baseUrl}}/scenarios
+Accept: application/json
+
+###############################################################################
+# risk/portfolio
+###############################################################################
+
+### /portfolio
+GET {{baseUrl}}/portfolio
+Accept: application/json
+
+### /trades
+GET {{baseUrl}}/trades
+Accept: application/json
+
+### /signals
+GET {{baseUrl}}/signals
+Accept: application/json
+
+### /risk
+GET {{baseUrl}}/risk
+Accept: application/json
+
+### /alerts
+GET {{baseUrl}}/alerts
+Accept: application/json
+
+### /history
+GET {{baseUrl}}/history
+Accept: application/json
+
+### /signing-policy
+GET {{baseUrl}}/signing-policy
+Accept: application/json
+
+### /exposure
+GET {{baseUrl}}/exposure
+Accept: application/json
+
+### /wallet-controls
+GET {{baseUrl}}/wallet-controls
+Accept: application/json
+
+### /drift
+GET {{baseUrl}}/drift
+Accept: application/json
+
+### /exit-triggers
+GET {{baseUrl}}/exit-triggers
+Accept: application/json
+
+###############################################################################
+# identity/proof
+###############################################################################
+
+### /proof
+GET {{baseUrl}}/proof
+Accept: application/json
+
+### /agent-services
+GET {{baseUrl}}/agent-services
+Accept: application/json
+
+### /agent-card
+GET {{baseUrl}}/agent-card
+Accept: application/json
+
+### /.well-known/agent-card.json
+GET {{baseUrl}}/.well-known/agent-card.json
+Accept: application/json
+
+### /bnb-sdk
+GET {{baseUrl}}/bnb-sdk
+Accept: application/json
+
+### /sdk-catalog
+GET {{baseUrl}}/sdk-catalog
+Accept: application/json
+
+### /commerce
+GET {{baseUrl}}/commerce
+Accept: application/json
+
+### /skill
+GET {{baseUrl}}/skill
+Accept: application/json
+
+###############################################################################
+# ops
+###############################################################################
+
+### /health
+GET {{baseUrl}}/health
+Accept: application/json
+
+### /events
+GET {{baseUrl}}/events
+Accept: application/json
+
+### /cockpit
+GET {{baseUrl}}/cockpit
+Accept: application/json
+
+### /report
+GET {{baseUrl}}/report
+Accept: application/json
+
+### /report/markdown
+GET {{baseUrl}}/report/markdown
+Accept: application/json
+
+### /export/submission.md
+GET {{baseUrl}}/export/submission.md
+Accept: application/json
+
+### /config
+GET {{baseUrl}}/config
+Accept: application/json
+
+### /ops
+GET {{baseUrl}}/ops
+Accept: application/json
+
+### /metrics
+GET {{baseUrl}}/metrics
+Accept: application/json
+
+### /playbook
+GET {{baseUrl}}/playbook
+Accept: application/json
+
+### /budget
+GET {{baseUrl}}/budget
+Accept: application/json
+
+### /heartbeat
+GET {{baseUrl}}/heartbeat
+Accept: application/json
+

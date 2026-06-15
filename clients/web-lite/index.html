@@ -1,0 +1,2483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Guardrail Mission Control</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --panel: #131a26;
+      --panel-2: #1a2433;
+      --border: #243044;
+      --text: #e6edf6;
+      --muted: #8b9bb4;
+      --accent: #4da3ff;
+      --ok: #3fb950;
+      --warn: #d29922;
+      --crit: #f85149;
+      --chip-off: #2d3748;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 600px at 50% -10%, #16202f 0%, var(--bg) 60%);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(11, 15, 23, 0.6);
+      backdrop-filter: blur(6px);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    header h1 {
+      font-size: 18px;
+      margin: 0;
+      letter-spacing: 0.3px;
+      font-weight: 650;
+    }
+
+    header .brand-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 12px var(--accent);
+      display: inline-block;
+    }
+
+    .controls {
+      margin-left: auto;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .controls label { font-size: 12px; color: var(--muted); }
+
+    .controls input {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 7px 10px;
+      font-size: 13px;
+      min-width: 240px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .controls input:focus { outline: none; border-color: var(--accent); }
+
+    .status-line {
+      font-size: 12px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .pulse {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--ok);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.35; }
+    }
+
+    /* --- Tab bar --- */
+    nav.tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 24px 0;
+      max-width: 1280px;
+      margin: 0 auto;
+      border-bottom: 1px solid var(--border);
+    }
+
+    nav.tabs button {
+      background: transparent;
+      border: 1px solid transparent;
+      border-bottom: none;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      padding: 10px 16px;
+      border-radius: 10px 10px 0 0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    nav.tabs button:hover { color: var(--text); }
+
+    nav.tabs button.active {
+      color: var(--text);
+      background: var(--panel);
+      border-color: var(--border);
+      position: relative;
+      top: 1px;
+    }
+
+    nav.tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+    main {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 16px;
+      padding: 24px;
+      max-width: 1280px;
+      margin: 0 auto;
+    }
+
+    .view { display: contents; }
+    .view[hidden] { display: none; }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    }
+
+    .card h2 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--muted);
+      margin: 0 0 14px;
+      font-weight: 600;
+    }
+
+    .card.span-2 { grid-column: span 2; }
+    .card.span-3 { grid-column: span 3; }
+
+    @media (max-width: 1100px) {
+      .card.span-3 { grid-column: span 2; }
+    }
+    @media (max-width: 760px) {
+      .card.span-2, .card.span-3 { grid-column: span 1; }
+      .controls input { min-width: 160px; }
+    }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 7px 11px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      background: var(--chip-off);
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .chip.ok { background: rgba(63, 185, 80, 0.14); border-color: rgba(63, 185, 80, 0.4); }
+    .chip.ok .dot { background: var(--ok); }
+    .chip.bad { background: rgba(248, 81, 73, 0.14); border-color: rgba(248, 81, 73, 0.4); }
+    .chip.bad .dot { background: var(--crit); }
+    .chip.warn { background: rgba(210, 153, 34, 0.14); border-color: rgba(210, 153, 34, 0.4); }
+    .chip.warn .dot { background: var(--warn); }
+
+    .big {
+      font-size: 30px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sub { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    .delta-up { color: var(--ok); }
+    .delta-down { color: var(--crit); }
+
+    .kv { display: flex; flex-direction: column; gap: 10px; }
+    .kv .row { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+    .kv .k { font-size: 12px; color: var(--muted); }
+    .kv .v {
+      font-size: 13px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      word-break: break-all;
+      text-align: right;
+    }
+
+    .spark-wrap { display: flex; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+    .spark-wrap svg { display: block; width: 100%; height: 80px; }
+    .spark-meta { min-width: 130px; }
+
+    /* Larger equity-curve SVG for backtest */
+    .curve svg { display: block; width: 100%; height: 240px; }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .badge.clear { background: rgba(63, 185, 80, 0.16); color: var(--ok); }
+    .badge.warning { background: rgba(210, 153, 34, 0.16); color: var(--warn); }
+    .badge.critical { background: rgba(248, 81, 73, 0.16); color: var(--crit); }
+    .badge.unknown { background: var(--chip-off); color: var(--muted); }
+
+    .placeholder {
+      color: var(--muted);
+      font-size: 13px;
+      font-style: italic;
+      padding: 6px 0;
+    }
+
+    /* Metric grid (backtest / indicators) */
+    .metric-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 12px;
+    }
+    .metric {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 14px;
+    }
+    .metric .ml { font-size: 11px; text-transform: uppercase; letter-spacing: 0.6px; color: var(--muted); }
+    .metric .mv {
+      font-size: 20px;
+      font-weight: 650;
+      margin-top: 6px;
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Selector controls inside cards */
+    .selector { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 14px; }
+    .selector label { font-size: 12px; color: var(--muted); }
+    .selector select {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 13px;
+      font-family: inherit;
+    }
+    .selector select:focus { outline: none; border-color: var(--accent); }
+
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
+    .legend .swatch { display: inline-block; width: 14px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
+
+    /* Tables (trending) */
+    table.grid { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.grid th, table.grid td {
+      text-align: left;
+      padding: 9px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    table.grid th {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    table.grid td.num { text-align: right; font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    table.grid tr:last-child td { border-bottom: none; }
+
+    /* Asset cards */
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .asset-card {
+      background: var(--panel-2);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .asset-card .sym { font-size: 16px; font-weight: 700; }
+    .asset-card .cat {
+      display: inline-block;
+      margin-left: 8px;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--muted);
+      background: var(--chip-off);
+      padding: 2px 7px;
+      border-radius: 999px;
+      vertical-align: middle;
+    }
+    .asset-card .addr {
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 8px;
+      word-break: break-all;
+    }
+    .asset-card .price { margin-top: 8px; font-variant-numeric: tabular-nums; font-size: 14px; }
+
+    footer {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 8px 24px 36px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    footer code {
+      background: var(--panel-2);
+      padding: 1px 6px;
+      border-radius: 5px;
+      font-size: 11.5px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <span class="brand-dot"></span>
+    <h1>Guardrail Mission Control</h1>
+    <div class="controls">
+      <label for="apiBase">API base</label>
+      <input id="apiBase" type="text" spellcheck="false" placeholder="http://localhost:8080" />
+      <span class="status-line"><span class="pulse"></span><span id="lastUpdated">starting…</span></span>
+    </div>
+  </header>
+
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+
+  <!-- Overview -->
+  <main class="view" id="view-overview" role="tabpanel">
+    <section class="card span-2">
+      <h2>Competition Readiness</h2>
+      <div id="compete" class="chips"><span class="placeholder">loading…</span></div>
+    </section>
+
+    <section class="card span-2">
+      <h2>NAV Equity Curve</h2>
+      <div id="history">
+        <div class="spark-wrap">
+          <span class="placeholder">loading…</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Alerts</h2>
+      <div id="alerts"><span class="placeholder">loading…</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Market Regime</h2>
+      <div id="regime"><span class="placeholder">loading…</span></div>
+    </section>
+
+    <section class="card span-2">
+      <h2>Proof</h2>
+      <div id="proof"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Backtest -->
+  <main class="view" id="view-backtest" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Backtest — Equity Curve</h2>
+      <div class="selector">
+        <label for="presetSel">Preset</label>
+        <select id="presetSel">
+          <option value="conservative">Conservative</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="aggressive">Aggressive</option>
+        </select>
+      </div>
+      <div class="legend" id="backtestLegend"></div>
+      <div id="backtestCurve" class="curve"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Backtest — Metrics</h2>
+      <div id="backtestMetrics"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Indicators -->
+  <main class="view" id="view-indicators" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Technical Indicators</h2>
+      <div class="selector">
+        <label for="symbolSel">Symbol</label>
+        <select id="symbolSel"><option value="WBNB">WBNB</option></select>
+      </div>
+      <div id="indicatorsGrid"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Trending -->
+  <main class="view" id="view-trending" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Trending Tokens</h2>
+      <div id="trendingTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Assets -->
+  <main class="view" id="view-assets" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Eligible Universe</h2>
+      <div id="assetsGrid"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Walk-forward -->
+  <main class="view" id="view-walkforward" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Walk-forward Analysis</h2>
+      <div class="selector">
+        <label for="wfPresetSel">Preset</label>
+        <select id="wfPresetSel">
+          <option value="conservative">Conservative</option>
+          <option value="balanced" selected>Balanced</option>
+          <option value="aggressive">Aggressive</option>
+        </select>
+      </div>
+      <div class="legend" id="wfLegend"></div>
+      <div id="wfStrip" class="curve"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Walk-forward — Per-window Results</h2>
+      <div id="wfTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Optimize -->
+  <main class="view" id="view-optimize" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Portfolio Optimizer — Ranked Allocation Methods</h2>
+      <div id="optimizeTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Experiments -->
+  <main class="view" id="view-experiments" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Registered Experiments</h2>
+      <div id="experimentsGrid"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Skill -->
+  <main class="view" id="view-skill" role="tabpanel" hidden>
+    <section class="card span-2">
+      <h2>Active Track-2 Skill</h2>
+      <div id="skillSummary"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card">
+      <h2>Skill Examples</h2>
+      <div id="skillExamples"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Regime Routing</h2>
+      <div id="skillRouting"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Funding -->
+  <main class="view" id="view-funding" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Funding-rate Proxy</h2>
+      <div id="fundingTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Scenarios -->
+  <main class="view" id="view-scenarios" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Scenario Stress Desk</h2>
+      <div id="scenariosTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Costs -->
+  <main class="view" id="view-costs" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Execution Cost Preview</h2>
+      <div id="costsMetrics"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Per-route Cost Breakdown</h2>
+      <div id="costsTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Liquidity -->
+  <main class="view" id="view-liquidity" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Liquidity Capacity</h2>
+      <div id="liquidityTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Readiness -->
+  <main class="view" id="view-readiness" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Competition Readiness Checklist</h2>
+      <div id="readinessPanel"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Ensemble -->
+  <main class="view" id="view-ensemble" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Ensemble Router — Current Regime</h2>
+      <div id="ensembleHead"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Track-2 Skill Weights</h2>
+      <div id="ensembleTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Journal -->
+  <main class="view" id="view-journal" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Decision Journal</h2>
+      <div id="journalTable"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- Signing -->
+  <main class="view" id="view-signing" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Self-custody Signing Policy</h2>
+      <div id="signingPanel"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <!-- About -->
+  <main class="view" id="view-about" role="tabpanel" hidden>
+    <section class="card span-2">
+      <h2>What is Guardrail</h2>
+      <div id="aboutSummary"></div>
+    </section>
+    <section class="card">
+      <h2>Live Identity</h2>
+      <div id="aboutIdentity"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card span-3">
+      <h2>Track-2 Skills &amp; Ensemble Core</h2>
+      <div id="aboutSkills"></div>
+    </section>
+    <section class="card span-2">
+      <h2>Prize Lanes</h2>
+      <div id="aboutPrizes"><span class="placeholder">loading…</span></div>
+    </section>
+    <section class="card">
+      <h2>Links</h2>
+      <div id="aboutLinks"></div>
+    </section>
+  </main>
+
+  <!-- Reports -->
+  <main class="view" id="view-reports" role="tabpanel" hidden>
+    <section class="card span-3">
+      <h2>Analytics Report Bundle</h2>
+      <div id="reportsAbout"></div>
+    </section>
+    <section class="card span-3">
+      <h2>Available Analytics</h2>
+      <div id="reportsTable"></div>
+    </section>
+    <section class="card span-3">
+      <h2>Live Scorecard Snapshot</h2>
+      <div id="reportsScorecard"><span class="placeholder">loading…</span></div>
+    </section>
+  </main>
+
+  <footer>
+    Zero-dependency cockpit. Refreshes every 5s from the API base above (persisted to your browser).
+    Set it via the field or with a <code>?api=</code> query param. Switch views with the tab bar
+    (deep-linkable via <code>#overview</code>, <code>#backtest</code>, <code>#indicators</code>,
+    <code>#trending</code>, <code>#assets</code>, <code>#walkforward</code>, <code>#optimize</code>,
+    <code>#experiments</code>, <code>#skill</code>, <code>#funding</code>, <code>#scenarios</code>,
+    <code>#costs</code>, <code>#liquidity</code>, <code>#readiness</code>,
+    <code>#ensemble</code>, <code>#journal</code>, <code>#signing</code>,
+    <code>#about</code>, <code>#reports</code>).
+    <br />
+    CORS note: this page runs in the browser, so the Guardrail API (built on <code>tower-http</code>)
+    must allow cross-origin requests when served from a different origin — add a permissive
+    <code>CorsLayer</code> on the API. When this page is served from the same origin as the API
+    (e.g. behind the same host/port), no CORS configuration is required.
+  </footer>
+
+  <script type="module">
+    "use strict";
+
+    const REFRESH_MS = 5000;
+    const STORAGE_KEY = "guardrail.apiBase";
+    const TAB_KEY = "guardrail.activeTab";
+    const DEFAULT_BASE = "http://localhost:8080";
+
+    const $ = (id) => document.getElementById(id);
+
+    // --- Tabs definition (hash routing) ---
+    const TABS = [
+      { id: "overview", label: "Overview" },
+      { id: "backtest", label: "Backtest" },
+      { id: "indicators", label: "Indicators" },
+      { id: "trending", label: "Trending" },
+      { id: "assets", label: "Assets" },
+      { id: "walkforward", label: "Walk-forward" },
+      { id: "optimize", label: "Optimize" },
+      { id: "experiments", label: "Experiments" },
+      { id: "skill", label: "Skill" },
+      { id: "funding", label: "Funding" },
+      { id: "scenarios", label: "Scenarios" },
+      { id: "costs", label: "Costs" },
+      { id: "liquidity", label: "Liquidity" },
+      { id: "readiness", label: "Readiness" },
+      { id: "ensemble", label: "Ensemble" },
+      { id: "journal", label: "Journal" },
+      { id: "signing", label: "Signing" },
+      { id: "about", label: "About" },
+      { id: "reports", label: "Reports" },
+    ];
+    const TAB_IDS = TABS.map((t) => t.id);
+
+    // --- API base resolution: ?api= param > localStorage > default ---
+    function resolveInitialBase() {
+      try {
+        const params = new URLSearchParams(window.location.search);
+        const fromQuery = params.get("api");
+        if (fromQuery && fromQuery.trim()) {
+          const cleaned = fromQuery.trim();
+          try { localStorage.setItem(STORAGE_KEY, cleaned); } catch (_) {}
+          return cleaned;
+        }
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored && stored.trim()) return stored.trim();
+      } catch (_) { /* storage may be unavailable */ }
+      return DEFAULT_BASE;
+    }
+
+    let apiBase = resolveInitialBase();
+
+    const apiInput = $("apiBase");
+    apiInput.value = apiBase;
+    apiInput.addEventListener("change", () => {
+      const next = apiInput.value.trim() || DEFAULT_BASE;
+      apiBase = next.replace(/\/+$/, "");
+      apiInput.value = apiBase;
+      try { localStorage.setItem(STORAGE_KEY, apiBase); } catch (_) {}
+      refreshAll();
+    });
+    apiBase = apiBase.replace(/\/+$/, "");
+    apiInput.value = apiBase;
+
+    // --- Safe fetch: never throws, returns { ok, data } ---
+    async function safeFetch(path) {
+      try {
+        const res = await fetch(apiBase + path, {
+          headers: { "Accept": "application/json" },
+          cache: "no-store",
+        });
+        if (!res.ok) return { ok: false, data: null, error: "HTTP " + res.status };
+        const data = await res.json();
+        return { ok: true, data };
+      } catch (err) {
+        return { ok: false, data: null, error: String(err && err.message ? err.message : err) };
+      }
+    }
+
+    // --- Small DOM helpers (no innerHTML with untrusted data) ---
+    function el(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined && text !== null) node.textContent = String(text);
+      return node;
+    }
+
+    function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
+
+    function placeholder(node, msg) {
+      clear(node);
+      node.appendChild(el("span", "placeholder", msg || "Unavailable — API not reachable"));
+    }
+
+    function chip(label, state) {
+      // state: "ok" | "bad" | "warn" | ""
+      const c = el("span", "chip" + (state ? " " + state : ""));
+      c.appendChild(el("span", "dot"));
+      c.appendChild(el("span", null, label));
+      return c;
+    }
+
+    function short(value, head = 8, tail = 6) {
+      if (value === null || value === undefined) return "—";
+      const s = String(value);
+      if (s.length <= head + tail + 1) return s;
+      return s.slice(0, head) + "…" + s.slice(-tail);
+    }
+
+    function firstDefined(obj, keys) {
+      if (!obj || typeof obj !== "object") return undefined;
+      for (const k of keys) {
+        if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+      }
+      return undefined;
+    }
+
+    function num(value) {
+      const n = Number.parseFloat(value);
+      return Number.isFinite(n) ? n : null;
+    }
+
+    function fmtPct(value) {
+      const n = num(value);
+      return n === null ? "—" : (n >= 0 ? "+" : "") + n.toFixed(2) + "%";
+    }
+
+    function fmtNum(value, digits = 2) {
+      const n = num(value);
+      return n === null ? "—" : n.toFixed(digits);
+    }
+
+    function metric(label, value, cls) {
+      const m = el("div", "metric");
+      m.appendChild(el("div", "ml", label));
+      m.appendChild(el("div", "mv" + (cls ? " " + cls : ""), value));
+      return m;
+    }
+
+    // --- /compete ---
+    async function renderCompete() {
+      const node = $("compete");
+      const { ok, data } = await safeFetch("/compete");
+      if (!ok || !data || typeof data !== "object") return placeholder(node);
+      clear(node);
+      const chips = [
+        chip(data.registered ? "Registered" : "Not registered", data.registered ? "ok" : "bad"),
+        chip("Eligible assets: " + (data.eligible_assets ?? 0), (data.eligible_assets ?? 0) > 0 ? "ok" : "warn"),
+        chip(data.daily_trade_satisfied ? "Daily trade met" : "Daily trade pending", data.daily_trade_satisfied ? "ok" : "warn"),
+        chip("Confirmed trades: " + (data.confirmed_trades ?? 0), (data.confirmed_trades ?? 0) > 0 ? "ok" : ""),
+        chip(data.kill_switch ? "Kill switch ACTIVE" : "Kill switch clear", data.kill_switch ? "bad" : "ok"),
+      ];
+      chips.forEach((c) => node.appendChild(c));
+    }
+
+    // --- SVG sparkline (overview NAV) ---
+    function sparkline(values, width = 480, height = 80, pad = 6) {
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.setAttribute("preserveAspectRatio", "none");
+      if (values.length < 2) {
+        const t = document.createElementNS(svgNS, "text");
+        t.setAttribute("x", String(width / 2));
+        t.setAttribute("y", String(height / 2));
+        t.setAttribute("fill", "#8b9bb4");
+        t.setAttribute("font-size", "12");
+        t.setAttribute("text-anchor", "middle");
+        t.textContent = "not enough data";
+        svg.appendChild(t);
+        return svg;
+      }
+      const min = Math.min(...values);
+      const max = Math.max(...values);
+      const range = max - min || 1;
+      const stepX = (width - pad * 2) / (values.length - 1);
+      const points = values.map((v, i) => {
+        const x = pad + i * stepX;
+        const y = pad + (height - pad * 2) * (1 - (v - min) / range);
+        return [x, y];
+      });
+      const up = values[values.length - 1] >= values[0];
+      const stroke = up ? "#3fb950" : "#f85149";
+      const line = points.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+
+      const area = document.createElementNS(svgNS, "polygon");
+      const areaPts = `${pad},${height - pad} ${line} ${(width - pad)},${height - pad}`;
+      area.setAttribute("points", areaPts);
+      area.setAttribute("fill", up ? "rgba(63,185,80,0.12)" : "rgba(248,81,73,0.12)");
+      svg.appendChild(area);
+
+      const path = document.createElementNS(svgNS, "polyline");
+      path.setAttribute("points", line);
+      path.setAttribute("fill", "none");
+      path.setAttribute("stroke", stroke);
+      path.setAttribute("stroke-width", "2");
+      path.setAttribute("stroke-linejoin", "round");
+      path.setAttribute("stroke-linecap", "round");
+      path.setAttribute("vector-effect", "non-scaling-stroke");
+      svg.appendChild(path);
+
+      const last = points[points.length - 1];
+      const dot = document.createElementNS(svgNS, "circle");
+      dot.setAttribute("cx", last[0].toFixed(1));
+      dot.setAttribute("cy", last[1].toFixed(1));
+      dot.setAttribute("r", "3");
+      dot.setAttribute("fill", stroke);
+      svg.appendChild(dot);
+      return svg;
+    }
+
+    async function renderHistory() {
+      const node = $("history");
+      const { ok, data } = await safeFetch("/history");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      const points = Array.isArray(data.points) ? data.points : [];
+      const navs = points
+        .map((p) => Number.parseFloat(p && p.nav_usd))
+        .filter((n) => Number.isFinite(n));
+
+      clear(node);
+      const wrap = el("div", "spark-wrap");
+      wrap.appendChild(sparkline(navs));
+
+      const meta = el("div", "spark-meta");
+      if (navs.length === 0) {
+        meta.appendChild(el("div", "placeholder", "no NAV points yet"));
+      } else {
+        const latest = navs[navs.length - 1];
+        const first = navs[0];
+        const pct = first !== 0 ? ((latest - first) / first) * 100 : 0;
+        const up = pct >= 0;
+        meta.appendChild(el("div", "big", "$" + latest.toLocaleString(undefined, { maximumFractionDigits: 2 })));
+        const delta = el("div", "sub " + (up ? "delta-up" : "delta-down"),
+          (up ? "▲ +" : "▼ ") + pct.toFixed(2) + "% since start");
+        meta.appendChild(delta);
+        meta.appendChild(el("div", "sub", navs.length + " reconciliation points"));
+      }
+      wrap.appendChild(meta);
+      node.appendChild(wrap);
+    }
+
+    // --- /alerts ---
+    async function renderAlerts() {
+      const node = $("alerts");
+      const { ok, data } = await safeFetch("/alerts");
+      if (!ok || !data || typeof data !== "object") return placeholder(node);
+      clear(node);
+      const status = typeof data.status === "string" ? data.status : "unknown";
+      const counts = data.counts || {};
+      const total = counts.total ?? (Array.isArray(data.alerts) ? data.alerts.length : 0);
+
+      const top = el("div");
+      top.style.display = "flex";
+      top.style.alignItems = "baseline";
+      top.style.gap = "12px";
+      top.appendChild(el("span", "big", total));
+      const badgeClass = ["clear", "warning", "critical"].includes(status) ? status : "unknown";
+      top.appendChild(el("span", "badge " + badgeClass, status));
+      node.appendChild(top);
+
+      node.appendChild(el("div", "sub",
+        "Critical: " + (counts.critical ?? 0) + " · Warning: " + (counts.warning ?? 0)));
+    }
+
+    // --- /regime ---
+    async function renderRegime() {
+      const node = $("regime");
+      const { ok, data } = await safeFetch("/regime");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      clear(node);
+      node.appendChild(el("div", "big", data.regime ?? "—"));
+      node.appendChild(el("div", "sub", "Exposure multiplier: " + (data.exposure_multiplier ?? "—")));
+
+      const inputs = data.inputs || {};
+      if (Object.keys(inputs).length) {
+        const kv = el("div", "kv");
+        kv.style.marginTop = "12px";
+        const rows = [
+          ["Fear / Greed", inputs.fear_greed],
+          ["Breadth %", inputs.breadth_pct],
+          ["BTC dominance %", inputs.btc_dominance_pct],
+          ["Median 24h return", inputs.median_24h_return],
+        ];
+        for (const [k, v] of rows) {
+          if (v === undefined || v === null) continue;
+          const row = el("div", "row");
+          row.appendChild(el("span", "k", k));
+          row.appendChild(el("span", "v", String(v)));
+          kv.appendChild(row);
+        }
+        node.appendChild(kv);
+      }
+    }
+
+    // --- /proof ---
+    async function renderProof() {
+      const node = $("proof");
+      const { ok, data } = await safeFetch("/proof");
+      if (!ok || !data || typeof data !== "object") return placeholder(node);
+      clear(node);
+
+      const report = (data.latest_report && typeof data.latest_report === "object") ? data.latest_report : {};
+      const runReport = (data.run_report && typeof data.run_report === "object") ? data.run_report : {};
+
+      const agent = firstDefined(data, ["agent", "agent_id"]) ?? "—";
+      const wallet = firstDefined(report, ["wallet_address", "wallet"]) ??
+                     firstDefined(runReport, ["wallet_address", "wallet"]) ?? "—";
+      const policyHash = firstDefined(report, ["policy_hash", "registration_hash"]) ??
+                         firstDefined(runReport, ["policy_hash", "registration_hash"]) ??
+                         firstDefined(data, ["policy_hash"]) ?? "—";
+      const regTx = firstDefined(data, ["registration_tx", "competition_tx"]) ?? "—";
+
+      const kv = el("div", "kv");
+      const rows = [
+        ["Agent ID", agent === "—" ? "—" : String(agent)],
+        ["Wallet", short(wallet)],
+        ["Policy hash", short(policyHash)],
+        ["Registration tx", short(regTx, 10, 8)],
+      ];
+      for (const [k, v] of rows) {
+        const row = el("div", "row");
+        row.appendChild(el("span", "k", k));
+        row.appendChild(el("span", "v", v));
+        kv.appendChild(row);
+      }
+      node.appendChild(kv);
+    }
+
+    // --- Backtest equity-curve SVG (strategy line over a baseline grid) ---
+    function equityCurve(values, baselineValue, width = 900, height = 240, pad = 28) {
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.setAttribute("preserveAspectRatio", "none");
+
+      const all = values.slice();
+      if (Number.isFinite(baselineValue)) all.push(baselineValue);
+      let min = Math.min(...all);
+      let max = Math.max(...all);
+      if (!Number.isFinite(min) || !Number.isFinite(max)) { min = 0; max = 1; }
+      const range = max - min || 1;
+      const xFor = (i, n) => pad + (width - pad * 2) * (n <= 1 ? 0.5 : i / (n - 1));
+      const yFor = (v) => pad + (height - pad * 2) * (1 - (v - min) / range);
+
+      // Buy-and-hold baseline (horizontal line at the benchmark final value).
+      if (Number.isFinite(baselineValue)) {
+        const by = yFor(baselineValue);
+        const base = document.createElementNS(svgNS, "line");
+        base.setAttribute("x1", String(pad));
+        base.setAttribute("y1", by.toFixed(1));
+        base.setAttribute("x2", String(width - pad));
+        base.setAttribute("y2", by.toFixed(1));
+        base.setAttribute("stroke", "#8b9bb4");
+        base.setAttribute("stroke-width", "1.5");
+        base.setAttribute("stroke-dasharray", "5 5");
+        base.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(base);
+      }
+
+      if (values.length >= 2) {
+        const pts = values.map((v, i) => [xFor(i, values.length), yFor(v)]);
+        const up = values[values.length - 1] >= values[0];
+        const stroke = up ? "#3fb950" : "#f85149";
+        const line = pts.map((p) => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
+
+        const area = document.createElementNS(svgNS, "polygon");
+        area.setAttribute("points", `${pad},${height - pad} ${line} ${(width - pad)},${height - pad}`);
+        area.setAttribute("fill", up ? "rgba(63,185,80,0.12)" : "rgba(248,81,73,0.12)");
+        svg.appendChild(area);
+
+        const path = document.createElementNS(svgNS, "polyline");
+        path.setAttribute("points", line);
+        path.setAttribute("fill", "none");
+        path.setAttribute("stroke", stroke);
+        path.setAttribute("stroke-width", "2.5");
+        path.setAttribute("stroke-linejoin", "round");
+        path.setAttribute("stroke-linecap", "round");
+        path.setAttribute("vector-effect", "non-scaling-stroke");
+        svg.appendChild(path);
+      } else {
+        const t = document.createElementNS(svgNS, "text");
+        t.setAttribute("x", String(width / 2));
+        t.setAttribute("y", String(height / 2));
+        t.setAttribute("fill", "#8b9bb4");
+        t.setAttribute("font-size", "13");
+        t.setAttribute("text-anchor", "middle");
+        t.textContent = "not enough data";
+        svg.appendChild(t);
+      }
+      return svg;
+    }
+
+    // --- /backtest ---
+    async function renderBacktest() {
+      const curveNode = $("backtestCurve");
+      const metricsNode = $("backtestMetrics");
+      const legendNode = $("backtestLegend");
+      const preset = $("presetSel").value || "balanced";
+      const { ok, data } = await safeFetch("/backtest?preset=" + encodeURIComponent(preset));
+      if (!ok || !data || typeof data !== "object" || data.error) {
+        placeholder(curveNode);
+        placeholder(metricsNode);
+        clear(legendNode);
+        return;
+      }
+
+      // Equity curve (strategy) + benchmark final value as a baseline.
+      const curve = (Array.isArray(data.equity_curve) ? data.equity_curve : [])
+        .map(num)
+        .filter((n) => n !== null);
+
+      const startNav = num(data.starting_nav_usd);
+      const benchPct = num(data.benchmark_return_pct);
+      const benchFinal = (startNav !== null && benchPct !== null)
+        ? startNav * (1 + benchPct / 100)
+        : NaN;
+
+      clear(legendNode);
+      const sUp = curve.length >= 2 && curve[curve.length - 1] >= curve[0];
+      const stratLegend = el("span");
+      const sw1 = el("span", "swatch");
+      sw1.style.background = sUp ? "#3fb950" : "#f85149";
+      stratLegend.appendChild(sw1);
+      stratLegend.appendChild(document.createTextNode("Strategy"));
+      legendNode.appendChild(stratLegend);
+      if (Number.isFinite(benchFinal)) {
+        const bhLegend = el("span");
+        const sw2 = el("span", "swatch");
+        sw2.style.background = "#8b9bb4";
+        bhLegend.appendChild(sw2);
+        bhLegend.appendChild(document.createTextNode("Buy & hold benchmark"));
+        legendNode.appendChild(bhLegend);
+      }
+
+      clear(curveNode);
+      curveNode.appendChild(equityCurve(curve, benchFinal));
+
+      // Metrics grid.
+      const m = (data.metrics && typeof data.metrics === "object") ? data.metrics : {};
+      const totalReturn = num(m.total_return_pct);
+      const maxDd = num(m.max_drawdown_pct);
+      clear(metricsNode);
+      const grid = el("div", "metric-grid");
+      grid.appendChild(metric("Total return", fmtPct(m.total_return_pct),
+        totalReturn === null ? "" : (totalReturn >= 0 ? "delta-up" : "delta-down")));
+      grid.appendChild(metric("Max drawdown", fmtPct(m.max_drawdown_pct),
+        maxDd === null ? "" : "delta-down"));
+      grid.appendChild(metric("Calmar ratio", fmtNum(m.calmar_ratio, 2)));
+      grid.appendChild(metric("Volatility", fmtPct(m.volatility_pct)));
+      grid.appendChild(metric("Win rate", fmtPct(m.win_rate_pct)));
+      grid.appendChild(metric("Profit factor", fmtNum(m.profit_factor, 2)));
+      grid.appendChild(metric("Trade count", m.trade_count ?? "—"));
+      grid.appendChild(metric("Benchmark return", fmtPct(data.benchmark_return_pct)));
+      grid.appendChild(metric("Excess return", fmtPct(data.excess_return_pct)));
+      grid.appendChild(metric("Final NAV", "$" + fmtNum(data.final_nav_usd, 2)));
+      metricsNode.appendChild(grid);
+    }
+
+    // --- /indicators ---
+    const RSI_OVERBOUGHT = 70;
+    const RSI_OVERSOLD = 30;
+
+    function lastFinite(arr) {
+      if (!Array.isArray(arr)) return null;
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const n = num(arr[i]);
+        if (n !== null) return n;
+      }
+      return null;
+    }
+
+    async function renderIndicators() {
+      const node = $("indicatorsGrid");
+      const symbol = $("symbolSel").value || "WBNB";
+      const { ok, data } = await safeFetch("/indicators?symbol=" + encodeURIComponent(symbol));
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      clear(node);
+      const grid = el("div", "metric-grid");
+
+      const ema = lastFinite(data.ema);
+      const sma = lastFinite(data.sma);
+      const rsi = lastFinite(data.rsi);
+      const close = lastFinite(data.closes);
+
+      grid.appendChild(metric("Last close", close === null ? "—" : close.toFixed(4)));
+      grid.appendChild(metric("EMA (12)", ema === null ? "—" : ema.toFixed(4)));
+      grid.appendChild(metric("SMA (12)", sma === null ? "—" : sma.toFixed(4)));
+
+      let rsiCls = "";
+      if (rsi !== null) {
+        if (rsi >= RSI_OVERBOUGHT) rsiCls = "delta-down";       // overbought
+        else if (rsi <= RSI_OVERSOLD) rsiCls = "delta-up";      // oversold
+      }
+      const rsiLabel = rsi === null ? "RSI (14)"
+        : rsi >= RSI_OVERBOUGHT ? "RSI (14) · overbought"
+        : rsi <= RSI_OVERSOLD ? "RSI (14) · oversold"
+        : "RSI (14) · neutral";
+      grid.appendChild(metric(rsiLabel, rsi === null ? "—" : rsi.toFixed(2), rsiCls));
+
+      const macd = (data.macd && typeof data.macd === "object") ? data.macd : {};
+      grid.appendChild(metric("MACD", fmtNum(lastFinite(macd.macd), 4)));
+      grid.appendChild(metric("MACD signal", fmtNum(lastFinite(macd.signal), 4)));
+      const hist = lastFinite(macd.histogram);
+      grid.appendChild(metric("MACD histogram", hist === null ? "—" : hist.toFixed(4),
+        hist === null ? "" : (hist >= 0 ? "delta-up" : "delta-down")));
+
+      const boll = (data.bollinger && typeof data.bollinger === "object") ? data.bollinger : {};
+      grid.appendChild(metric("Bollinger upper", fmtNum(lastFinite(boll.upper), 4)));
+      grid.appendChild(metric("Bollinger mid", fmtNum(lastFinite(boll.mid), 4)));
+      grid.appendChild(metric("Bollinger lower", fmtNum(lastFinite(boll.lower), 4)));
+
+      node.appendChild(grid);
+    }
+
+    // --- /trending ---
+    async function renderTrending() {
+      const node = $("trendingTable");
+      const { ok, data } = await safeFetch("/trending");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      const tokens = Array.isArray(data.tokens) ? data.tokens : [];
+      if (tokens.length === 0) return placeholder(node, "no trending tokens");
+
+      clear(node);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Rank", "Symbol", "CMC ID"].forEach((h, i) => {
+        const th = el("th", i === 0 || i === 2 ? "num" : null, h);
+        htr.appendChild(th);
+      });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      tokens.forEach((t) => {
+        const tr = el("tr");
+        tr.appendChild(el("td", "num", t && t.rank != null ? t.rank : "—"));
+        tr.appendChild(el("td", null, t && t.symbol != null ? t.symbol : "—"));
+        tr.appendChild(el("td", "num", t && t.cmc_id != null ? t.cmc_id : "—"));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /assets ---
+    let symbolOptionsKey = "";
+
+    function syncSymbolSelector(symbols) {
+      const sel = $("symbolSel");
+      const key = symbols.join(",");
+      if (key === symbolOptionsKey || symbols.length === 0) return;
+      symbolOptionsKey = key;
+      const current = sel.value;
+      clear(sel);
+      symbols.forEach((s) => {
+        const opt = el("option", null, s);
+        opt.value = s;
+        sel.appendChild(opt);
+      });
+      if (symbols.includes(current)) sel.value = current;
+      else if (symbols.includes("WBNB")) sel.value = "WBNB";
+    }
+
+    async function renderAssets() {
+      const node = $("assetsGrid");
+      const { ok, data } = await safeFetch("/assets");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      if (assets.length === 0) return placeholder(node, "no eligible assets");
+
+      // Feed the eligible set into the indicators symbol selector.
+      syncSymbolSelector(assets.map((a) => a && a.symbol).filter((s) => typeof s === "string"));
+
+      clear(node);
+      const grid = el("div", "asset-grid");
+      assets.forEach((a) => {
+        if (!a || typeof a !== "object") return;
+        const card = el("div", "asset-card");
+        const head = el("div");
+        head.appendChild(el("span", "sym", a.symbol ?? "—"));
+        if (a.category) head.appendChild(el("span", "cat", a.category));
+        card.appendChild(head);
+
+        const price = num(a.price_usd);
+        card.appendChild(el("div", "price",
+          price === null ? "" : "$" + price.toLocaleString(undefined, { maximumFractionDigits: 6 })));
+
+        const ret = num(a.ret_24h);
+        if (ret !== null) {
+          card.appendChild(el("div", "sub " + (ret >= 0 ? "delta-up" : "delta-down"),
+            "24h " + (ret >= 0 ? "▲ +" : "▼ ") + ret.toFixed(2) + "%"));
+        }
+        node.appendChild(grid);
+        grid.appendChild(card);
+      });
+      node.appendChild(grid);
+    }
+
+    // --- Walk-forward: bar strip of OOS returns colored by sign ---
+    function barStrip(values, width = 900, height = 120, pad = 24) {
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      svg.setAttribute("preserveAspectRatio", "none");
+
+      if (!Array.isArray(values) || values.length === 0) {
+        const t = document.createElementNS(svgNS, "text");
+        t.setAttribute("x", String(width / 2));
+        t.setAttribute("y", String(height / 2));
+        t.setAttribute("fill", "#8b9bb4");
+        t.setAttribute("font-size", "13");
+        t.setAttribute("text-anchor", "middle");
+        t.textContent = "not enough data";
+        svg.appendChild(t);
+        return svg;
+      }
+
+      const maxAbs = Math.max(1e-9, ...values.map((v) => Math.abs(v)));
+      const innerW = width - pad * 2;
+      const innerH = height - pad * 2;
+      const mid = pad + innerH / 2;
+
+      // Zero baseline.
+      const base = document.createElementNS(svgNS, "line");
+      base.setAttribute("x1", String(pad));
+      base.setAttribute("y1", mid.toFixed(1));
+      base.setAttribute("x2", String(width - pad));
+      base.setAttribute("y2", mid.toFixed(1));
+      base.setAttribute("stroke", "#8b9bb4");
+      base.setAttribute("stroke-width", "1");
+      base.setAttribute("stroke-dasharray", "4 4");
+      base.setAttribute("vector-effect", "non-scaling-stroke");
+      svg.appendChild(base);
+
+      const slot = innerW / values.length;
+      const barW = Math.max(2, slot * 0.6);
+      values.forEach((v, i) => {
+        const cx = pad + slot * (i + 0.5);
+        const h = (Math.abs(v) / maxAbs) * (innerH / 2);
+        const up = v >= 0;
+        const rect = document.createElementNS(svgNS, "rect");
+        rect.setAttribute("x", (cx - barW / 2).toFixed(1));
+        rect.setAttribute("y", (up ? mid - h : mid).toFixed(1));
+        rect.setAttribute("width", barW.toFixed(1));
+        rect.setAttribute("height", Math.max(0.5, h).toFixed(1));
+        rect.setAttribute("fill", up ? "#3fb950" : "#f85149");
+        rect.setAttribute("rx", "2");
+        svg.appendChild(rect);
+      });
+      return svg;
+    }
+
+    // --- /walkforward ---
+    async function renderWalkforward() {
+      const stripNode = $("wfStrip");
+      const tableNode = $("wfTable");
+      const legendNode = $("wfLegend");
+      const preset = $("wfPresetSel").value || "balanced";
+      const { ok, data } = await safeFetch("/walkforward?preset=" + encodeURIComponent(preset));
+      if (!ok || !data || typeof data !== "object" || data.error) {
+        placeholder(stripNode);
+        placeholder(tableNode);
+        clear(legendNode);
+        return;
+      }
+
+      const windows = Array.isArray(data.windows) ? data.windows : [];
+      const aggregate = (data.aggregate && typeof data.aggregate === "object") ? data.aggregate : {};
+
+      // OOS return strip (per-window total return, treated as out-of-sample).
+      const oos = windows.map((w) => num(w && w.total_return_pct)).map((n) => (n === null ? 0 : n));
+      clear(legendNode);
+      const upSw = el("span");
+      const sw1 = el("span", "swatch");
+      sw1.style.background = "#3fb950";
+      upSw.appendChild(sw1);
+      upSw.appendChild(document.createTextNode("OOS return positive"));
+      legendNode.appendChild(upSw);
+      const downSw = el("span");
+      const sw2 = el("span", "swatch");
+      sw2.style.background = "#f85149";
+      downSw.appendChild(sw2);
+      downSw.appendChild(document.createTextNode("OOS return negative"));
+      legendNode.appendChild(downSw);
+
+      clear(stripNode);
+      stripNode.appendChild(barStrip(oos));
+
+      if (windows.length === 0) {
+        placeholder(tableNode, "no walk-forward windows");
+        return;
+      }
+
+      // Per-window table: in-sample (benchmark) vs out-of-sample (strategy) return,
+      // drawdown, and pass/fail derived from excess return.
+      clear(tableNode);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Window", "Fear/Greed", "In-sample (bench)", "Out-of-sample", "Drawdown", "Trades", "Result"]
+        .forEach((h, i) => {
+          htr.appendChild(el("th", i === 0 || (i >= 1 && i <= 5) ? "num" : null, h));
+        });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      windows.forEach((w) => {
+        if (!w || typeof w !== "object") return;
+        const inSample = num(w.benchmark_return_pct);
+        const outSample = num(w.total_return_pct);
+        const excess = num(w.excess_return_pct);
+        const dd = num(w.max_drawdown_pct);
+        const pass = excess === null ? null : excess >= 0;
+
+        const tr = el("tr");
+        tr.appendChild(el("td", "num", w.window != null ? w.window : "—"));
+        tr.appendChild(el("td", "num", w.fear_greed != null ? w.fear_greed : "—"));
+        tr.appendChild(el("td", "num", inSample === null ? "—" : fmtPct(inSample)));
+
+        const outTd = el("td", "num " + (outSample === null ? "" : (outSample >= 0 ? "delta-up" : "delta-down")),
+          outSample === null ? "—" : fmtPct(outSample));
+        tr.appendChild(outTd);
+
+        tr.appendChild(el("td", "num", dd === null ? "—" : fmtPct(dd)));
+        tr.appendChild(el("td", "num", w.trades != null ? w.trades : "—"));
+
+        const resTd = el("td");
+        if (pass === null) {
+          resTd.appendChild(el("span", "badge unknown", "—"));
+        } else {
+          resTd.appendChild(el("span", "badge " + (pass ? "clear" : "critical"), pass ? "pass" : "fail"));
+        }
+        tr.appendChild(resTd);
+        tbody.appendChild(tr);
+      });
+
+      // Aggregate row.
+      const aggTr = el("tr");
+      const meanExcess = num(aggregate.mean_excess_pct);
+      const worstDd = num(aggregate.worst_drawdown_pct);
+      const positive = aggregate.positive_windows;
+      const total = aggregate.total != null ? aggregate.total : windows.length;
+
+      const aggLabel = el("td", null, "Aggregate");
+      aggLabel.style.fontWeight = "700";
+      aggTr.appendChild(aggLabel);
+      aggTr.appendChild(el("td", "num", "—"));
+      aggTr.appendChild(el("td", "num", "—"));
+      aggTr.appendChild(el("td", "num " + (meanExcess === null ? "" : (meanExcess >= 0 ? "delta-up" : "delta-down")),
+        meanExcess === null ? "—" : "mean excess " + fmtPct(meanExcess)));
+      aggTr.appendChild(el("td", "num", worstDd === null ? "—" : fmtPct(worstDd)));
+      aggTr.appendChild(el("td", "num", "—"));
+      const aggRes = el("td");
+      const passCount = (positive != null ? positive : 0);
+      aggRes.appendChild(el("span",
+        "badge " + (passCount === total && total > 0 ? "clear" : passCount > 0 ? "warning" : "critical"),
+        passCount + "/" + total + " pos"));
+      aggTr.appendChild(aggRes);
+      aggTr.style.borderTop = "2px solid var(--border)";
+      tbody.appendChild(aggTr);
+
+      table.appendChild(tbody);
+      tableNode.appendChild(table);
+    }
+
+    // --- /optimize ---
+    // Score a method's weight vector by concentration (top-weight share). A higher
+    // top-weight share means a more decisive allocation; we rank methods by it so
+    // the cockpit can highlight the most concentrated allocation as the "top" config.
+    function methodScore(weights) {
+      if (!Array.isArray(weights) || weights.length === 0) return null;
+      const nums = weights.map(num).filter((n) => n !== null);
+      if (nums.length === 0) return null;
+      return Math.max(...nums);
+    }
+
+    const OPTIMIZE_METHOD_LABELS = {
+      equal_weight: "Equal weight",
+      score_proportional: "Score proportional",
+      inverse_volatility: "Inverse volatility",
+      risk_parity: "Risk parity",
+    };
+
+    async function renderOptimize() {
+      const node = $("optimizeTable");
+      const { ok, data } = await safeFetch("/optimize");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      const symbols = Array.isArray(data.symbols) ? data.symbols : [];
+      const methods = (data.methods && typeof data.methods === "object") ? data.methods : {};
+      const methodKeys = Object.keys(methods);
+      if (symbols.length === 0 || methodKeys.length === 0) return placeholder(node, "no allocation data");
+
+      // Rank methods by their concentration score (descending); top is highlighted.
+      const ranked = methodKeys
+        .map((key) => ({ key, weights: methods[key], score: methodScore(methods[key]) }))
+        .sort((a, b) => (b.score ?? -Infinity) - (a.score ?? -Infinity));
+
+      clear(node);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      htr.appendChild(el("th", null, "Rank"));
+      htr.appendChild(el("th", null, "Method"));
+      symbols.forEach((s) => htr.appendChild(el("th", "num", typeof s === "string" ? s : String(s))));
+      htr.appendChild(el("th", "num", "Top weight"));
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      ranked.forEach((row, idx) => {
+        const tr = el("tr");
+        if (idx === 0) {
+          tr.style.background = "rgba(77, 163, 255, 0.10)";
+        }
+        const rankTd = el("td", "num", String(idx + 1));
+        if (idx === 0) rankTd.style.fontWeight = "700";
+        tr.appendChild(rankTd);
+
+        const label = OPTIMIZE_METHOD_LABELS[row.key] || row.key;
+        const nameTd = el("td", null, label);
+        if (idx === 0) nameTd.style.fontWeight = "700";
+        tr.appendChild(nameTd);
+
+        const weights = Array.isArray(row.weights) ? row.weights : [];
+        symbols.forEach((_, i) => {
+          const w = num(weights[i]);
+          tr.appendChild(el("td", "num", w === null ? "—" : (w * 100).toFixed(1) + "%"));
+        });
+
+        tr.appendChild(el("td", "num", row.score === null ? "—" : (row.score * 100).toFixed(1) + "%"));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /experiments ---
+    // Pull a likely-named field from an experiment object, scanning common keys.
+    function pickField(obj, keys) {
+      const v = firstDefined(obj, keys);
+      if (v === undefined) return null;
+      if (typeof v === "object") return null;
+      return v;
+    }
+
+    async function renderExperiments() {
+      const node = $("experimentsGrid");
+      const { ok, data } = await safeFetch("/experiments");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      const experiments = Array.isArray(data.experiments) ? data.experiments : [];
+      if (experiments.length === 0) return placeholder(node, "no registered experiments");
+
+      clear(node);
+      const grid = el("div", "asset-grid");
+      experiments.forEach((exp) => {
+        if (!exp || typeof exp !== "object") return;
+        const card = el("div", "asset-card");
+
+        const name = pickField(exp, ["name", "tag", "id", "experiment", "label"]);
+        const head = el("div");
+        head.appendChild(el("span", "sym", name != null ? String(name) : "experiment"));
+
+        const status = pickField(exp, ["status", "state", "phase"]);
+        if (status != null) {
+          const s = String(status).toLowerCase();
+          const cls = ["clear", "complete", "completed", "done", "passed", "ok"].includes(s) ? "clear"
+            : ["running", "active", "pending", "in_progress"].includes(s) ? "warning"
+            : ["failed", "error", "critical"].includes(s) ? "critical"
+            : "unknown";
+          const badge = el("span", "badge " + cls, String(status));
+          badge.style.marginLeft = "8px";
+          head.appendChild(badge);
+        }
+        card.appendChild(head);
+
+        // Key metric: prefer well-known fields, else show any numeric field.
+        let metricLabel = null;
+        let metricVal = null;
+        const knownMetrics = [
+          ["objective", "Objective"],
+          ["score", "Score"],
+          ["total_return_pct", "Total return %"],
+          ["excess_return_pct", "Excess return %"],
+          ["sharpe", "Sharpe"],
+          ["max_drawdown_pct", "Max drawdown %"],
+        ];
+        for (const [k, lbl] of knownMetrics) {
+          const v = pickField(exp, [k]);
+          if (v != null && num(v) !== null) { metricLabel = lbl; metricVal = num(v); break; }
+        }
+        if (metricLabel === null) {
+          for (const [k, v] of Object.entries(exp)) {
+            if (typeof v === "number" && Number.isFinite(v)) { metricLabel = k; metricVal = v; break; }
+            if (typeof v === "string" && num(v) !== null) { metricLabel = k; metricVal = num(v); break; }
+          }
+        }
+        if (metricLabel !== null) {
+          card.appendChild(el("div", "price", metricLabel + ": " + metricVal.toFixed(2)));
+        }
+
+        const created = pickField(exp, ["created_ms"]);
+        if (created != null && num(created) !== null) {
+          const d = new Date(num(created));
+          if (!Number.isNaN(d.getTime())) {
+            card.appendChild(el("div", "addr", "created " + d.toLocaleString()));
+          }
+        }
+        const preset = pickField(exp, ["preset"]);
+        if (preset != null) {
+          card.appendChild(el("div", "sub", "preset: " + String(preset)));
+        }
+
+        grid.appendChild(card);
+      });
+      node.appendChild(grid);
+    }
+
+    // --- /skill ---
+    // Extract a short human summary from raw skill text. The API returns the
+    // skill.yaml and README.md verbatim (no YAML parser server-side), so we pull
+    // the first non-empty, non-heading, non-key prose line as a summary, and any
+    // "description:" value if present in the YAML.
+    function firstProseLine(text) {
+      if (typeof text !== "string") return null;
+      const lines = text.split(/\r?\n/);
+      for (const raw of lines) {
+        const line = raw.trim();
+        if (!line) continue;
+        if (line.startsWith("#")) continue;          // markdown heading
+        if (line.startsWith("---")) continue;        // yaml doc separator
+        if (line.startsWith("-")) continue;          // list item
+        if (/^[\w.-]+\s*:/.test(line) && !/\s/.test(line.split(":")[0])) continue; // yaml key
+        return line;
+      }
+      return null;
+    }
+
+    function yamlValue(text, key) {
+      if (typeof text !== "string") return null;
+      const re = new RegExp("^\\s*" + key + "\\s*:\\s*(.+)$", "mi");
+      const m = text.match(re);
+      if (!m) return null;
+      return m[1].trim().replace(/^["']|["']$/g, "");
+    }
+
+    // Pull "<regime>: <weights/target>" style routing lines from the skill text.
+    // We scan for lines that mention a known regime keyword and capture the
+    // surrounding "key: value" pairs as a regime -> target mapping.
+    const REGIME_KEYWORDS = ["risk_on", "risk-on", "neutral", "risk_off", "risk-off", "bull", "bear", "chop", "crisis"];
+
+    function extractRegimeRouting(text) {
+      if (typeof text !== "string") return [];
+      const out = [];
+      const seen = new Set();
+      const lines = text.split(/\r?\n/);
+      for (const raw of lines) {
+        const line = raw.trim().replace(/^[-*]\s*/, "");
+        if (!line || line.startsWith("#")) continue;
+        const lower = line.toLowerCase();
+        const hit = REGIME_KEYWORDS.find((k) => lower.includes(k));
+        if (!hit) continue;
+        const colon = line.indexOf(":");
+        if (colon <= 0) continue;
+        const regime = line.slice(0, colon).trim();
+        const target = line.slice(colon + 1).trim();
+        if (!regime || !target) continue;
+        const dedupe = regime.toLowerCase();
+        if (seen.has(dedupe)) continue;
+        seen.add(dedupe);
+        out.push({ regime, target });
+        if (out.length >= 12) break;
+      }
+      return out;
+    }
+
+    async function renderSkill() {
+      const summaryNode = $("skillSummary");
+      const examplesNode = $("skillExamples");
+      const routingNode = $("skillRouting");
+      const { ok, data } = await safeFetch("/skill");
+      if (!ok || !data || typeof data !== "object" || data.error) {
+        placeholder(summaryNode);
+        placeholder(examplesNode);
+        placeholder(routingNode);
+        return;
+      }
+
+      const name = typeof data.name === "string" ? data.name : "—";
+      const skillYaml = typeof data.skill_yaml === "string" ? data.skill_yaml : "";
+      const readme = typeof data.readme === "string" ? data.readme : "";
+      const examples = Array.isArray(data.examples) ? data.examples : [];
+
+      // Summary card: name + description + a prose blurb.
+      clear(summaryNode);
+      const kv = el("div", "kv");
+      const addRow = (k, v) => {
+        const row = el("div", "row");
+        row.appendChild(el("span", "k", k));
+        row.appendChild(el("span", "v", v));
+        kv.appendChild(row);
+      };
+      addRow("Name", name);
+      const version = yamlValue(skillYaml, "version");
+      if (version) addRow("Version", version);
+      const author = yamlValue(skillYaml, "author");
+      if (author) addRow("Author", author);
+      summaryNode.appendChild(kv);
+
+      const desc = yamlValue(skillYaml, "description") || firstProseLine(readme) || firstProseLine(skillYaml);
+      if (desc) {
+        const p = el("div", "sub", desc);
+        p.style.marginTop = "12px";
+        p.style.lineHeight = "1.5";
+        summaryNode.appendChild(p);
+      } else if (!version && !author) {
+        summaryNode.appendChild(el("div", "placeholder", "skill artifact not available"));
+      }
+
+      // Examples card.
+      clear(examplesNode);
+      if (examples.length === 0) {
+        placeholder(examplesNode, "no example files");
+      } else {
+        const list = el("div", "kv");
+        examples.forEach((name) => {
+          if (typeof name !== "string") return;
+          const row = el("div", "row");
+          row.appendChild(el("span", "k", "•"));
+          row.appendChild(el("span", "v", name));
+          list.appendChild(row);
+        });
+        examplesNode.appendChild(list);
+      }
+
+      // Regime routing card: parse "regime -> target weights" lines from the
+      // skill text. Render a table when present; otherwise a short note.
+      clear(routingNode);
+      const routes = extractRegimeRouting(skillYaml).concat(extractRegimeRouting(readme));
+      const deduped = [];
+      const rseen = new Set();
+      for (const r of routes) {
+        const key = r.regime.toLowerCase();
+        if (rseen.has(key)) continue;
+        rseen.add(key);
+        deduped.push(r);
+      }
+      if (deduped.length === 0) {
+        routingNode.appendChild(el("span", "placeholder",
+          "Regime-routed strategy — no structured regime → weight mapping found in the skill artifact."));
+      } else {
+        const table = el("table", "grid");
+        const thead = el("thead");
+        const htr = el("tr");
+        htr.appendChild(el("th", null, "Regime"));
+        htr.appendChild(el("th", null, "Target / weights"));
+        thead.appendChild(htr);
+        table.appendChild(thead);
+        const tbody = el("tbody");
+        deduped.forEach((r) => {
+          const tr = el("tr");
+          tr.appendChild(el("td", null, r.regime));
+          tr.appendChild(el("td", null, r.target));
+          tbody.appendChild(tr);
+        });
+        table.appendChild(tbody);
+        routingNode.appendChild(table);
+      }
+    }
+
+    // --- /funding ---
+    // Classify a funding-rate proxy by sign: positive funding is "crowded long"
+    // (a contrarian short tilt / red), negative funding is "favourable" for longs
+    // (green). Zero / tiny magnitude is neutral.
+    const FUNDING_NEUTRAL_BAND = 0.01;
+
+    function fundingSignal(rate) {
+      if (rate === null) return { label: "—", cls: "" };
+      if (rate > FUNDING_NEUTRAL_BAND) return { label: "Crowded long — short tilt", cls: "delta-down" };
+      if (rate < -FUNDING_NEUTRAL_BAND) return { label: "Favourable — long tilt", cls: "delta-up" };
+      return { label: "Neutral", cls: "" };
+    }
+
+    async function renderFunding() {
+      const node = $("fundingTable");
+      const { ok, data } = await safeFetch("/funding");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      if (assets.length === 0) return placeholder(node, "no funding data");
+
+      clear(node);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Symbol", "Funding rate proxy (1h)", "24h return", "Signal / tilt"].forEach((h, i) => {
+        htr.appendChild(el("th", i === 1 || i === 2 ? "num" : null, h));
+      });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      assets.forEach((a) => {
+        if (!a || typeof a !== "object") return;
+        const rate = num(a.funding_rate_proxy);
+        const ret = num(a.ret_24h);
+        const sig = fundingSignal(rate);
+
+        const tr = el("tr");
+        tr.appendChild(el("td", null, typeof a.symbol === "string" ? a.symbol : "—"));
+
+        const rateTd = el("td", "num " + (rate === null ? "" : (rate > 0 ? "delta-down" : rate < 0 ? "delta-up" : "")),
+          rate === null ? "—" : (rate >= 0 ? "+" : "") + rate.toFixed(4) + "%");
+        tr.appendChild(rateTd);
+
+        tr.appendChild(el("td", "num " + (ret === null ? "" : (ret >= 0 ? "delta-up" : "delta-down")),
+          ret === null ? "—" : fmtPct(ret)));
+
+        const sigTd = el("td", sig.cls);
+        sigTd.appendChild(el("span", "badge " + (sig.cls === "delta-up" ? "clear" : sig.cls === "delta-down" ? "critical" : "unknown"), sig.label));
+        tr.appendChild(sigTd);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /scenarios ---
+    // Map a scenario status string to a badge severity class.
+    function scenarioBadgeClass(status) {
+      const s = String(status || "").toLowerCase();
+      if (s === "critical") return "critical";
+      if (s === "watch") return "warning";
+      if (s === "normal") return "clear";
+      return "unknown";
+    }
+
+    async function renderScenarios() {
+      const node = $("scenariosTable");
+      const { ok, data } = await safeFetch("/scenarios");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+      const scenarios = Array.isArray(data.scenarios) ? data.scenarios : [];
+      if (scenarios.length === 0) return placeholder(node, "no scenarios");
+
+      clear(node);
+
+      // Header summary: NAV + worst scenario.
+      const nav = num(data.nav_usd);
+      const worstPnl = num(data.worst_pnl_usd);
+      const summary = el("div", "metric-grid");
+      summary.style.marginBottom = "16px";
+      summary.appendChild(metric("Portfolio NAV", nav === null ? "—" : "$" + nav.toLocaleString(undefined, { maximumFractionDigits: 2 })));
+      summary.appendChild(metric("Worst scenario",
+        typeof data.worst_scenario_id === "string" && data.worst_scenario_id ? data.worst_scenario_id : "—"));
+      summary.appendChild(metric("Worst P&L", worstPnl === null ? "—" : "$" + worstPnl.toLocaleString(undefined, { maximumFractionDigits: 2 }),
+        worstPnl === null ? "" : (worstPnl >= 0 ? "delta-up" : "delta-down")));
+      node.appendChild(summary);
+
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Scenario", "Portfolio P&L", "Return", "Largest loss", "Status"].forEach((h, i) => {
+        htr.appendChild(el("th", i === 1 || i === 2 ? "num" : null, h));
+      });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      scenarios.forEach((sc) => {
+        if (!sc || typeof sc !== "object") return;
+        const pnl = num(sc.portfolio_pnl_usd);
+        const ret = num(sc.portfolio_return_pct);
+
+        const tr = el("tr");
+
+        const labelCell = el("td");
+        labelCell.appendChild(el("div", null, typeof sc.label === "string" && sc.label ? sc.label : (sc.id ?? "—")));
+        if (typeof sc.description === "string" && sc.description) {
+          labelCell.appendChild(el("div", "sub", sc.description));
+        }
+        tr.appendChild(labelCell);
+
+        tr.appendChild(el("td", "num " + (pnl === null ? "" : (pnl >= 0 ? "delta-up" : "delta-down")),
+          pnl === null ? "—" : "$" + pnl.toLocaleString(undefined, { maximumFractionDigits: 2 })));
+        tr.appendChild(el("td", "num " + (ret === null ? "" : (ret >= 0 ? "delta-up" : "delta-down")),
+          ret === null ? "—" : fmtPct(ret)));
+
+        const ll = (sc.largest_loss && typeof sc.largest_loss === "object") ? sc.largest_loss : {};
+        const llSym = typeof ll.symbol === "string" ? ll.symbol : null;
+        const llPnl = num(ll.pnl_usd);
+        tr.appendChild(el("td", null,
+          llSym === null ? "—" : llSym + (llPnl === null ? "" : " ($" + llPnl.toLocaleString(undefined, { maximumFractionDigits: 2 }) + ")")));
+
+        const statusTd = el("td");
+        statusTd.appendChild(el("span", "badge " + scenarioBadgeClass(sc.status), String(sc.status ?? "—")));
+        tr.appendChild(statusTd);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /costs ---
+    // Fee / execution cost accounting. The API returns Decimal values as strings,
+    // so every numeric field is parsed via num() before formatting.
+    async function renderCosts() {
+      const metricsNode = $("costsMetrics");
+      const tableNode = $("costsTable");
+      const { ok, data } = await safeFetch("/costs");
+      if (!ok || !data || typeof data !== "object" || data.error) {
+        placeholder(metricsNode);
+        placeholder(tableNode);
+        return;
+      }
+
+      const s = (data.summary && typeof data.summary === "object") ? data.summary : {};
+
+      // Metrics grid: total cost accounting.
+      clear(metricsNode);
+      const grid = el("div", "metric-grid");
+      grid.appendChild(metric("Order notional", "$" + fmtNum(s.amount_usd, 2)));
+      grid.appendChild(metric("Routes priced", s.routes != null ? s.routes : "—"));
+      grid.appendChild(metric("Total gas", "$" + fmtNum(s.total_gas_usd, 4)));
+      grid.appendChild(metric("Total slippage", "$" + fmtNum(s.total_slippage_usd, 4)));
+      grid.appendChild(metric("All-in cost", "$" + fmtNum(s.total_all_in_cost_usd, 4), "delta-down"));
+      grid.appendChild(metric("Average cost", fmtNum(s.average_cost_bps, 2) + " bps"));
+      metricsNode.appendChild(grid);
+
+      // Per-route breakdown table.
+      const routes = Array.isArray(data.routes) ? data.routes : [];
+      clear(tableNode);
+      if (routes.length === 0) {
+        placeholder(tableNode, "no routes configured");
+        return;
+      }
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Route", "Side", "Notional", "Gas", "Slippage", "All-in", "Cost (bps)", "Price impact"]
+        .forEach((h, i) => {
+          htr.appendChild(el("th", i >= 2 ? "num" : null, h));
+        });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      routes.forEach((r) => {
+        if (!r || typeof r !== "object") return;
+        const tr = el("tr");
+        tr.appendChild(el("td", null, typeof r.route === "string" ? r.route : "—"));
+        tr.appendChild(el("td", null, typeof r.side === "string" ? r.side : "—"));
+        tr.appendChild(el("td", "num", "$" + fmtNum(r.amount_usd, 2)));
+        tr.appendChild(el("td", "num", "$" + fmtNum(r.gas_usd, 4)));
+        tr.appendChild(el("td", "num", "$" + fmtNum(r.slippage_usd, 4)));
+        tr.appendChild(el("td", "num delta-down", "$" + fmtNum(r.all_in_cost_usd, 4)));
+        tr.appendChild(el("td", "num", fmtNum(r.all_in_cost_bps, 2)));
+        tr.appendChild(el("td", "num", fmtPct(r.price_impact_pct)));
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableNode.appendChild(table);
+    }
+
+    // --- /liquidity ---
+    // Per-asset liquidity capacity, color-coded by adequacy status from the API
+    // ("ok" / "watch" / "blocking").
+    function liquidityBadgeClass(status) {
+      const v = String(status || "").toLowerCase();
+      if (v === "ok") return "clear";
+      if (v === "watch") return "warning";
+      if (v === "blocking") return "critical";
+      return "unknown";
+    }
+
+    function usdAbbrev(value) {
+      const n = num(value);
+      if (n === null) return "—";
+      if (Math.abs(n) >= 1e6) return "$" + (n / 1e6).toFixed(2) + "M";
+      if (Math.abs(n) >= 1e3) return "$" + (n / 1e3).toFixed(1) + "K";
+      return "$" + n.toFixed(2);
+    }
+
+    async function renderLiquidity() {
+      const node = $("liquidityTable");
+      const { ok, data } = await safeFetch("/liquidity");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      clear(node);
+
+      const s = (data.summary && typeof data.summary === "object") ? data.summary : {};
+      const summary = el("div", "metric-grid");
+      summary.style.marginBottom = "16px";
+      summary.appendChild(metric("Assets", s.assets != null ? s.assets : "—"));
+      summary.appendChild(metric("OK", s.ok != null ? s.ok : "—", "delta-up"));
+      summary.appendChild(metric("Watch", s.watch != null ? s.watch : "—",
+        (num(s.watch) || 0) > 0 ? "" : ""));
+      summary.appendChild(metric("Blocking", s.blocking != null ? s.blocking : "—",
+        (num(s.blocking) || 0) > 0 ? "delta-down" : ""));
+      node.appendChild(summary);
+
+      const assets = Array.isArray(data.assets) ? data.assets : [];
+      if (assets.length === 0) {
+        node.appendChild(el("span", "placeholder", "no liquidity data"));
+        return;
+      }
+
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Symbol", "Liquidity", "Pool usage", "Capacity", "Headroom", "24h", "Status"]
+        .forEach((h, i) => {
+          htr.appendChild(el("th", (i >= 1 && i <= 5) ? "num" : null, h));
+        });
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      assets.forEach((a) => {
+        if (!a || typeof a !== "object") return;
+        const tr = el("tr");
+
+        const symTd = el("td");
+        symTd.appendChild(el("span", null, typeof a.symbol === "string" ? a.symbol : "—"));
+        if (typeof a.category === "string" && a.category) {
+          const cat = el("span", "cat", a.category);
+          symTd.appendChild(cat);
+        }
+        tr.appendChild(symTd);
+
+        tr.appendChild(el("td", "num", usdAbbrev(a.liquidity_usd)));
+
+        const usage = num(a.pool_usage_pct);
+        tr.appendChild(el("td", "num", usage === null ? "—" : usage.toFixed(2) + "%"));
+
+        tr.appendChild(el("td", "num", usdAbbrev(a.capacity_usd)));
+        tr.appendChild(el("td", "num", usdAbbrev(a.headroom_usd)));
+
+        const ret = num(a.ret_24h);
+        tr.appendChild(el("td", "num " + (ret === null ? "" : (ret >= 0 ? "delta-up" : "delta-down")),
+          ret === null ? "—" : fmtPct(ret)));
+
+        const statusTd = el("td");
+        statusTd.appendChild(el("span", "badge " + liquidityBadgeClass(a.status), String(a.status ?? "—")));
+        tr.appendChild(statusTd);
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /readiness ---
+    // Judge-facing "are we ready" panel: each readiness check renders as a row
+    // with a pass/fail badge. The API marks checks as "pass" or "blocking".
+    async function renderReadiness() {
+      const node = $("readinessPanel");
+      const { ok, data } = await safeFetch("/readiness");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      clear(node);
+
+      const checks = Array.isArray(data.checks) ? data.checks : [];
+      const status = typeof data.status === "string" ? data.status : "unknown";
+      const blocking = num(data.blocking);
+      const passing = checks.filter((c) => c && c.status === "pass").length;
+
+      // Headline summary.
+      const head = el("div");
+      head.style.display = "flex";
+      head.style.alignItems = "baseline";
+      head.style.gap = "12px";
+      head.style.marginBottom = "16px";
+      head.appendChild(el("span", "big", passing + "/" + checks.length));
+      const headBadge = status === "ready" ? "clear" : status === "blocking" ? "critical" : "unknown";
+      head.appendChild(el("span", "badge " + headBadge, status));
+      if (blocking !== null) {
+        head.appendChild(el("span", "sub", blocking + " blocking"));
+      }
+      node.appendChild(head);
+
+      if (checks.length === 0) {
+        node.appendChild(el("span", "placeholder", "no readiness checks"));
+        return;
+      }
+
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Check", "Detail", "Result"].forEach((h) => htr.appendChild(el("th", null, h)));
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      checks.forEach((c) => {
+        if (!c || typeof c !== "object") return;
+        const pass = c.status === "pass";
+        const tr = el("tr");
+        tr.appendChild(el("td", null, typeof c.label === "string" ? c.label : (c.id ?? "—")));
+        tr.appendChild(el("td", null, typeof c.detail === "string" ? c.detail : "—"));
+        const resTd = el("td");
+        resTd.appendChild(el("span", "badge " + (pass ? "clear" : "critical"), pass ? "pass" : "fail"));
+        tr.appendChild(resTd);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /regime -> ensemble router ---
+    // Regime -> Track-2 skill weight table. Mirrors skills/ensemble.json
+    // (risk_on / risk_off / chop / breakout each summing to 1.0). The four
+    // skills are the Track-2 candidates routed by the live market regime; the
+    // dominant skill(s) in the current regime are highlighted in the table.
+    const ENSEMBLE_SKILLS = [
+      {
+        key: "regime-routed-bsc-alpha",
+        label: "Regime-routed BSC alpha",
+        thesis: "Meta-allocator that tilts the book toward whichever sub-strategy fits the live regime.",
+      },
+      {
+        key: "funding-rate-carry-bsc",
+        label: "Funding-rate carry (BSC)",
+        thesis: "Harvests perp funding/basis carry; favoured when markets are calm and risk-on.",
+      },
+      {
+        key: "mean-reversion-chop-bsc",
+        label: "Mean-reversion (chop)",
+        thesis: "Fades stretched moves inside ranges; dominates when price is choppy and directionless.",
+      },
+      {
+        key: "trend-breakout-momentum-bsc",
+        label: "Trend / breakout momentum",
+        thesis: "Rides confirmed breakouts and momentum; dominates when volatility expands into trends.",
+      },
+    ];
+
+    // Regime -> per-skill weight. Each regime row sums to 1.0. Mirrors
+    // skills/ensemble.json (risk_on / risk_off / chop / breakout).
+    const ENSEMBLE_WEIGHTS = {
+      risk_on: {
+        "regime-routed-bsc-alpha": 0.30,
+        "funding-rate-carry-bsc": 0.40,
+        "mean-reversion-chop-bsc": 0.05,
+        "trend-breakout-momentum-bsc": 0.25,
+      },
+      risk_off: {
+        "regime-routed-bsc-alpha": 0.40,
+        "funding-rate-carry-bsc": 0.35,
+        "mean-reversion-chop-bsc": 0.20,
+        "trend-breakout-momentum-bsc": 0.05,
+      },
+      chop: {
+        "regime-routed-bsc-alpha": 0.20,
+        "funding-rate-carry-bsc": 0.15,
+        "mean-reversion-chop-bsc": 0.55,
+        "trend-breakout-momentum-bsc": 0.10,
+      },
+      breakout: {
+        "regime-routed-bsc-alpha": 0.25,
+        "funding-rate-carry-bsc": 0.05,
+        "mean-reversion-chop-bsc": 0.10,
+        "trend-breakout-momentum-bsc": 0.60,
+      },
+    };
+
+    const REGIME_LABELS = {
+      risk_on: "Risk-on",
+      risk_off: "Risk-off",
+      chop: "Chop",
+      breakout: "Breakout",
+    };
+
+    async function renderEnsemble() {
+      const headNode = $("ensembleHead");
+      const tableNode = $("ensembleTable");
+      const { ok, data } = await safeFetch("/regime");
+      if (!ok || !data || typeof data !== "object" || data.error) {
+        placeholder(headNode);
+        placeholder(tableNode);
+        return;
+      }
+
+      const regimeKey = typeof data.regime === "string" ? data.regime : null;
+      const weights = (regimeKey && ENSEMBLE_WEIGHTS[regimeKey]) ? ENSEMBLE_WEIGHTS[regimeKey] : null;
+
+      // Header: current regime + exposure multiplier.
+      clear(headNode);
+      const head = el("div");
+      head.style.display = "flex";
+      head.style.alignItems = "baseline";
+      head.style.gap = "12px";
+      head.style.flexWrap = "wrap";
+      head.appendChild(el("span", "big", regimeKey ? (REGIME_LABELS[regimeKey] || regimeKey) : "—"));
+      head.appendChild(el("span", "sub", "Exposure multiplier: " + (data.exposure_multiplier ?? "—")));
+      headNode.appendChild(head);
+      headNode.appendChild(el("div", "sub",
+        "Live regime routes the four Track-2 skills below. Dominant skill(s) for the current regime are highlighted."));
+
+      // Find max weight in the current regime to highlight the dominant skill(s).
+      let maxWeight = 0;
+      if (weights) {
+        for (const s of ENSEMBLE_SKILLS) {
+          const w = num(weights[s.key]);
+          if (w !== null && w > maxWeight) maxWeight = w;
+        }
+      }
+
+      clear(tableNode);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      htr.appendChild(el("th", null, "Skill"));
+      htr.appendChild(el("th", null, "Thesis"));
+      htr.appendChild(el("th", "num", "Weight (this regime)"));
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      ENSEMBLE_SKILLS.forEach((s) => {
+        const w = weights ? num(weights[s.key]) : null;
+        const dominant = w !== null && maxWeight > 0 && w >= maxWeight - 1e-9;
+        const tr = el("tr");
+        if (dominant) tr.style.background = "rgba(77, 163, 255, 0.10)";
+
+        const nameTd = el("td");
+        const nameWrap = el("div", null, s.label);
+        if (dominant) nameWrap.style.fontWeight = "700";
+        nameTd.appendChild(nameWrap);
+        nameTd.appendChild(el("div", "addr", s.key));
+        tr.appendChild(nameTd);
+
+        tr.appendChild(el("td", null, s.thesis));
+
+        const wTd = el("td", "num");
+        const wText = el("span", w === null ? "" : (dominant ? "delta-up" : ""),
+          w === null ? "—" : (w * 100).toFixed(0) + "%");
+        if (dominant) wText.style.fontWeight = "700";
+        wTd.appendChild(wText);
+        if (dominant) {
+          const b = el("span", "badge clear", "dominant");
+          b.style.marginLeft = "8px";
+          wTd.appendChild(b);
+        }
+        tr.appendChild(wTd);
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      tableNode.appendChild(table);
+    }
+
+    // --- /events -> decision journal ---
+    // Map an event_type (snake_case) to a human label and a badge severity.
+    const EVENT_META = {
+      agent_started: { label: "Agent started", cls: "unknown" },
+      market_snapshot_received: { label: "Market snapshot", cls: "unknown" },
+      regime_classified: { label: "Regime classified", cls: "clear" },
+      asset_scored: { label: "Asset scored", cls: "unknown" },
+      portfolio_target_computed: { label: "Target computed", cls: "clear" },
+      order_proposed: { label: "Order proposed", cls: "warning" },
+      risk_approved: { label: "Risk approved", cls: "clear" },
+      risk_rejected: { label: "Risk rejected", cls: "critical" },
+      risk_clipped: { label: "Risk clipped", cls: "warning" },
+      twak_quote_received: { label: "Quote received", cls: "unknown" },
+      twak_swap_submitted: { label: "Swap submitted", cls: "warning" },
+      tx_confirmed: { label: "Tx confirmed", cls: "clear" },
+      portfolio_reconciled: { label: "Portfolio reconciled", cls: "clear" },
+      drawdown_throttle_activated: { label: "Drawdown throttle", cls: "warning" },
+      kill_switch_triggered: { label: "Kill switch", cls: "critical" },
+      daily_trade_requirement_satisfied: { label: "Daily trade met", cls: "clear" },
+      agent_report_published: { label: "Report published", cls: "clear" },
+    };
+
+    function eventMeta(type) {
+      if (typeof type === "string" && EVENT_META[type]) return EVENT_META[type];
+      const label = typeof type === "string"
+        ? type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+        : "Event";
+      return { label, cls: "unknown" };
+    }
+
+    // Build a short, human-readable detail string from an event payload by
+    // surfacing a few well-known fields, falling back to a compact key list.
+    function eventDetail(type, payload) {
+      if (!payload || typeof payload !== "object") return "";
+      const parts = [];
+      const push = (label, v) => {
+        if (v === undefined || v === null || v === "") return;
+        if (typeof v === "object") return;
+        parts.push(label + ": " + String(v));
+      };
+      push("regime", payload.regime);
+      push("symbol", payload.symbol);
+      push("side", payload.side);
+      push("score", payload.score);
+      push("reason", payload.reason);
+      push("tx", payload.tx_hash ? short(payload.tx_hash, 10, 8) : null);
+      push("nav", payload.nav_usd != null ? "$" + payload.nav_usd : null);
+      if (parts.length === 0) {
+        const keys = Object.keys(payload).slice(0, 4);
+        for (const k of keys) push(k, payload[k]);
+      }
+      return parts.slice(0, 4).join(" · ");
+    }
+
+    async function renderJournal() {
+      const node = $("journalTable");
+      const { ok, data } = await safeFetch("/events");
+      if (!ok || !data || typeof data !== "object") return placeholder(node);
+      const events = Array.isArray(data.events) ? data.events : [];
+      if (events.length === 0) return placeholder(node, "no journal entries yet");
+
+      // Reverse-chronological: newest first. Sort by timestamp string when present
+      // (ISO-8601 sorts lexicographically); otherwise reverse insertion order.
+      const ordered = events.slice().reverse().sort((a, b) => {
+        const ta = a && typeof a.timestamp === "string" ? a.timestamp : "";
+        const tb = b && typeof b.timestamp === "string" ? b.timestamp : "";
+        if (ta && tb) return tb.localeCompare(ta);
+        return 0;
+      });
+
+      clear(node);
+      const table = el("table", "grid");
+      const thead = el("thead");
+      const htr = el("tr");
+      ["Time", "Event", "Detail"].forEach((h) => htr.appendChild(el("th", null, h)));
+      thead.appendChild(htr);
+      table.appendChild(thead);
+
+      const tbody = el("tbody");
+      ordered.forEach((ev) => {
+        if (!ev || typeof ev !== "object") return;
+        const meta = eventMeta(ev.event_type);
+        const tr = el("tr");
+
+        const tsTd = el("td");
+        let ts = typeof ev.timestamp === "string" ? ev.timestamp : "—";
+        const d = new Date(ts);
+        if (!Number.isNaN(d.getTime())) ts = d.toLocaleString();
+        const tsWrap = el("div", "sub", ts);
+        tsTd.appendChild(tsWrap);
+        tr.appendChild(tsTd);
+
+        const evTd = el("td");
+        evTd.appendChild(el("span", "badge " + meta.cls, meta.label));
+        tr.appendChild(evTd);
+
+        const detail = eventDetail(ev.event_type, ev.payload_json);
+        tr.appendChild(el("td", null, detail || "—"));
+
+        tbody.appendChild(tr);
+      });
+      table.appendChild(tbody);
+      node.appendChild(table);
+    }
+
+    // --- /signing-policy -> self-custody panel ---
+    function signingRow(kv, k, v) {
+      const row = el("div", "row");
+      row.appendChild(el("span", "k", k));
+      row.appendChild(el("span", "v", v === undefined || v === null || v === "" ? "—" : String(v)));
+      kv.appendChild(row);
+    }
+
+    async function renderSigning() {
+      const node = $("signingPanel");
+      const { ok, data } = await safeFetch("/signing-policy");
+      if (!ok || !data || typeof data !== "object" || data.error) return placeholder(node);
+
+      clear(node);
+
+      // Judge-facing headline: keys never leave the user.
+      const head = el("div");
+      head.style.display = "flex";
+      head.style.alignItems = "baseline";
+      head.style.gap = "12px";
+      head.style.flexWrap = "wrap";
+      head.style.marginBottom = "16px";
+      head.appendChild(el("span", "big", typeof data.name === "string" ? data.name : "Signing policy"));
+      head.appendChild(el("span", "badge clear", "self-custody"));
+      if (typeof data.mode === "string") head.appendChild(el("span", "badge unknown", data.mode));
+      node.appendChild(head);
+
+      node.appendChild(el("div", "sub",
+        "Keys never leave the user: the agent only proposes EIP-712 payment authorizations; " +
+        "the user's own wallet signs them locally within the limits below."));
+
+      // Labeled grid of policy facts.
+      const grid = el("div", "metric-grid");
+      grid.style.marginTop = "16px";
+
+      const headers = (data.headers && typeof data.headers === "object") ? data.headers : {};
+      const budget = (data.budget && typeof data.budget === "object") ? data.budget : {};
+      const summary = (data.summary && typeof data.summary === "object") ? data.summary : {};
+      const sample = (data.sample_payment && typeof data.sample_payment === "object") ? data.sample_payment : {};
+
+      grid.appendChild(metric("Status", typeof data.status === "string" ? data.status : "—"));
+      grid.appendChild(metric("Chain ID", data.chain_id != null ? data.chain_id : "—"));
+      grid.appendChild(metric("Allowed actions", summary.allowed_types != null ? summary.allowed_types : "—"));
+      grid.appendChild(metric("Denied actions", summary.denied_types != null ? summary.denied_types : "—"));
+      grid.appendChild(metric("Priced resources", summary.resources != null ? summary.resources : "—"));
+      grid.appendChild(metric("Sample signed", summary.sample_signed === true ? "yes" : summary.sample_signed === false ? "no" : "—"));
+      node.appendChild(grid);
+
+      // Limits + key custody as a labeled key/value list.
+      const kv = el("div", "kv");
+      kv.style.marginTop = "16px";
+      signingRow(kv, "Who holds keys", "User's own wallet (self-custody) — agent never holds private keys");
+      signingRow(kv, "Payment header", headers.payment);
+      signingRow(kv, "Accepts header", headers.accepts);
+      signingRow(kv, "Payment token", short(budget.payment_token, 10, 8));
+      signingRow(kv, "Max per call (base units)", budget.max_per_call_base_units);
+      signingRow(kv, "Session budget (base units)", budget.session_budget_base_units);
+      signingRow(kv, "Validity window (s)", budget.validity_window_seconds);
+      signingRow(kv, "Max future validity (s)", budget.max_future_validity_seconds);
+      signingRow(kv, "Sample payer", short(sample.payer, 10, 8));
+      signingRow(kv, "Authorization hash", short(sample.authorization_hash, 10, 8));
+      node.appendChild(kv);
+
+      // Allowed / denied EIP-712 primary types as chips.
+      const allow = Array.isArray(data.primary_type_allowlist) ? data.primary_type_allowlist : [];
+      const deny = Array.isArray(data.primary_type_denylist) ? data.primary_type_denylist : [];
+      if (allow.length || deny.length) {
+        const chipsWrap = el("div", "chips");
+        chipsWrap.style.marginTop = "16px";
+        allow.forEach((t) => { if (typeof t === "string") chipsWrap.appendChild(chip(t, "ok")); });
+        deny.forEach((t) => { if (typeof t === "string") chipsWrap.appendChild(chip(t, "bad")); });
+        node.appendChild(chipsWrap);
+      }
+    }
+
+    // --- Tab bar + hash routing ---
+    let activeTab = "overview";
+
+    function resolveInitialTab() {
+      const fromHash = (window.location.hash || "").replace(/^#/, "");
+      if (TAB_IDS.includes(fromHash)) return fromHash;
+      try {
+        const stored = localStorage.getItem(TAB_KEY);
+        if (stored && TAB_IDS.includes(stored)) return stored;
+      } catch (_) {}
+      return "overview";
+    }
+
+    function buildTabBar() {
+      const bar = $("tabs");
+      clear(bar);
+      TABS.forEach((t) => {
+        const btn = el("button", null, t.label);
+        btn.type = "button";
+        btn.setAttribute("role", "tab");
+        btn.dataset.tab = t.id;
+        btn.addEventListener("click", () => setTab(t.id, true));
+        bar.appendChild(btn);
+      });
+    }
+
+    function setTab(id, updateHash) {
+      if (!TAB_IDS.includes(id)) id = "overview";
+      activeTab = id;
+      TABS.forEach((t) => {
+        const view = $("view-" + t.id);
+        if (view) view.hidden = t.id !== id;
+      });
+      document.querySelectorAll("nav.tabs button").forEach((b) => {
+        const on = b.dataset.tab === id;
+        b.classList.toggle("active", on);
+        b.setAttribute("aria-selected", on ? "true" : "false");
+      });
+      try { localStorage.setItem(TAB_KEY, id); } catch (_) {}
+      if (updateHash && window.location.hash.replace(/^#/, "") !== id) {
+        window.location.hash = id;
+      }
+      // Refresh the freshly-shown view immediately.
+      renderActive();
+    }
+
+    window.addEventListener("hashchange", () => {
+      const fromHash = (window.location.hash || "").replace(/^#/, "");
+      if (TAB_IDS.includes(fromHash) && fromHash !== activeTab) setTab(fromHash, false);
+    });
+
+    // Wire selectors to re-fetch on change.
+    $("presetSel").addEventListener("change", () => { if (activeTab === "backtest") renderBacktest(); });
+    $("symbolSel").addEventListener("change", () => { if (activeTab === "indicators") renderIndicators(); });
+    $("wfPresetSel").addEventListener("change", () => { if (activeTab === "walkforward") renderWalkforward(); });
+
+    // --- Orchestration ---
+    // Overview always refreshes (so its data is warm). The active non-overview
+    // tab also refreshes. Assets is fetched whenever needed so the symbol
+    // selector stays populated for the Indicators tab.
+    async function renderActive() {
+      const jobs = [];
+      if (activeTab === "overview") {
+        jobs.push(renderCompete(), renderHistory(), renderAlerts(), renderRegime(), renderProof());
+      } else if (activeTab === "backtest") {
+        jobs.push(renderBacktest());
+      } else if (activeTab === "indicators") {
+        jobs.push(renderAssets(), renderIndicators());
+      } else if (activeTab === "trending") {
+        jobs.push(renderTrending());
+      } else if (activeTab === "assets") {
+        jobs.push(renderAssets());
+      } else if (activeTab === "walkforward") {
+        jobs.push(renderWalkforward());
+      } else if (activeTab === "optimize") {
+        jobs.push(renderOptimize());
+      } else if (activeTab === "experiments") {
+        jobs.push(renderExperiments());
+      } else if (activeTab === "skill") {
+        jobs.push(renderSkill());
+      } else if (activeTab === "funding") {
+        jobs.push(renderFunding());
+      } else if (activeTab === "scenarios") {
+        jobs.push(renderScenarios());
+      } else if (activeTab === "costs") {
+        jobs.push(renderCosts());
+      } else if (activeTab === "liquidity") {
+        jobs.push(renderLiquidity());
+      } else if (activeTab === "readiness") {
+        jobs.push(renderReadiness());
+      } else if (activeTab === "ensemble") {
+        jobs.push(renderEnsemble());
+      } else if (activeTab === "journal") {
+        jobs.push(renderJournal());
+      } else if (activeTab === "signing") {
+        jobs.push(renderSigning());
+      }
+      await Promise.allSettled(jobs);
+    }
+
+    async function refreshAll() {
+      await renderActive();
+      const now = new Date();
+      $("lastUpdated").textContent = "updated " + now.toLocaleTimeString();
+    }
+
+    buildTabBar();
+    setTab(resolveInitialTab(), true);
+    refreshAll();
+    setInterval(refreshAll, REFRESH_MS);
+  </script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+# =============================================================================
+# <PLACEHOLDER_SKILL_NAME> — Backtestable Strategy Specification (TEMPLATE)
+# =============================================================================
+# Track 2 (Strategy Skills) skeleton for the Guardrail project.
+#
+# This file is the SINGLE SOURCE OF TRUTH for a CMC-data-driven, regime-routed
+# strategy over a fixed universe of 20 eligible BSC tokens. It is a sibling of the
+# shipping skills (e.g. skills/funding-rate-carry, skills/trend-breakout-momentum):
+# same universe, same regime model, same allocator and risk envelope. The ONLY
+# thing you change per skill is the SIGNAL/TILT in section 4 (and any new inputs).
+#
+# Authoritative Rust sources every threshold below mirrors (READ-ONLY):
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   base alpha score        -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# Replace every <PLACEHOLDER> and delete guidance comments you do not need.
+# =============================================================================
+
+spec_version: "0.1.0"
+name: <PLACEHOLDER_SKILL_NAME>
+track: "Track 2 — Strategy Skills"
+description: >
+  <PLACEHOLDER thesis paragraph> Describe the distinguishing signal/tilt this
+  skill layers on top of the shared base alpha score, how it re-ranks and re-sizes
+  candidates, and how it behaves across the four regimes. State explicitly that
+  the tilt can re-rank/re-size but never breach a risk limit, and that the book
+  de-risks to reserve in risk_off regardless of the signal.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+# Do NOT change the universe between skills — it is shared and fixed. Stables
+# (USDT, USDC) are the reserve/quote leg and are never risk candidates.
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  asset_scores:
+    description: >
+      Base per-asset alpha score (0..1) reused/derived from the shared alpha
+      blend (momentum + volume + volatility + liquidity + sentiment +
+      execution-quality, minus security penalty). This skill's signal/tilt is
+      applied on top of this base score.
+    fields: [symbol, base_score, security_penalty]
+    source: crates/strategy-engine/src/alpha_score.rs
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+  # <PLACEHOLDER signal feed unique to this skill>:
+  #   description: <what it is and why it matters>
+  #   source: <Rust file or CMC endpoint>
+  #   fields: [<...>]
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()  (SHARED)
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+# DO NOT EDIT these thresholds — they are shared across all skills.
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy risk appetite.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — de-risk regardless of signal.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless market.
+  exposure_multipliers:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 4. SIGNAL / TILT — the DISTINGUISHING layer of THIS skill  (CUSTOMISE HERE)
+# -----------------------------------------------------------------------------
+# This is the only section that meaningfully differs between skills. Define the
+# raw signal, how it maps to a tilt in [0, 1], and how that tilt re-weights the
+# base alpha score. Keep the tilt a TILT, not an override: bound the multiplier
+# so the signal can re-rank/re-size candidates but can never invent conviction
+# or resurrect a security-flagged asset.
+signal:
+  name: <PLACEHOLDER_SIGNAL_NAME>        # e.g. funding_tilt, breakout_confirmation
+  description: >
+    <PLACEHOLDER> Describe the raw signal, its source, units, and bounds.
+  source: <PLACEHOLDER Rust file or CMC endpoint>
+  raw_signal: <PLACEHOLDER field name>   # e.g. funding_rate_proxy, volume_ratio
+  thresholds:
+    # <PLACEHOLDER> name the bands/cutoffs your tilt uses, with comments.
+    example_lo: 0.0
+    example_hi: 1.0
+  mapping:
+    # <PLACEHOLDER> describe how raw_signal maps to a tilt in [0, 1].
+    formula: "tilt = clamp01( <PLACEHOLDER function of raw_signal> )"
+  apply:
+    # The tilt re-weights the base alpha score; keep the factor bounded (e.g.
+    # [0.7, 1.3]) and ALWAYS re-apply the security penalty after the tilt so a
+    # favourable signal can never resurrect a security-flagged asset.
+    factor: "0.7 + 0.6 * tilt"            # in [0.7, 1.3]
+    formula: "score = clamp01( base_score * (0.7 + 0.6 * tilt) * (1 - security_penalty) )"
+    note: >
+      score is in 0..1, sorted descending. The security penalty is re-applied
+      multiplicatively AFTER the tilt.
+
+# -----------------------------------------------------------------------------
+# 5. ALLOCATION / POSITION SIZING — mirrors allocator.rs::build_targets()  (SHARED)
+# -----------------------------------------------------------------------------
+allocation:
+  method: score_proportional            # proportional to the final score
+  steps:
+    - "Select entries with score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold 100% reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - reserve]."
+    - "Per name: weight = risk_budget * (score / Σ selected_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder)."
+  parameters:
+    target_stable_reserve_pct: 15.0     # strategy_config.rs (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0       # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0          # risk-engine cap on a single new buy
+    min_score_to_enter: 0.65            # strategy_config.rs
+    min_score_to_hold: 0.50             # strategy_config.rs
+    max_positions: 5                    # top-N by score
+  regime_exposure_multiplier:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 6. RISK POLICY — the Rust engine is the final authority  (SHARED ENVELOPE)
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0          # throttle: block new BUYs while breached (soft)
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0        # latching: halt all trading once engaged
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  protective:
+    stop_loss_pct: 12.0
+    take_profit_pct: 25.0
+    rebalance_threshold_pct: 3.0        # only act if target vs current drifts > 3% of NAV
+  entry:
+    # <PLACEHOLDER> any signal-specific entry gates (e.g. "never initiate when ...").
+    - "Asset is non-stable, enabled, and passes its liquidity / 24h-volume floor."
+    - "score >= min_score_to_enter (0.65); top max_positions (5) by score."
+    - "require_quote_before_swap; twap_only; max_slippage_pct 0.8."
+  exit:
+    # <PLACEHOLDER> any signal-specific exit gates.
+    - "Trim/exit when score < min_score_to_hold (0.50) on the next rebalance."
+    - "Force-exit at stop_loss 12% or take_profit 25%."
+    - "On transition to risk_off rotate to USDT regardless of the signal; on chop halve exposure (0.5x)."
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The signal/tilt can re-rank and re-size candidates but cannot override
+    risk — proposals that violate caps are clamped or rejected.
+
+# -----------------------------------------------------------------------------
+# 7. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10         # if no signal-driven trade occurs, a tiny
+                                        # heartbeat trade (<= 0.10% NAV) satisfies
+                                        # the requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. When the strategy is
+    flat (e.g. deep risk_off, or no asset qualifies) a minimal heartbeat trade
+    keeps the agent compliant while the kill switch / throttle still gate
+    everything else.
+
+# -----------------------------------------------------------------------------
+# 8. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  asset_scores: "list of { symbol, base_score, <signal field>, tilt, score, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct } — risk weights sum to <=100; remainder is USDT reserve"
+  actions: "list of entry/exit/rebalance/no_entry/reject/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

@@ -1,0 +1,86 @@
+[workspace]
+resolver = "2"
+
+members = [
+  "crates/common",
+  "crates/market-data",
+  "crates/cmc-client",
+  "crates/feature-engine",
+  "crates/strategy-engine",
+  "crates/risk-engine",
+  "crates/portfolio",
+  "crates/portfolio-optimizer",
+  "crates/execution",
+  "crates/twak-client",
+  "crates/bnb-agent",
+  "crates/event-store",
+  "crates/backtester",
+  "crates/policy-compiler",
+  "crates/llm-interface",
+  "crates/observability",
+  "crates/agent-runtime",
+  "crates/indicators",
+  "crates/notifier",
+  "apps/guardrail-agent",
+  "apps/guardrail-api",
+  "apps/guardrail-cli",
+  "apps/guardrail-monitor",
+  "apps/guardrail-exporter",
+  "apps/guardrail-replay",
+  "apps/guardrail-sim",
+  "apps/guardrail-doctor",
+  "apps/guardrail-tui",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["Guardrail Alpha"]
+
+[workspace.dependencies]
+# Internal crates
+common = { path = "crates/common" }
+market-data = { path = "crates/market-data" }
+cmc-client = { path = "crates/cmc-client" }
+feature-engine = { path = "crates/feature-engine" }
+strategy-engine = { path = "crates/strategy-engine" }
+risk-engine = { path = "crates/risk-engine" }
+portfolio = { path = "crates/portfolio" }
+execution = { path = "crates/execution" }
+twak-client = { path = "crates/twak-client" }
+bnb-agent = { path = "crates/bnb-agent" }
+event-store = { path = "crates/event-store" }
+backtester = { path = "crates/backtester" }
+policy-compiler = { path = "crates/policy-compiler" }
+llm-interface = { path = "crates/llm-interface" }
+observability = { path = "crates/observability" }
+agent-runtime = { path = "crates/agent-runtime" }
+
+# Third-party
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+chrono = { version = "0.4", features = ["serde"] }
+rust_decimal = { version = "1", features = ["serde"] }
+rust_decimal_macros = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+clap = { version = "4", features = ["derive"] }
+config = { version = "0.14", default-features = false, features = ["toml", "json"] }
+uuid = { version = "1", features = ["serde", "v4"] }
+async-trait = "0.1"
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+futures = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+
+[profile.release]
+opt-level = 3
+lto = "thin"

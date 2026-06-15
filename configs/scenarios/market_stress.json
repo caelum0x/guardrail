@@ -1,0 +1,66 @@
+[
+  {
+    "id": "risk_off_day",
+    "label": "Risk-Off Day",
+    "description": "Broad drawdown with high-beta categories hit harder than core assets.",
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -7,
+      "defi": -12,
+      "meme": -20,
+      "ai": -16,
+      "rwa": -8,
+      "infrastructure": -10,
+      "other": -12,
+      "uncategorized": -12
+    }
+  },
+  {
+    "id": "meme_unwind",
+    "label": "Meme Unwind",
+    "description": "Meme liquidity leaves the market while core and infrastructure hold comparatively better.",
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -3,
+      "defi": -8,
+      "meme": -35,
+      "ai": -10,
+      "rwa": -4,
+      "infrastructure": -5,
+      "other": -9,
+      "uncategorized": -9
+    }
+  },
+  {
+    "id": "bnb_rotation",
+    "label": "BNB Rotation",
+    "description": "BSC core strength with capital rotating out of weaker long-tail positions.",
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": 6,
+      "defi": 3,
+      "meme": -8,
+      "ai": -5,
+      "rwa": 1,
+      "infrastructure": 4,
+      "other": -4,
+      "uncategorized": -4
+    }
+  },
+  {
+    "id": "liquidity_gap",
+    "label": "Liquidity Gap",
+    "description": "Thin-liquidity names gap lower while stables and core assets absorb flow.",
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -5,
+      "defi": -15,
+      "meme": -28,
+      "ai": -22,
+      "rwa": -10,
+      "infrastructure": -14,
+      "other": -18,
+      "uncategorized": -18
+    }
+  }
+]

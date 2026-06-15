@@ -1,0 +1,44 @@
+name: funding-rate-carry-bsc
+version: 1.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that turns perpetual-swap funding-rate pressure (a synthetic
+  per-hour funding proxy derived from 24h return and 1h volatility) into a
+  regime-routed basis-carry strategy over 20 eligible BSC tokens. It tilts the
+  book toward assets whose funding is favourable for a long carry (negative or
+  only mildly positive) while fading richly-positive, crowded longs, then
+  respects the same risk envelope (per-name cap, stable reserve, drawdown gates)
+  and de-risks hard in risk_off. It is a strategy specification, not an
+  executor — the Rust risk engine is the final authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - funding_rate_proxy    # per-hour synthetic funding proxy (apps/guardrail-api/src/funding.rs)
+  - cmc_fear_greed        # market-wide sentiment (0..100)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - asset_scores          # per-asset 0..1 base alpha score (reused from regime-routed-bsc-alpha)
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - carry_scores          # per-asset 0..1 carry-tilted score + funding component
+  - target_portfolio      # weights summing to ~100, USDT reserve
+  - actions               # entry | exit | rebalance | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

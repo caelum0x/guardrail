@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guardrail Alpha &mdash; Submission Report</title>
+<style>
+:root {
+  --bg: #0f1420;
+  --panel: #19202e;
+  --panel-alt: #212a3b;
+  --text: #e6ecf5;
+  --muted: #93a1b8;
+  --accent: #5b9dff;
+  --ok: #46c98b;
+  --danger: #ff6b6b;
+  --border: #2c3853;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+}
+.wrap { max-width: 1040px; margin: 0 auto; padding: 32px 20px 64px; }
+header.report-header {
+  border-bottom: 2px solid var(--border);
+  padding-bottom: 20px;
+  margin-bottom: 28px;
+}
+header.report-header h1 { margin: 0 0 6px; font-size: 28px; letter-spacing: -0.5px; }
+header.report-header .sub { color: var(--muted); font-size: 14px; }
+header.report-header .sub code { color: var(--accent); }
+.pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 22px;
+}
+.card h2 {
+  margin: 0 0 14px;
+  font-size: 17px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.badge {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1px 8px;
+}
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+.metric {
+  background: var(--panel-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.metric__label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+.metric__value { font-size: 20px; font-weight: 600; }
+.metric--primary .metric__value { color: var(--accent); }
+.metric--ok .metric__value { color: var(--ok); }
+.metric--danger .metric__value { color: var(--danger); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; }
+table.data thead th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+table.data tbody td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+table.data tbody tr:last-child td { border-bottom: none; }
+table.data tbody tr:nth-child(even) { background: rgba(255,255,255,0.02); }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+table.kv th {
+  text-align: left;
+  color: var(--muted);
+  font-weight: 500;
+  padding: 6px 16px 6px 0;
+  white-space: nowrap;
+  vertical-align: top;
+}
+table.kv td { padding: 6px 0; }
+code {
+  font-family: "SFMono-Regular", Menlo, Consolas, monospace;
+  font-size: 13px;
+  word-break: break-all;
+  color: var(--text);
+}
+.empty, .hint { color: var(--muted); font-size: 13px; margin: 4px 0 0; }
+.hint { margin-bottom: 12px; }
+footer.report-footer {
+  margin-top: 28px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="report-header"><h1>Guardrail Alpha &mdash; Submission Report<span class="pill">paper</span></h1><div class="sub">Run ID: <code>run_58680f6fbebd4dbea653d1a69f307b14</code></div></header><section class="card"><h2>Key Metrics</h2><div class="metrics"><div class="metric"><div class="metric__label">Starting NAV</div><div class="metric__value">$10,000.00</div></div><div class="metric metric--primary"><div class="metric__label">Final NAV</div><div class="metric__value">$9,989.75</div></div><div class="metric"><div class="metric__label">Reported drawdown</div><div class="metric__value">10.25%</div></div><div class="metric"><div class="metric__label">Observed max drawdown</div><div class="metric__value">-0.04%</div></div><div class="metric"><div class="metric__label">Regime</div><div class="metric__value">final</div></div><div class="metric metric--ok"><div class="metric__label">Kill switch</div><div class="metric__value">inactive</div></div></div></section><section class="card"><h2>Agent Identity &amp; Proof</h2><table class="kv"><tbody><tr><th>Agent ID</th><td><code>e38b86d49c975f0b3428d973141b89cda5281c2b330bfc29d9c418fb078012a4</code></td></tr><tr><th>Wallet</th><td><code>0xA9e5C0FfEe0000000000000000000000000A1b2C3</code></td></tr><tr><th>Policy hash</th><td><code>a25d3a24f541ed163a8e561a10ef838694362769597a1be76799200408acc1d2</code></td></tr><tr><th>Report hash</th><td><code>eae46b6ff701bf3712b14a012088325b10f859fbd146b0ae00594e96a7005d67</code></td></tr><tr><th>Run ID</th><td><code>run_58680f6fbebd4dbea653d1a69f307b14</code></td></tr></tbody></table></section><section class="card"><h2>Positions</h2><table class="data"><thead><tr><th>Symbol</th><th class="num">Value (USD)</th><th class="num">Weight</th></tr></thead><tbody><tr><td>SHIB</td><td class="num">$1,698.26</td><td class="num">17.00%</td></tr><tr><td>DOGE</td><td class="num">$1,684.28</td><td class="num">16.86%</td></tr><tr><td>AVAX</td><td class="num">$1,680.29</td><td class="num">16.82%</td></tr><tr><td>LTC</td><td class="num">$1,672.30</td><td class="num">16.74%</td></tr><tr><td>UNI</td><td class="num">$1,198.10</td><td class="num">11.99%</td></tr><tr><td>ETH</td><td class="num">$1,197.71</td><td class="num">11.99%</td></tr></tbody></table></section><section class="card"><h2>Trade Attribution <span class="badge">11 confirmed</span></h2><p class="hint">Confirmed swaps grouped by destination symbol.</p><table class="data"><thead><tr><th>Destination</th><th class="num">Confirmed Swaps</th><th class="num">Total Amount (USD)</th></tr></thead><tbody><tr><td>SHIB</td><td class="num">2</td><td class="num">$1,700.20</td></tr><tr><td>DOGE</td><td class="num">2</td><td class="num">$1,686.20</td></tr><tr><td>AVAX</td><td class="num">2</td><td class="num">$1,682.20</td></tr><tr><td>LTC</td><td class="num">2</td><td class="num">$1,674.21</td></tr><tr><td>UNI</td><td class="num">1</td><td class="num">$1,199.38</td></tr><tr><td>ETH</td><td class="num">1</td><td class="num">$1,199.00</td></tr><tr><td>UNKNOWN</td><td class="num">1</td><td class="num">$0.00</td></tr></tbody></table></section><section class="card"><h2>Event-Type Counts <span class="badge">75 total</span></h2><table class="data"><thead><tr><th>Event Type</th><th class="num">Count</th></tr></thead><tbody><tr><td>agent_report_published</td><td class="num">1</td></tr><tr><td>agent_started</td><td class="num">1</td></tr><tr><td>asset_scored</td><td class="num">10</td></tr><tr><td>daily_trade_requirement_satisfied</td><td class="num">2</td></tr><tr><td>market_snapshot_received</td><td class="num">2</td></tr><tr><td>order_proposed</td><td class="num">11</td></tr><tr><td>portfolio_reconciled</td><td class="num">2</td></tr><tr><td>portfolio_target_computed</td><td class="num">2</td></tr><tr><td>regime_classified</td><td class="num">2</td></tr><tr><td>risk_approved</td><td class="num">4</td></tr><tr><td>risk_clipped</td><td class="num">6</td></tr><tr><td>risk_rejected</td><td class="num">1</td></tr><tr><td>twak_quote_received</td><td class="num">10</td></tr><tr><td>twak_swap_submitted</td><td class="num">10</td></tr><tr><td>tx_confirmed</td><td class="num">11</td></tr></tbody></table></section><section class="card"><h2>Experiment Comparison</h2><table class="data"><thead><tr><th>Tag</th><th>Preset</th><th class="num">Return</th><th class="num">Excess</th><th class="num">Max DD</th><th class="num">Calmar</th><th class="num">Trades</th><th class="num">Final NAV</th></tr></thead><tbody><tr><td>demo-balanced</td><td>balanced</td><td class="num">30.84%</td><td class="num">-60.65%</td><td class="num">0.10%</td><td class="num">299.427</td><td class="num">4</td><td class="num">$13,084.12</td></tr><tr><td>demo-aggr</td><td>aggressive</td><td class="num">30.84%</td><td class="num">-60.65%</td><td class="num">0.10%</td><td class="num">299.427</td><td class="num">4</td><td class="num">$13,084.12</td></tr><tr><td>py-a</td><td>balanced</td><td class="num">9.67%</td><td class="num">-18.98%</td><td class="num">0.27%</td><td class="num">35.410</td><td class="num">4</td><td class="num">$10,966.68</td></tr><tr><td>py-b</td><td>aggressive</td><td class="num">29.90%</td><td class="num">-59.30%</td><td class="num">0.02%</td><td class="num">1358.955</td><td class="num">4</td><td class="num">$12,989.70</td></tr></tbody></table></section><section class="card"><h2>Regime</h2><p class="hint">Regime classifications: 2 (first <code>risk_on</code> &rarr; last <code>risk_on</code>).</p></section><footer class="report-footer">Generated 2026-06-14 13:56:46 UTC &middot; Guardrail Alpha lab &middot; stdlib-only, self-contained.</footer>
+</div>
+</body>
+</html>

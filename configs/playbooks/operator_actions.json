@@ -1,0 +1,57 @@
+[
+  {
+    "id": "ready",
+    "status": "ready",
+    "label": "Ready for demo",
+    "description": "Run report is present, no kill switch is active, and the operator can present current proof artifacts.",
+    "commands": [
+      "cargo run -p guardrail-cli -- submission --report data/run_report.json",
+      "./scripts/readiness.sh",
+      "open http://localhost:3000/compete"
+    ]
+  },
+  {
+    "id": "bootstrap",
+    "status": "blocking",
+    "label": "Generate run state",
+    "description": "The run report is missing or unreadable. Start paper mode and regenerate the current report before demo.",
+    "commands": [
+      "GUARDRAIL_CYCLES=3 cargo run -p guardrail-agent -- --config configs/paper.toml",
+      "cargo run -p guardrail-cli -- report --report data/run_report.json",
+      "open http://localhost:3000/readiness"
+    ]
+  },
+  {
+    "id": "kill_switch",
+    "status": "critical",
+    "label": "Kill switch active",
+    "description": "Trading must remain stopped until the kill-switch event is reviewed and the operator explicitly restarts the agent.",
+    "commands": [
+      "cargo run -p guardrail-cli -- report --report data/run_report.json",
+      "open http://localhost:3000/risk",
+      "open http://localhost:3000/events"
+    ]
+  },
+  {
+    "id": "execution_proof",
+    "status": "blocking",
+    "label": "Capture transaction proof",
+    "description": "The event log does not show a confirmed transaction. Run paper competition mode or inspect the TWAK execution path.",
+    "commands": [
+      "./scripts/compete.sh",
+      "open http://localhost:3000/trades",
+      "open http://localhost:3000/proof"
+    ]
+  },
+  {
+    "id": "operator_review",
+    "status": "warning",
+    "label": "Review current book",
+    "description": "The report is available, but the operator should review alerts, exposure, and the next rebalance before continuing.",
+    "commands": [
+      "cargo run -p guardrail-cli -- exposure --report data/run_report.json",
+      "cargo run -p guardrail-cli -- rebalance --report data/run_report.json",
+      "open http://localhost:3000/alerts"
+    ]
+  }
+]

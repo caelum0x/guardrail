@@ -1,0 +1,48 @@
+name: mean-reversion-chop-bsc
+version: 1.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that runs a mean-reversion / range-fade strategy specialised for
+  the CHOP (range-bound, directionless) regime over 20 eligible BSC tokens. It
+  buys oversold dips (low RSI and lower-Bollinger-band touches) and trims into
+  overbought stretches (high RSI and upper-band touches), sizing toward the
+  statistical re-centre rather than chasing momentum. It is most active in chop,
+  steps aside in trending risk_on / breakout (where buying weakness bleeds), and
+  de-risks to a large stable reserve in risk_off. It respects the same risk
+  envelope (per-name cap, stable reserve, drawdown gates) as its sibling Skills.
+  It is a strategy specification, not an executor — the Rust risk engine is the
+  final authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_ohlcv             # hourly candles -> RSI, Bollinger, ATR (crates/indicators)
+  - rsi_14                # 14-period Wilder RSI -> oversold/overbought
+  - bollinger_20_2        # 20-period, 2-sigma bands -> band-touch / %B position
+  - atr_14                # 14-period Wilder ATR -> volatility-scaled stops/targets
+  - cmc_fear_greed        # market-wide sentiment (0..100)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - reversion_scores      # per-asset 0..1 mean-reversion score + RSI/%B component
+  - target_portfolio      # weights summing to <=100, large USDT reserve
+  - actions               # entry | exit | rebalance | trim | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

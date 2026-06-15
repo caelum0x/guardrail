@@ -1,0 +1,56 @@
+groups:
+  - name: guardrail-alpha
+    rules:
+      - alert: MetricsSurfaceDown
+        expr: up{job=~"guardrail-api|guardrail-exporter"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Guardrail metrics surface is unreachable"
+          description: "Prometheus cannot scrape {{ $labels.job }} at {{ $labels.instance }}."
+
+      - alert: ReportStale
+        expr: guardrail_report_age_seconds > 300
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Run report is stale"
+          description: "No fresh run report for {{ $value }}s; the agent loop may be stalled."
+
+      - alert: DrawdownSoftBreach
+        expr: guardrail_total_drawdown_pct > 10
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Total drawdown above soft limit"
+          description: "Total drawdown {{ $value }}% exceeds the 10% soft limit."
+
+      - alert: DrawdownHardBreach
+        expr: guardrail_total_drawdown_pct > 20
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Total drawdown above hard limit"
+          description: "Total drawdown {{ $value }}% exceeds the 20% hard limit."
+
+      - alert: KillSwitchEngaged
+        expr: guardrail_kill_switch == 1
+        for: 30s
+        labels:
+          severity: critical
+        annotations:
+          summary: "Kill switch engaged"
+          description: "The agent kill switch is active; trading is halted."
+
+      - alert: NoRecentTrades
+        expr: increase(guardrail_trades_total[1h]) == 0
+        for: 1h
+        labels:
+          severity: warning
+        annotations:
+          summary: "No trades in the last hour"
+          description: "Track 1 requires minimum daily activity; no confirmed trades in 1h."

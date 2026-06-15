@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="Guardrail Alpha">
+  <rect width="128" height="128" rx="24" fill="#101315"/>
+  <path d="M28 84V44l36-16 36 16v40L64 100 28 84Z" fill="#d7f263"/>
+  <path d="M46 65h36M64 43v44" stroke="#101315" stroke-width="8" stroke-linecap="round"/>
+</svg>
+

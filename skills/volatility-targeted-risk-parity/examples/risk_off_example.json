@@ -1,0 +1,64 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Fearful, broadly declining tape — realised vol spikes across the universe. The target-vol scalar collapses (est_book_vol >> target) AND the regime multiplier drops to 0.4, so the book DE-RISKS hard into a near-full USDT reserve, keeping only tiny inverse-vol sleeves in the two lowest-vol large-caps plus a heartbeat trade.",
+  "inputs": {
+    "fear_greed": { "value": 22, "value_classification": "fear" },
+    "global": { "total_market_cap_usd": 2020000000000, "btc_dominance_pct": 55.5 },
+    "market_breadth": { "breadth_pct": 31.0, "median_24h_return": -3.6 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 60500.0, "percent_change_1h": -0.5, "percent_change_24h": -2.2, "percent_change_7d": -6.0, "market_cap_usd": 1190000000000, "volume_24h_usd": 26000000000, "liquidity_usd": 60000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3120.0, "percent_change_1h": -0.9, "percent_change_24h": -4.8, "percent_change_7d": -11.5, "market_cap_usd": 374000000000, "volume_24h_usd": 18000000000, "liquidity_usd": 52000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 555.0, "percent_change_1h": -1.2, "percent_change_24h": -5.4, "percent_change_7d": -12.0, "market_cap_usd": 79000000000, "volume_24h_usd": 2500000000, "liquidity_usd": 40000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.25, "percent_change_1h": -1.8, "percent_change_24h": -8.4, "percent_change_7d": -17.5, "market_cap_usd": 720000000, "volume_24h_usd": 205000000, "liquidity_usd": 8400000, "safety_score": 90, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "BTCB", "realised_vol": 0.85, "atr14": 2600.0, "atr_pct": 4.3 },
+      { "symbol": "ETH", "realised_vol": 1.10, "atr14": 150.0, "atr_pct": 4.8 },
+      { "symbol": "WBNB", "realised_vol": 1.25, "atr14": 27.0, "atr_pct": 4.9 },
+      { "symbol": "CAKE", "realised_vol": 1.60, "atr14": 0.20, "atr_pct": 8.9 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "breadth_pct 31 <= 40 AND median_24h_return -3.6 < -2 AND fear_greed 22 <= 30 -> risk_off (vol spikes; de-risk)",
+    "exposure_multiplier": 0.4,
+    "target_vol": { "target_portfolio_vol": 0.45, "est_book_vol": 1.05, "target_vol_scalar": 0.43, "reason": "est_book_vol 1.05 far above target 0.45 -> scalar 0.45/1.05 = 0.43 (strong de-risk)" },
+    "gross_pct": 17.2,
+    "gross_reason": "gross = 100 * regime_multiplier 0.4 * target_vol_scalar 0.43 = 17.2; the elevated-vol book is cut to two tiny lowest-vol sleeves, the rest rotates to USDT.",
+    "risk_weights": [
+      { "symbol": "BTCB", "realised_vol": 0.85, "inv_vol": 1.18, "raw_parity_weight": 0.413, "security_penalty": 0.01, "weight_pct": 7.0, "note": "lowest vol -> largest (still tiny) sleeve" },
+      { "symbol": "ETH", "realised_vol": 1.10, "inv_vol": 0.91, "raw_parity_weight": 0.318, "security_penalty": 0.01, "weight_pct": 5.0, "note": "second-lowest vol -> small sleeve" },
+      { "symbol": "WBNB", "realised_vol": 1.25, "inv_vol": 0.80, "raw_parity_weight": 0.280, "security_penalty": 0.02, "weight_pct": 0.0, "note": "dropped — gross too small to seat a meaningful sleeve" },
+      { "symbol": "CAKE", "realised_vol": 1.60, "inv_vol": 0.63, "raw_parity_weight": 0.220, "security_penalty": 0.03, "weight_pct": 0.0, "note": "highest vol -> smallest sleeve, dropped at this gross" }
+    ],
+    "risk_weights_reason": "Every realised_vol is elevated (BTCB 0.85 up to CAKE 1.60). inv_vol = 1/vol; raw_parity_weight = inv_vol / Σ inv_vol. The collapsed gross 17.2 only seats the two lowest-vol sleeves (BTCB, ETH); the rest stays in USDT to de-risk.",
+    "reserve_reason": "Two sleeves at 7 + 5 = 12 deployed; the remaining 88 is the USDT reserve. min_stable_reserve 10% comfortably honoured."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 7.0 },
+      { "symbol": "ETH", "weight_pct": 5.0 },
+      { "symbol": "USDT", "weight_pct": 88.0 }
+    ],
+    "rules": {
+      "entry": [
+        "De-risk in risk_off: the target-vol scalar (0.43) and the regime multiplier (0.4) both cut gross; seat only the lowest-vol sleeves tiny.",
+        "Hold the bulk of the book in USDT; do not chase — risk is managed by SIZING, not by a directional bet.",
+        "Per-name weight capped at 17%; min_stable_reserve floor 10% always honoured."
+      ],
+      "exit": [
+        "Scale the whole book down proportionally as est_book_vol rises above target; rotate the cut to USDT.",
+        "Trim/exit sleeves whose realised_vol spiked further; exit any name that becomes ineligible.",
+        "Re-deploy gross only as realised vol normalises and the target-vol scalar recovers toward 1.0."
+      ]
+    },
+    "actions": [
+      { "type": "exit", "symbol": "WBNB", "side": "sell", "target_weight_pct": 0.0, "reason": "risk_off de-risk + realised_vol 1.25 -> sleeve dropped, rotate to USDT", "execution": "twap" },
+      { "type": "exit", "symbol": "CAKE", "side": "sell", "target_weight_pct": 0.0, "reason": "highest realised_vol 1.60 -> dropped at the collapsed gross", "execution": "twap" },
+      { "type": "rebalance", "symbol": "BTCB", "side": "buy", "target_weight_pct": 7.0, "reason": "lowest realised_vol 0.85 -> largest (tiny) inverse-vol sleeve", "execution": "twap" },
+      { "type": "rebalance", "symbol": "ETH", "side": "buy", "target_weight_pct": 5.0, "reason": "second-lowest realised_vol 1.10 -> small inverse-vol sleeve", "execution": "twap" },
+      { "type": "heartbeat", "symbol": "BTCB", "side": "buy", "target_weight_pct": 7.0, "reason": "smallest compliant daily-trade clip folded into the lowest-vol sleeve; satisfies min_trades_per_day 1 without taking real risk", "execution": "twap" }
+    ]
+  }
+}

@@ -1,0 +1,303 @@
+# =============================================================================
+# Regime-Routed BSC Alpha — Backtestable Strategy Specification
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, regime-routed
+# trading strategy over a fixed universe of 20 eligible BSC tokens. It mirrors,
+# field-for-field, the production Rust engine so an LLM (or a human) can
+# regenerate, audit, or backtest the exact behaviour the live agent ships:
+#
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   feature/signal blend     -> crates/feature-engine/src/* + crates/indicators
+#   alpha score              -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Every numeric constant below is traceable to those sources. Nothing here
+# executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "2.0.0"
+name: regime-routed-bsc-alpha
+track: "Track 2 — Strategy Skills"
+description: >
+  Turns CoinMarketCap market, OHLCV, DEX-liquidity, token-security, trending,
+  global and Fear & Greed data into a regime-routed long/stable rotation over
+  20 eligible BSC tokens. A market-regime classifier routes overall exposure;
+  a multi-factor alpha blend (momentum + RSI + MACD + volume + volatility +
+  liquidity + sentiment + execution-quality, minus a security penalty) ranks
+  candidates; a score-proportional allocator with a per-name cap and stable
+  reserve builds the target book; explicit entry/exit and risk rules govern
+  every position.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg, never alpha candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  # Per-asset liquidity/volume floors carried from the config. Assets that fail
+  # their floor are dropped from the candidate set before scoring.
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the
+      config (core/stable: 1,000,000; defi/major: 500,000; long-tail:
+      200,000-300,000). An asset below its floor is ineligible this cycle.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the CMC data feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_ohlcv:
+    description: Candle history used to derive RSI, MACD, ATR-based volatility.
+    fields: [open, high, low, close, volume, timestamp]
+    endpoint: /v2/cryptocurrency/ohlcv/historical
+    lookback_candles: 60
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_trending:
+    description: Trending / most-visited tokens; a soft tailwind confirming participation.
+    endpoint: /v1/cryptocurrency/trending/latest
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy risk appetite.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless market.
+  # exposure_multiplier scales the risk budget in allocator.rs.
+  exposure_multipliers:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 4. FEATURE / SIGNAL BLEND — mirrors feature-engine + indicators + alpha_score
+# -----------------------------------------------------------------------------
+# Each feature is normalized to 0..1. The alpha score is the weighted sum
+# divided by the weight sum, then haircut by the security penalty:
+#
+#   raw   = Σ ( weight_i * feature_i )
+#   norm  = raw / Σ weight_i
+#   score = clamp01( norm * (1 - security_penalty) )
+#
+# (See alpha_score.rs — note risk_penalty is applied multiplicatively, NOT as
+#  a weighted term in the numerator.)
+feature_blend:
+  normalization:
+    sigmoid: "1 / (1 + e^-x)"
+    clamp01: "clamp(x, 0, 1)"
+    min_max: "clamp((x - lo) / (hi - lo), 0, 1)"
+  weights:                 # strategy_config.rs::FeatureWeights::default()
+    momentum: 0.30
+    volume: 0.15
+    volatility: 0.10
+    liquidity: 0.15
+    sentiment: 0.10
+    execution_quality: 0.20
+    security_penalty: 1.0  # applied multiplicatively, not summed
+  features:
+    momentum:
+      source: feature-engine/src/momentum.rs (+ indicators RSI/MACD confirmation)
+      formula: "sigmoid( (0.6*ret_1h + 0.4*ret_24h) / 5 )"
+      indicators:
+        rsi:  { period: 14, role: "confirm — favour 40..70, fade >75 overbought / <30 if no reversal" }
+        macd: { fast: 12, slow: 26, signal: 9, role: "confirm — histogram > 0 and rising supports long" }
+      note: Recent (1h) momentum weighted more than 24h; RSI/MACD from OHLCV confirm direction.
+    volume:
+      source: feature-engine/src/volume.rs
+      formula: "min_max(volume_24h / market_cap, 0, 0.5)  (fallback: min_max(log10(volume), 4, 8))"
+      note: Turnover proxy for participation.
+    volatility:
+      source: feature-engine/src/volatility.rs
+      formula: "clamp01( 1 - |volatility_1h - 3| / 6 )"
+      note: Triangular preference peaking at ~3% hourly range; ATR-derived.
+    liquidity:
+      source: feature-engine/src/liquidity.rs
+      formula: "min_max(log10(liquidity_usd), 5, 8)   # ~$100k .. $100M"
+      note: Deeper on-chain DEX liquidity scores higher.
+    sentiment:
+      source: feature-engine/src/sentiment.rs
+      formula: "if fg<=75: clamp01(fg/75) else clamp01(1 - (fg-75)/50)"
+      note: Greed is a tailwind; extreme greed (>75) is tapered. One market value for all assets.
+    execution_quality:
+      source: feature-engine/src/execution_quality.rs
+      formula: "clamp01( 1 - (2000 / liquidity_usd) * 20 )"
+      note: Expected fill quality for a $2,000 nominal clip vs pool depth.
+    security_penalty:
+      source: feature-engine/src/risk_penalty.rs
+      formula: "clamp01( (100 - safety_score)/100 * 0.5 + 0.25 * num_security_flags )"
+      note: Higher = worse. Applied as a multiplicative haircut (1 - penalty).
+  alpha_score:
+    source: strategy-engine/src/alpha_score.rs
+    formula: "clamp01( (Σ w_i*f_i / Σ w_i) * (1 - security_penalty) )"
+    output: per-asset score in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65        # strategy_config.rs
+    max_positions: 5                # top-N by score
+    ordering: "descending alpha score; ties broken by liquidity then symbol"
+  confirmation:
+    rsi: "Prefer RSI in 40..70; do not initiate above 80 without MACD confirmation."
+    macd: "Prefer MACD histogram > 0 and rising for new longs."
+    trending: "Presence on CMC trending is a soft positive tiebreaker, never a sole reason to enter."
+  execution:
+    require_quote_before_swap: true # risk-engine/src/policy.rs
+    execution_layer: twap_only      # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  score_decay:
+    min_score_to_hold: 0.50         # below this, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0    # only act if target vs current drifts > 3% of NAV
+  protective:
+    stop_loss_pct: 12.0             # force-exit at -12% vs avg cost
+    take_profit_pct: 25.0           # force-exit at +25% vs avg cost
+  regime_exit:
+    - "On transition to risk_off, cut risk exposure toward the 0.2x multiplier (rotate into reserve)."
+    - "On transition to chop, halve risk exposure (0.5x multiplier)."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0     # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0           # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional
+  steps:
+    - "Select entries with score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold 100% reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - reserve]."
+    - "Per name: weight = risk_budget * (score / Σ selected_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder)."
+  parameters:
+    target_stable_reserve_pct: 15.0  # strategy_config.rs (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0    # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0       # risk-engine cap on a single new buy
+  regime_exposure_multiplier:        # how much of the risk budget is deployed
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10     # if no signal-driven trade occurs, a tiny
+                                    # heartbeat trade (<= 0.10% NAV) satisfies the
+                                    # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. When the strategy is
+    flat (e.g. deep risk_off) a minimal heartbeat trade keeps the agent
+    compliant while the kill switch / throttle still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. Proposals that violate caps are clamped or rejected — the Skill cannot
+    override risk.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  asset_scores: "list of { symbol, score, components, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

@@ -1,0 +1,145 @@
+# The trading agent and its read-only sidecars share one SQLite event log
+# + run report, so they co-locate in a single pod with a shared data volume.
+# The agent is the sole writer; api/exporter/monitor read.
+# Single writer: replicas is fixed at 1 and the strategy is Recreate so the old
+# writer fully stops before a new one starts (never run two writers at once).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guardrail.core.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  replicas: 1 # single writer; do NOT scale the agent horizontally
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "guardrail.core.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "guardrail.core.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "guardrail.core.name" . }}-data
+          {{- else }}
+          emptyDir: {} # swap for a PVC (persistence.enabled=true) to persist across restarts
+          {{- end }}
+        {{- if .Values.configs.enabled }}
+        - name: configs
+          configMap:
+            name: {{ .Values.configs.name }}
+            optional: true
+        {{- end }}
+      containers:
+        - name: agent
+          image: "{{ .Values.agent.image.repository }}:{{ .Values.agent.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          {{- with .Values.agent.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.data.databaseUrl | quote }}
+            - name: GUARDRAIL_REPORT
+              value: {{ .Values.data.report | quote }}
+            {{- range $k, $v := .Values.agent.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.data.mountPath }}
+          resources:
+            {{- toYaml .Values.agent.resources | nindent 12 }}
+        - name: api
+          image: "{{ .Values.api.image.repository }}:{{ .Values.api.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.data.databaseUrl | quote }}
+            {{- range $k, $v := .Values.api.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.api.port }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: {{ .Values.api.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.data.mountPath }}
+          resources:
+            {{- toYaml .Values.api.resources | nindent 12 }}
+        - name: exporter
+          image: "{{ .Values.exporter.image.repository }}:{{ .Values.exporter.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: DATABASE_URL
+              value: {{ .Values.data.databaseUrl | quote }}
+            - name: GUARDRAIL_REPORT
+              value: {{ .Values.data.report | quote }}
+            {{- range $k, $v := .Values.exporter.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.exporter.port }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.data.mountPath }}
+          resources:
+            {{- toYaml .Values.exporter.resources | nindent 12 }}
+        - name: monitor
+          image: "{{ .Values.monitor.image.repository }}:{{ .Values.monitor.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            - name: GUARDRAIL_REPORT
+              value: {{ .Values.data.report | quote }}
+            {{- range $k, $v := .Values.monitor.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: {{ .Values.data.mountPath }}
+          resources:
+            {{- toYaml .Values.monitor.resources | nindent 12 }}
+{{- if .Values.persistence.enabled }}
+---
+# Shared data PVC for the core pod (used when persistence.enabled=true).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "guardrail.core.name" . }}-data
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core
+spec:
+  accessModes:
+    {{- toYaml .Values.persistence.accessModes | nindent 4 }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+  {{- if .Values.persistence.storageClass }}
+  storageClassName: {{ .Values.persistence.storageClass | quote }}
+  {{- end }}
+{{- end }}

@@ -1,0 +1,1467 @@
+{
+  "info": {
+    "name": "Guardrail Alpha API",
+    "_postman_id": "guardrail-alpha-api-collection",
+    "description": "Read-only GET requests for the Guardrail Alpha API, one per route in docs/api/openapi.yaml. Every endpoint is side-effect free. Set the baseUrl variable to point at your server (default http://localhost:8080).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "readiness/competition",
+      "item": [
+        {
+          "name": "GET /readiness",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/readiness",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "readiness"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /audit-manifest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/audit-manifest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "audit-manifest"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /prizes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/prizes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "prizes"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /briefing",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/briefing",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "briefing"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /scorecard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/scorecard",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scorecard"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /compete",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/compete",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "compete"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "market data",
+      "item": [
+        {
+          "name": "GET /universe",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/universe",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "universe"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /assets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/assets",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "assets"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /costs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/costs",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "costs"
+              ],
+              "query": [
+                {
+                  "key": "amount_usd",
+                  "value": "1000",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /indicators",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/indicators",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "indicators"
+              ],
+              "query": [
+                {
+                  "key": "symbol",
+                  "value": "WBNB",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "steps",
+                  "value": "60",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /liquidity",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/liquidity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "liquidity"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /trending",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trending",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trending"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /watchlist",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/watchlist",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "watchlist"
+              ],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "12",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /quotes",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/quotes",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "quotes"
+              ],
+              "query": [
+                {
+                  "key": "amount_usd",
+                  "value": "1000",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /regime",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/regime",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "regime"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /funding",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/funding",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "funding"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "strategy/backtest",
+      "item": [
+        {
+          "name": "GET /policy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "policy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /policy/compile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/policy/compile?mandate=Trade%20CAKE%20max%20drawdown%2020%25%20kill%20switch%2025%25",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "policy",
+                "compile"
+              ],
+              "query": [
+                {
+                  "key": "mandate",
+                  "value": "Trade CAKE max drawdown 20% kill switch 25%",
+                  "disabled": false,
+                  "description": "required"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /backtest",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/backtest",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "backtest"
+              ],
+              "query": [
+                {
+                  "key": "steps",
+                  "value": "60",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "fear_greed",
+                  "value": "60",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "preset",
+                  "value": "balanced",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /walkforward",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/walkforward",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "walkforward"
+              ],
+              "query": [
+                {
+                  "key": "windows",
+                  "value": "6",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "steps",
+                  "value": "30",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "preset",
+                  "value": "balanced",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /sweep",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sweep",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sweep"
+              ],
+              "query": [
+                {
+                  "key": "steps",
+                  "value": "40",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "fear_greed",
+                  "value": "20,40,60,80",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "preset",
+                  "value": "balanced",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /job-simulator",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/job-simulator",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "job-simulator"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /mandates",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/mandates",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mandates"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /optimize",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/optimize",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "optimize"
+              ],
+              "query": [
+                {
+                  "key": "symbols",
+                  "value": "CAKE,WBNB,BTCB",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "scores",
+                  "value": "0.6,0.3,0.1",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "vols",
+                  "value": "0.4,0.5,0.6",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /experiments",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/experiments",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "experiments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /rebalance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/rebalance",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "rebalance"
+              ],
+              "query": [
+                {
+                  "key": "preset",
+                  "value": "balanced",
+                  "disabled": true,
+                  "description": "optional"
+                },
+                {
+                  "key": "nav_usd",
+                  "value": "100000",
+                  "disabled": true,
+                  "description": "optional"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /scenarios",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/scenarios",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "scenarios"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "risk/portfolio",
+      "item": [
+        {
+          "name": "GET /portfolio",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/portfolio",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "portfolio"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /trades",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/trades",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "trades"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /signals",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signals",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signals"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /risk",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/risk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "risk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /alerts",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/alerts",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "alerts"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /history",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /signing-policy",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/signing-policy",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "signing-policy"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /exposure",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exposure",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exposure"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /wallet-controls",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/wallet-controls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "wallet-controls"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /drift",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/drift",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "drift"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /exit-triggers",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/exit-triggers",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "exit-triggers"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "identity/proof",
+      "item": [
+        {
+          "name": "GET /proof",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/proof",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "proof"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /agent-services",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agent-services",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agent-services"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /agent-card",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/agent-card",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "agent-card"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /.well-known/agent-card.json",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/.well-known/agent-card.json",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ".well-known",
+                "agent-card.json"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /bnb-sdk",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/bnb-sdk",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "bnb-sdk"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /sdk-catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/sdk-catalog",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "sdk-catalog"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /commerce",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/commerce",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "commerce"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /skill",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/skill",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "skill"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "ops",
+      "item": [
+        {
+          "name": "GET /health",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /events",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "events"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /cockpit",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cockpit",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cockpit"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/report",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /report/markdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/report/markdown",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "report",
+                "markdown"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /export/submission.md",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/export/submission.md",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "export",
+                "submission.md"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /config",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/config",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "config"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /ops",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/ops",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "ops"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/metrics",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "metrics"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /playbook",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/playbook",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "playbook"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /budget",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/budget",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "budget"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET /heartbeat",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/heartbeat",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "heartbeat"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080",
+      "type": "string"
+    }
+  ]
+}

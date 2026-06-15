@@ -1,0 +1,193 @@
+# Default values for the guardrail chart.
+# Mirrors deploy/k8s: one core pod (agent + api + exporter + monitor) sharing a
+# data volume, plus a separate dashboard Deployment + Service.
+
+# Optional global name overrides (see _helpers.tpl).
+nameOverride: ""
+fullnameOverride: ""
+
+# Image pull settings shared by all images.
+imagePullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Pod-level security context for the core pod (matches deploy/k8s).
+securityContext:
+  runAsNonRoot: true
+  runAsUser: 10001
+  fsGroup: 10001
+
+# Shared application data.
+#   DATABASE_URL    - SQLite event log written by the agent, read by api/exporter.
+#   GUARDRAIL_REPORT - run report JSON written by the agent, read by exporter/monitor.
+data:
+  databaseUrl: "sqlite://data/guardrail_alpha.db"
+  report: "data/run_report.json"
+  # Mount path for the shared data volume inside every core container.
+  mountPath: /app/data
+
+# Shared data volume.
+#   persistence.enabled=false -> emptyDir (ephemeral, mirrors k8s default).
+#   persistence.enabled=true  -> PersistentVolumeClaim of the given size.
+persistence:
+  enabled: false
+  size: 1Gi
+  storageClass: ""
+  accessModes:
+    - ReadWriteOnce
+
+# Optional ConfigMap holding configs/ (e.g. paper.toml). Mounted if it exists.
+configs:
+  enabled: true
+  name: guardrail-configs
+
+# ---------------------------------------------------------------------------
+# Core pod containers (single replica; the agent is the sole writer).
+# ---------------------------------------------------------------------------
+agent:
+  image:
+    repository: guardrail/agent
+    tag: latest
+  args:
+    - "--config"
+    - "configs/paper.toml"
+  env:
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
+
+api:
+  image:
+    repository: guardrail/api
+    tag: latest
+  port: 8080
+  env:
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: "50m"
+      memory: "64Mi"
+    limits:
+      cpu: "500m"
+      memory: "256Mi"
+
+exporter:
+  image:
+    repository: guardrail/exporter
+    tag: latest
+  port: 9100
+  env:
+    EXPORTER_ADDR: "0.0.0.0:9100"
+  resources:
+    requests:
+      cpu: "25m"
+      memory: "32Mi"
+    limits:
+      cpu: "250m"
+      memory: "128Mi"
+
+monitor:
+  image:
+    repository: guardrail/monitor
+    tag: latest
+  env:
+    GUARDRAIL_MONITOR_CHECKS: "0"
+    RUST_LOG: info
+  resources:
+    requests:
+      cpu: "25m"
+      memory: "32Mi"
+    limits:
+      cpu: "250m"
+      memory: "128Mi"
+
+# ---------------------------------------------------------------------------
+# Dashboard (separate Deployment + Service).
+# ---------------------------------------------------------------------------
+dashboard:
+  enabled: true
+  image:
+    repository: guardrail/dashboard
+    tag: latest
+  port: 3000
+  # Browser-facing API URL; set to the externally-routable API address.
+  apiUrl: "http://localhost:8080"
+  env:
+    NODE_ENV: production
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "128Mi"
+    limits:
+      cpu: "1"
+      memory: "512Mi"
+
+# ---------------------------------------------------------------------------
+# Alert relay (OPTIONAL; disabled by default).
+# A standalone, stdlib-only daemon (see integrations/alert-relay) that polls the
+# api /alerts feed and forwards new alerts to chat/email sinks. It is a pure
+# read-only consumer of the API and holds no keys of its own.
+#
+# Secrets are NEVER inlined here. Sink credentials are referenced from the
+# config as env:VAR_NAME and supplied via an existing Kubernetes Secret named
+# in alertRelay.secretName (each key in that Secret becomes an env var).
+# ---------------------------------------------------------------------------
+alertRelay:
+  # Off by default: opt in with --set alertRelay.enabled=true.
+  enabled: false
+  image:
+    repository: guardrail/alert-relay
+    tag: latest
+  # Relay arguments. Default runs the continuous LIVE loop against the mounted
+  # config. Override to "--dry-run" for an offline, no-network smoke deployment.
+  args:
+    - "--live"
+    - "--config"
+    - "/app/configs/alerts.json"
+  # Name of an EXISTING Secret whose keys are injected as env vars (e.g.
+  # GUARDRAIL_SLACK_WEBHOOK_URL, GUARDRAIL_SMTP_PASSWORD, ...). Leave empty to
+  # run with no secret-backed env (only --dry-run is then meaningful).
+  # NOTE: this chart never creates the Secret or inlines secret values.
+  secretName: ""
+  # Plain (non-secret) environment variables for the relay container.
+  env:
+    PYTHONUNBUFFERED: "1"
+  # Relay config, rendered into a ConfigMap and mounted at /app/configs/alerts.json.
+  # All credential fields use env:VAR_NAME references resolved from secretName.
+  config:
+    poll_interval_seconds: 60
+    sink_timeout_seconds: 10
+    severity_threshold: "warning"
+    include_readiness: true
+    api:
+      # In-cluster api Service URL. Override if the api port/name differs.
+      base_url: "http://guardrail-api:8080"
+    sinks:
+      - kind: slack
+        enabled: false
+        webhook_url: "env:GUARDRAIL_SLACK_WEBHOOK_URL"
+      - kind: email
+        enabled: false
+        host: "env:GUARDRAIL_SMTP_HOST"
+        port: 587
+        use_tls: true
+        sender: "env:GUARDRAIL_SMTP_SENDER"
+        recipients: "env:GUARDRAIL_SMTP_RECIPIENTS"
+        username: "env:GUARDRAIL_SMTP_USERNAME"
+        password: "env:GUARDRAIL_SMTP_PASSWORD"
+        subject_prefix: "[Guardrail]"
+  resources:
+    requests:
+      cpu: "25m"
+      memory: "32Mi"
+    limits:
+      cpu: "250m"
+      memory: "128Mi"
+
+# Service definitions (ClusterIP by default).
+service:
+  type: ClusterIP

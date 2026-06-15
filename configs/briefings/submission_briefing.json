@@ -1,0 +1,50 @@
+{
+  "title": "Guardrail Alpha Submission Briefing",
+  "claims": [
+    "Rust-native autonomous trading engine",
+    "CMC market intelligence and eligible BSC universe",
+    "TWAK-only self-custody execution path",
+    "Risk gate before every proposed order",
+    "BNB identity/proof artifacts and competition readiness surfaces",
+    "BNB Agent SDK module map covering ERC-8004, ERC-8183, x402, signing policy, wallet providers, storage, ERC-20, paymaster, and nonce manager",
+    "ERC-8183 commerce readiness plus TWAK x402 signing policy evidence",
+    "Daily-trade heartbeat planner and weighted judge scorecard",
+    "Product-owned BNB Agent SDK catalog and ERC-8183 provider service offerings",
+    "ERC-8004 agent card plus deterministic ERC-8183 job simulation",
+    "Read-only operator dashboard, CLI, and API"
+  ],
+  "artifact_paths": [
+    "/compete",
+    "/readiness",
+    "/proof",
+    "/bnb-sdk",
+    "/commerce",
+    "/signing-policy",
+    "/heartbeat",
+    "/scorecard",
+    "/sdk-catalog",
+    "/agent-services",
+    "/agent-card",
+    "/job-simulator",
+    "/report",
+    "/export/submission.md",
+    "/scenarios",
+    "/costs"
+  ],
+  "demo_commands": [
+    "cargo run -p guardrail-cli -- submission --report data/run_report.json",
+    "cargo run -p guardrail-cli -- exposure --report data/run_report.json",
+    "cargo run -p guardrail-cli -- scenarios --report data/run_report.json",
+    "cargo run -p guardrail-cli -- costs",
+    "cargo run -p guardrail-cli -- bnb-sdk",
+    "cargo run -p guardrail-cli -- commerce",
+    "cargo run -p guardrail-cli -- signing-policy",
+    "cargo run -p guardrail-cli -- heartbeat",
+    "cargo run -p guardrail-cli -- scorecard",
+    "cargo run -p guardrail-cli -- sdk-catalog",
+    "cargo run -p guardrail-cli -- agent-services",
+    "cargo run -p guardrail-cli -- agent-card",
+    "cargo run -p guardrail-cli -- job-simulator",
+    "open http://localhost:3000/compete"
+  ]
+}

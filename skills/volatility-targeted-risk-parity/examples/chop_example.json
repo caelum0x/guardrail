@@ -1,0 +1,70 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Directionless, range-bound tape with moderate realised vol. Regime multiplier trims to 0.8 (keep dry powder) and the target-vol scalar is near 1.0 (book vol ~ target). Run a diversified inverse-vol book across the lowest-vol names with a larger USDT reserve than risk_on.",
+  "inputs": {
+    "fear_greed": { "value": 48, "value_classification": "neutral" },
+    "global": { "total_market_cap_usd": 2310000000000, "btc_dominance_pct": 52.0 },
+    "market_breadth": { "breadth_pct": 49.0, "median_24h_return": 0.2 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 63000.0, "percent_change_1h": 0.1, "percent_change_24h": 0.3, "percent_change_7d": 0.8, "market_cap_usd": 1240000000000, "volume_24h_usd": 21000000000, "liquidity_usd": 61000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3420.0, "percent_change_1h": -0.1, "percent_change_24h": 0.4, "percent_change_7d": -0.6, "market_cap_usd": 410000000000, "volume_24h_usd": 13000000000, "liquidity_usd": 54000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 602.0, "percent_change_1h": 0.2, "percent_change_24h": 0.5, "percent_change_7d": 1.1, "market_cap_usd": 86000000000, "volume_24h_usd": 1600000000, "liquidity_usd": 42000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 14.7, "percent_change_1h": -0.2, "percent_change_24h": -0.4, "percent_change_7d": 0.3, "market_cap_usd": 9150000000, "volume_24h_usd": 370000000, "liquidity_usd": 11000000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "XRP", "price_usd": 0.62, "percent_change_1h": 0.0, "percent_change_24h": 0.1, "percent_change_7d": -0.2, "market_cap_usd": 35000000000, "volume_24h_usd": 1500000000, "liquidity_usd": 18000000, "safety_score": 94, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "BTCB", "realised_vol": 0.42, "atr14": 1250.0, "atr_pct": 2.0 },
+      { "symbol": "XRP", "realised_vol": 0.50, "atr14": 0.013, "atr_pct": 2.1 },
+      { "symbol": "ETH", "realised_vol": 0.58, "atr14": 70.0, "atr_pct": 2.0 },
+      { "symbol": "WBNB", "realised_vol": 0.68, "atr14": 14.0, "atr_pct": 2.3 },
+      { "symbol": "LINK", "realised_vol": 0.82, "atr14": 0.65, "atr_pct": 4.4 }
+    ]
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breadth_pct 49 in [40,55] AND |median_24h_return| 0.2 < 1 AND fear_greed 48 neutral -> chop (directionless range)",
+    "exposure_multiplier": 0.8,
+    "target_vol": { "target_portfolio_vol": 0.45, "est_book_vol": 0.52, "target_vol_scalar": 0.87, "reason": "est_book_vol 0.52 modestly above target 0.45 -> scalar 0.45/0.52 = 0.87" },
+    "gross_pct": 69.6,
+    "gross_reason": "gross = 100 * regime_multiplier 0.8 * target_vol_scalar 0.87 = 69.6; a diversified inverse-vol book with a larger USDT reserve to keep dry powder in the range.",
+    "risk_weights": [
+      { "symbol": "BTCB", "realised_vol": 0.42, "inv_vol": 2.38, "raw_parity_weight": 0.276, "security_penalty": 0.01, "weight_pct": 16.0, "note": "lowest vol -> largest sleeve, just under the cap at this gross" },
+      { "symbol": "XRP", "realised_vol": 0.50, "inv_vol": 2.00, "raw_parity_weight": 0.232, "security_penalty": 0.02, "weight_pct": 16.0, "note": "second-lowest vol -> large sleeve" },
+      { "symbol": "ETH", "realised_vol": 0.58, "inv_vol": 1.72, "raw_parity_weight": 0.200, "security_penalty": 0.01, "weight_pct": 14.0, "note": "mid sleeve" },
+      { "symbol": "WBNB", "realised_vol": 0.68, "inv_vol": 1.47, "raw_parity_weight": 0.171, "security_penalty": 0.02, "weight_pct": 12.0, "note": "smaller sleeve" },
+      { "symbol": "LINK", "realised_vol": 0.82, "inv_vol": 1.22, "raw_parity_weight": 0.142, "security_penalty": 0.03, "weight_pct": 10.0, "note": "highest vol of the set -> smallest sleeve" }
+    ],
+    "risk_weights_reason": "inv_vol = 1/realised_vol; raw_parity_weight = inv_vol / Σ inv_vol (Σ inv_vol = 8.79). Each name's risk contribution (weight*vol) is equalised. gross 69.6 spreads the parity weights across five low-vol names; no sleeve reaches the 17% cap in chop.",
+    "reserve_reason": "Five sleeves 16+16+14+12+10 = 68 deployed; the remaining 32 is the USDT reserve — larger than risk_on to hold dry powder in a directionless tape."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 16.0 },
+      { "symbol": "XRP", "weight_pct": 16.0 },
+      { "symbol": "ETH", "weight_pct": 14.0 },
+      { "symbol": "WBNB", "weight_pct": 12.0 },
+      { "symbol": "LINK", "weight_pct": 10.0 },
+      { "symbol": "USDT", "weight_pct": 32.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Hold a diversified inverse-vol book (weight ∝ 1/realised_vol) across the lowest-vol eligible names; no directional score gate.",
+        "Trim gross to the 0.8 regime multiplier in chop and keep a larger USDT reserve as dry powder.",
+        "Per-name weight capped at 17%; surplus rolls to the USDT reserve."
+      ],
+      "exit": [
+        "Rebalance toward parity when a name's realised_vol drifts > 20% relative or its sleeve drifts > 3% of NAV.",
+        "Scale the book down if est_book_vol rises above target; exit any name that becomes ineligible.",
+        "Hold reserve patiently — a risk-parity book is low-turnover in a range."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "BTCB", "side": "buy", "target_weight_pct": 16.0, "reason": "lowest realised_vol 0.42 -> largest inverse-vol sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "XRP", "side": "buy", "target_weight_pct": 16.0, "reason": "realised_vol 0.50 -> large inverse-vol sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 14.0, "reason": "realised_vol 0.58 -> mid sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 12.0, "reason": "realised_vol 0.68 -> smaller sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 10.0, "reason": "highest realised_vol 0.82 -> smallest sleeve so it contributes equal risk", "execution": "twap" }
+    ]
+  }
+}

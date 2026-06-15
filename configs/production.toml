@@ -1,0 +1,62 @@
+# ============================================================================
+# Guardrail Alpha — LIVE COMPETITION PROFILE
+# ============================================================================
+# This profile runs the agent against the real CoinMarketCap data path and the
+# real TWAK execution surface for the live competition. The runtime safely
+# falls back to deterministic mocks whenever a required key or URL is absent,
+# so it never fails closed mid-window — but for a real live run the following
+# environment variables MUST be exported before launch:
+#
+#   Required:
+#     CMC_API_KEY        CoinMarketCap API key for the REST data path.
+#     TWAK_BASE_URL      Base URL for the TWAK REST execution surface
+#                        (resolves [twak].base_url, which is left absent here).
+#     BSC_RPC_URL        BNB Smart Chain JSON-RPC endpoint for chain reads/writes.
+#
+#   Optional (x402 paid CMC requests):
+#     CMC_X402_FROM      Payer address for x402-settled CMC requests.
+#     CMC_X402_SIGNATURE Signature authorizing the x402 payment.
+#
+# See docs/LIVE_RUNBOOK.md for the full operator runbook and scripts/compete.sh
+# for the one-command live launch flow.
+# ============================================================================
+
+[app]
+name = "guardrail-alpha"
+mode = "live"
+database_url = "sqlite://data/guardrail_alpha.db"
+
+[chain]
+chain_id = 56
+name = "bsc"
+
+[cmc]
+use_mock = false
+use_rest = true
+use_x402 = true
+request_timeout_ms = 8000
+
+[twak]
+mode = "rest"
+quote_before_swap = true
+competition_register_enabled = true
+autonomous = true
+# base_url intentionally absent — resolved from env TWAK_BASE_URL at runtime.
+
+[strategy]
+loop_interval_seconds = 900
+rebalance_threshold_pct = 3
+max_positions = 5
+min_score_to_enter = 0.65
+min_score_to_hold = 0.50
+stop_loss_pct = 10
+take_profit_pct = 20
+target_stable_reserve_pct = 18
+allocation_method = "risk_parity"
+
+[risk]
+policy_path = "configs/risk_policy.production.json"
+
+[reporting]
+daily_report_enabled = true
+publish_report_hash = true

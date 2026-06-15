@@ -1,0 +1,38 @@
+{
+  "description": "Required-output schema contract for the mean-reversion-chop-bsc Skill.",
+  "required_outputs": [
+    "market_regime",
+    "reversion_scores",
+    "target_portfolio",
+    "actions",
+    "risk_policy"
+  ],
+  "market_regime_enum": ["risk_on", "risk_off", "chop", "breakout"],
+  "reversion_score_fields": ["symbol", "base_score", "rsi", "percent_b", "reversion_tilt", "reversion_score", "security_penalty"],
+  "target_portfolio_fields": ["symbol", "weight_pct"],
+  "action_types": ["entry", "exit", "trim", "rebalance", "no_entry", "reject", "heartbeat"],
+  "invariants": {
+    "score_range": [0.0, 1.0],
+    "reversion_tilt_range": [0.0, 1.0],
+    "rsi_range": [0.0, 100.0],
+    "percent_b_typical_range": [-0.5, 1.5],
+    "weights_sum_pct": 100,
+    "max_position_weight_pct": 17.0,
+    "min_score_to_enter": 0.65,
+    "min_score_to_hold": 0.50,
+    "target_stable_reserve_pct": 25.0,
+    "max_positions": 5,
+    "rsi_oversold": 30,
+    "rsi_overbought": 70,
+    "rsi_breakdown": 12,
+    "bollinger_buy_zone_hi": 0.20,
+    "bollinger_trim_zone_lo": 0.80,
+    "stop_loss_pct": 12.0,
+    "atr_stop_multiple": 2.5,
+    "take_profit_pct": 25.0,
+    "drawdown_throttle_pct": 22.0,
+    "kill_switch_pct": 24.0,
+    "reserve_symbol": "USDT",
+    "exposure_multipliers": { "chop": 1.0, "risk_on": 0.4, "breakout": 0.2, "risk_off": 0.15 }
+  }
+}

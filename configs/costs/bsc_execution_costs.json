@@ -1,0 +1,19 @@
+{
+  "chain": "bsc",
+  "native_symbol": "BNB",
+  "native_price_usd": 610,
+  "gas_price_gwei": 3,
+  "quote_gas_units": 45000,
+  "swap_gas_units": 210000,
+  "approval_gas_units": 65000,
+  "register_gas_units": 120000,
+  "default_order_notional_usd": 1000,
+  "approval_required": true,
+  "routes": [
+    { "from": "USDT", "to": "WBNB", "side": "buy" },
+    { "from": "USDT", "to": "ETH", "side": "buy" },
+    { "from": "USDT", "to": "DOGE", "side": "buy" },
+    { "from": "WBNB", "to": "USDT", "side": "sell" },
+    { "from": "ETH", "to": "USDT", "side": "sell" }
+  ]
+}

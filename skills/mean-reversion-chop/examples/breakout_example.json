@@ -1,0 +1,67 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 72, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2620000000000, "btc_dominance_pct": 49.0 },
+    "market_breadth": { "breadth_pct": 71.0, "median_24h_return": 3.8 },
+    "indicators": [
+      { "symbol": "WBNB", "rsi": 78.0, "percent_b": 1.02, "atr_pct": 2.6, "note": "RSI 78 overbought, %B > 1 riding the upper band -> tilt 0, a strong trend not a fade" },
+      { "symbol": "CAKE", "rsi": 81.0, "percent_b": 1.08, "atr_pct": 3.5, "note": "RSI 81 deeply overbought, %B 1.08 -> tilt 0" },
+      { "symbol": "AVAX", "rsi": 74.0, "percent_b": 0.95, "atr_pct": 3.8, "note": "RSI 74 >= overbought 70 (rsi_score 0); %B 0.95 >= 0.80 (pb 0) -> tilt 0" },
+      { "symbol": "INJ", "rsi": 83.0, "percent_b": 1.15, "atr_pct": 4.4, "note": "RSI 83 extreme overbought, %B 1.15 well above the band -> tilt 0" },
+      { "symbol": "LINK", "rsi": 66.0, "percent_b": 0.74, "atr_pct": 2.9, "note": "RSI 66 / %B 0.74 elevated but not oversold -> rsi_score 0, pb 0 -> tilt 0, no oversold dislocation to fade" }
+    ],
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 651.0, "percent_change_1h": 1.3, "percent_change_24h": 4.6, "market_cap_usd": 93000000000, "volume_24h_usd": 2300000000, "liquidity_usd": 45000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.24, "percent_change_1h": 1.7, "percent_change_24h": 5.1, "market_cap_usd": 930000000, "volume_24h_usd": 370000000, "liquidity_usd": 13500000, "safety_score": 92, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 41.0, "percent_change_1h": 1.0, "percent_change_24h": 3.0, "market_cap_usd": 16600000000, "volume_24h_usd": 610000000, "liquidity_usd": 8900000, "safety_score": 91, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 32.4, "percent_change_1h": 2.8, "percent_change_24h": 10.2, "market_cap_usd": 3200000000, "volume_24h_usd": 560000000, "liquidity_usd": 9900000, "safety_score": 88, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 15.4, "percent_change_1h": 0.7, "percent_change_24h": 2.6, "market_cap_usd": 9500000000, "volume_24h_usd": 460000000, "liquidity_usd": 11000000, "safety_score": 95, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 71 >= 65 AND median_24h_return 3.8 > 2 AND fear_greed 72 >= 60 -> breakout (a strong trend, the worst regime for fading)",
+    "exposure_multiplier": 0.2,
+    "reversion_scores": [
+      { "symbol": "LINK", "base_score": 0.78, "rsi": 66.0, "percent_b": 0.74, "reversion_tilt": 0.0, "reversion_score": 0.55, "security_penalty": 0.03 },
+      { "symbol": "WBNB", "base_score": 0.80, "rsi": 78.0, "percent_b": 1.02, "reversion_tilt": 0.0, "reversion_score": 0.55, "security_penalty": 0.02 },
+      { "symbol": "AVAX", "base_score": 0.79, "rsi": 74.0, "percent_b": 0.95, "reversion_tilt": 0.0, "reversion_score": 0.53, "security_penalty": 0.05 },
+      { "symbol": "INJ", "base_score": 0.81, "rsi": 83.0, "percent_b": 1.15, "reversion_tilt": 0.0, "reversion_score": 0.53, "security_penalty": 0.06 },
+      { "symbol": "CAKE", "base_score": 0.83, "rsi": 81.0, "percent_b": 1.08, "reversion_tilt": 0.0, "reversion_score": 0.56, "security_penalty": 0.04 }
+    ],
+    "reversion_reason": "A broad, strong advance (breakout) is the worst environment for a fade: every name is overbought (RSI >= 66, most >= 70, price riding or above the upper band), so the reversion tilt is 0 everywhere and no reversion_score clears min_score_to_enter 0.65 even with strong base scores. The strategy steps aside (exposure_multiplier 0.2) and holds full reserve rather than shorting strength or buying a non-existent dip."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "USDT", "weight_pct": 100.0 }
+    ],
+    "rules": {
+      "entry": [
+        "No new entries in breakout: a strong trend punishes fading, exposure_multiplier 0.2 and nothing is oversold.",
+        "Never initiate into strength (RSI >= 70 or %B >= 0.80); there is no oversold dislocation to fade here.",
+        "Capital preservation outranks reversion: hold the full USDT reserve and wait for the range to return."
+      ],
+      "exit": [
+        "Any held names would be trimmed/exited into this strength (RSI >= 70 / %B >= 0.80 = take profit on the fade).",
+        "Rotate proceeds into USDT via TWAP; honour stop_loss 12% and 2.5x ATR.",
+        "Stay flat until the regime reverts to chop, the home turf for fading."
+      ]
+    },
+    "actions": [
+      { "type": "no_entry", "reason": "No asset clears min_score_to_enter 0.65 in breakout: every name is overbought (tilt 0). The strategy refuses to fade a strong trend; allocator holds full reserve (exposure_multiplier 0.2)" },
+      { "type": "heartbeat", "symbol": "USDT", "side": "buy", "notional_pct": 0.05, "reason": "daily-trade requirement satisfied via minimal heartbeat trade (<= 0.10% NAV) while flat in a trending regime" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false,
+      "note": "Mean-reversion deliberately steps aside in a breakout: the 0.2x multiplier and the all-overbought tape leave the book in full reserve."
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "heartbeat", "trades_today": 1 }
+  }
+}

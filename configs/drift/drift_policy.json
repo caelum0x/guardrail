@@ -1,0 +1,9 @@
+{
+  "name": "Paper Rebalance Drift Policy",
+  "warning_delta_pct": 3,
+  "critical_delta_pct": 8,
+  "max_turnover_pct": 35,
+  "stable_symbol": "USDT",
+  "report_path": "data/run_report.json",
+  "config_path": "configs/paper.toml"
+}

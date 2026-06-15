@@ -1,0 +1,52 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-13T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 47, "value_classification": "neutral" },
+    "global": { "total_market_cap_usd": 2210000000000, "btc_dominance_pct": 52.6 },
+    "market_breadth": { "breadth_pct": 49.0, "median_24h_return": 0.2 },
+    "trending": ["WBNB", "LINK"],
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 585.0, "percent_change_1h": 0.2, "percent_change_24h": 0.7, "market_cap_usd": 84000000000, "volume_24h_usd": 1500000000, "liquidity_usd": 41000000, "volatility_1h": 2.8, "safety_score": 96, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 14.6, "percent_change_1h": 0.5, "percent_change_24h": 1.9, "market_cap_usd": 9100000000, "volume_24h_usd": 420000000, "liquidity_usd": 11000000, "volatility_1h": 3.1, "safety_score": 95, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.62, "percent_change_1h": -0.4, "percent_change_24h": 0.3, "market_cap_usd": 760000000, "volume_24h_usd": 150000000, "liquidity_usd": 11000000, "volatility_1h": 3.2, "safety_score": 92, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3360.0, "percent_change_1h": -0.2, "percent_change_24h": -0.4, "market_cap_usd": 404000000000, "volume_24h_usd": 11000000000, "liquidity_usd": 54000000, "volatility_1h": 2.3, "safety_score": 98, "security_flags": [] },
+      { "symbol": "ADA", "price_usd": 0.46, "percent_change_1h": 0.3, "percent_change_24h": -1.1, "market_cap_usd": 16300000000, "volume_24h_usd": 380000000, "liquidity_usd": 6800000, "volatility_1h": 3.5, "safety_score": 90, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breakout/risk_on not met (breadth 49 < 55), risk_off not met (breadth 49 > 40, fg 47 > 30, median 0.2 > -2) -> default chop",
+    "exposure_multiplier": 0.5,
+    "asset_scores": [
+      { "symbol": "LINK", "score": 0.69, "components": { "momentum": 0.55, "volume": 0.49, "volatility": 0.98, "liquidity": 0.68, "sentiment": 0.63, "execution_quality": 0.96 }, "security_penalty": 0.03 },
+      { "symbol": "WBNB", "score": 0.66, "components": { "momentum": 0.52, "volume": 0.28, "volatility": 0.97, "liquidity": 0.76, "sentiment": 0.63, "execution_quality": 0.99 }, "security_penalty": 0.02 },
+      { "symbol": "CAKE", "score": 0.61, "components": { "momentum": 0.49, "volume": 0.45, "volatility": 0.97, "liquidity": 0.67, "sentiment": 0.63, "execution_quality": 0.96 }, "security_penalty": 0.04 },
+      { "symbol": "ETH", "score": 0.60, "components": { "momentum": 0.49, "volume": 0.24, "volatility": 0.88, "liquidity": 0.78, "sentiment": 0.63, "execution_quality": 0.99 }, "security_penalty": 0.01 },
+      { "symbol": "ADA", "score": 0.55, "components": { "momentum": 0.47, "volume": 0.42, "volatility": 0.92, "liquidity": 0.60, "sentiment": 0.63, "execution_quality": 0.94 }, "security_penalty": 0.05 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "LINK", "weight_pct": 21.85 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 61.15 }
+    ],
+    "actions": [
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 21.85, "reason": "score 0.69 >= 0.65; risk budget halved by chop exposure_multiplier 0.5", "execution": "twap", "note": "raw share would exceed cap of two qualifiers; LINK takes proportional share within the reduced budget" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.66 >= 0.65; capped at max_position_weight_pct 17", "execution": "twap" },
+      { "type": "no_entry", "symbol": "CAKE", "reason": "score 0.61 < min_score_to_enter 0.65" },
+      { "type": "no_entry", "symbol": "ETH", "reason": "score 0.60 < min_score_to_enter 0.65" },
+      { "type": "no_entry", "symbol": "ADA", "reason": "score 0.55 < min_score_to_enter 0.65" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 2 }
+  }
+}

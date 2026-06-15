@@ -1,0 +1,56 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-13T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 72, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2620000000000, "btc_dominance_pct": 49.4 },
+    "market_breadth": { "breadth_pct": 71.0, "median_24h_return": 3.8 },
+    "trending": ["INJ", "CAKE", "AVAX", "DOGE"],
+    "quotes": [
+      { "symbol": "INJ", "price_usd": 31.8, "percent_change_1h": 2.6, "percent_change_24h": 9.4, "market_cap_usd": 3100000000, "volume_24h_usd": 540000000, "liquidity_usd": 9800000, "volatility_1h": 3.6, "safety_score": 88, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.18, "percent_change_1h": 2.1, "percent_change_24h": 8.2, "market_cap_usd": 920000000, "volume_24h_usd": 360000000, "liquidity_usd": 13500000, "volatility_1h": 3.3, "safety_score": 92, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 41.2, "percent_change_1h": 1.9, "percent_change_24h": 7.1, "market_cap_usd": 16800000000, "volume_24h_usd": 610000000, "liquidity_usd": 8900000, "volatility_1h": 3.7, "safety_score": 91, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 648.0, "percent_change_1h": 1.2, "percent_change_24h": 4.4, "market_cap_usd": 93000000000, "volume_24h_usd": 2300000000, "liquidity_usd": 45000000, "volatility_1h": 2.9, "safety_score": 96, "security_flags": [] },
+      { "symbol": "DOGE", "price_usd": 0.142, "percent_change_1h": 3.1, "percent_change_24h": 11.8, "market_cap_usd": 20700000000, "volume_24h_usd": 1100000000, "liquidity_usd": 6300000, "volatility_1h": 7.2, "safety_score": 84, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 71 >= 65 AND median_24h_return 3.8 > 2 AND fear_greed 72 >= 60 -> breakout",
+    "exposure_multiplier": 1.1,
+    "asset_scores": [
+      { "symbol": "CAKE", "score": 0.85, "components": { "momentum": 0.74, "volume": 0.62, "volatility": 0.95, "liquidity": 0.71, "sentiment": 0.96, "execution_quality": 0.97 }, "security_penalty": 0.04 },
+      { "symbol": "INJ", "score": 0.83, "components": { "momentum": 0.78, "volume": 0.54, "volatility": 0.90, "liquidity": 0.66, "sentiment": 0.96, "execution_quality": 0.96 }, "security_penalty": 0.06 },
+      { "symbol": "AVAX", "score": 0.81, "components": { "momentum": 0.72, "volume": 0.51, "volatility": 0.88, "liquidity": 0.64, "sentiment": 0.96, "execution_quality": 0.95 }, "security_penalty": 0.05 },
+      { "symbol": "WBNB", "score": 0.78, "components": { "momentum": 0.64, "volume": 0.33, "volatility": 0.98, "liquidity": 0.77, "sentiment": 0.96, "execution_quality": 0.99 }, "security_penalty": 0.02 },
+      { "symbol": "DOGE", "score": 0.66, "components": { "momentum": 0.82, "volume": 0.55, "volatility": 0.30, "liquidity": 0.59, "sentiment": 0.96, "execution_quality": 0.93 }, "security_penalty": 0.08 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "CAKE", "weight_pct": 17.0 },
+      { "symbol": "INJ", "weight_pct": 17.0 },
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "DOGE", "weight_pct": 15.84 },
+      { "symbol": "USDT", "weight_pct": 16.16 }
+    ],
+    "actions": [
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.85 >= 0.65; breakout deploys 1.1x risk budget; per-name cap 17 applied", "execution": "twap" },
+      { "type": "entry", "symbol": "INJ", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.83 >= 0.65; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.81 >= 0.65; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.78 >= 0.65; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "DOGE", "side": "buy", "target_weight_pct": 15.84, "reason": "score 0.66 >= 0.65; fills remaining risk budget (5th of max_positions 5)", "execution": "twap", "note": "low volatility_score (7.2% hourly range far from 3% ideal) and security flag risk drag the score despite strong momentum" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false,
+      "note": "Even in breakout, per-name 17% cap and the 15% stable reserve floor bound exposure; surplus over caps falls back to USDT."
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 5 }
+  }
+}

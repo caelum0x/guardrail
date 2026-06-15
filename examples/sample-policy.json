@@ -1,0 +1,30 @@
+{
+  "max_total_drawdown_pct": "20",
+  "max_daily_drawdown_pct": "6",
+  "max_position_pct": "15",
+  "max_new_position_pct": "12",
+  "min_stable_reserve_pct": "12",
+  "max_slippage_pct": "0.5",
+  "kill_switch_drawdown_pct": "24",
+  "allowed_assets": [
+    "CAKE",
+    "WBNB"
+  ],
+  "allowed_chains": [
+    56
+  ],
+  "execution_layer": "twak_only",
+  "require_quote_before_swap": true,
+  "daily_trade_requirement": {
+    "enabled": true,
+    "min_trades_per_day": 1,
+    "max_heartbeat_trade_pct": "2"
+  },
+  "forbidden_actions": [
+    "launch_token",
+    "borrow_without_policy",
+    "custodial_signing",
+    "trade_non_eligible_assets",
+    "bypass_twak"
+  ]
+}

@@ -1,0 +1,98 @@
+{
+  "name": "guardrail-mcp",
+  "version": "0.4.0",
+  "description": "Stdlib-only Model Context Protocol server exposing the read-only Guardrail API as MCP tools, resources and prompts. Hub-ready for the CoinMarketCap Agent Hub / TWAK-style hosts.",
+  "protocol": "mcp",
+  "protocolVersion": "2024-11-05",
+  "transport": "stdio",
+  "homepage": "https://modelcontextprotocol.io",
+  "runtime": {
+    "command": "python3",
+    "args": ["clients/mcp/run.py"]
+  },
+  "env": {
+    "GUARDRAIL_BASE_URL": {
+      "description": "Base URL of the read-only Guardrail API the server proxies.",
+      "default": "http://localhost:8080",
+      "required": false
+    }
+  },
+  "capabilities": {
+    "tools": true,
+    "resources": true,
+    "prompts": true
+  },
+  "tools": [
+    { "name": "guardrail_health", "description": "API and database health status (read-only).", "route": "/health" },
+    { "name": "guardrail_backtest", "description": "Strategy-vs-benchmark backtest (read-only).", "route": "/backtest" },
+    { "name": "guardrail_walkforward", "description": "Rolling walk-forward window analysis (read-only).", "route": "/walkforward" },
+    { "name": "guardrail_sweep", "description": "Sentiment comparison sweep across fear/greed values (read-only).", "route": "/sweep" },
+    { "name": "guardrail_regime", "description": "Current market regime classification (read-only).", "route": "/regime" },
+    { "name": "guardrail_funding", "description": "Funding rates across tracked markets (read-only).", "route": "/funding" },
+    { "name": "guardrail_compete", "description": "Competition status and standings (read-only).", "route": "/compete" },
+    { "name": "guardrail_alerts", "description": "Currently evaluated alerts (read-only).", "route": "/alerts" },
+    { "name": "guardrail_proof", "description": "Agent identity and report proof (read-only).", "route": "/proof" },
+    { "name": "guardrail_compile_policy", "description": "Compile a natural-language mandate into a validated policy plus hash (read-only).", "route": "/policy/compile" },
+    { "name": "guardrail_indicators", "description": "Deterministic synthetic indicators for a symbol (read-only).", "route": "/indicators" },
+    { "name": "guardrail_skill", "description": "Agent skill descriptor / capability catalog (read-only).", "route": "/skill" },
+    { "name": "guardrail_prizes", "description": "Hackathon prize-track catalog and mapping (read-only).", "route": "/prizes" },
+    { "name": "guardrail_readiness", "description": "Operational readiness probe for the agent (read-only).", "route": "/readiness" },
+    { "name": "guardrail_journal", "description": "Decision journal: the agent's recent event log (read-only).", "route": "/events" },
+    { "name": "guardrail_scenarios", "description": "Stress-scenario catalog and each scenario's expected risk response (read-only).", "route": "/scenarios" },
+    { "name": "guardrail_skill_catalog", "description": "List the 5 strategy skills (id, name, thesis): the 4 regime-complementary ensemble-core skills plus the standalone volatility-targeted-risk-parity sizing strategy (read-only).", "file": "skills/INDEX.json" },
+    { "name": "guardrail_ensemble_routing", "description": "Resolve regime-routed ensemble weights: blend embedded per-skill weights for the live or specified regime. The ensemble core is the 4 regime-complementary skills; volatility-targeted-risk-parity is an additional standalone strategy (read-only).", "route": "/regime", "embeds": "skills/ensemble.json" }
+  ],
+  "resources": [
+    { "uri": "guardrail://compete", "name": "Competition status", "description": "Live competition standings and status.", "mimeType": "application/json", "route": "/compete" },
+    { "uri": "guardrail://regime", "name": "Market regime", "description": "Current market regime classification.", "mimeType": "application/json", "route": "/regime" },
+    { "uri": "guardrail://skill", "name": "Agent skill descriptor", "description": "Guardrail agent skill descriptor / capability catalog.", "mimeType": "application/json", "route": "/skill" },
+    { "uri": "guardrail://prizes", "name": "Prize catalog", "description": "Hackathon prize-track catalog and mapping.", "mimeType": "application/json", "route": "/prizes" },
+    { "uri": "guardrail://readiness", "name": "Readiness probe", "description": "Operational readiness probe for the agent.", "mimeType": "application/json", "route": "/readiness" },
+    { "uri": "guardrail://ensemble", "name": "Regime ensemble config", "description": "Embedded meta-allocator weights that blend the Track-2 strategy skills by market regime.", "mimeType": "application/json", "file": "skills/ensemble.json" },
+    { "uri": "guardrail://scenarios", "name": "Scenario catalog", "description": "Committed stress-scenario catalog with each scenario's expected risk response.", "mimeType": "application/json", "file": "configs/scenarios/index.json" },
+    { "uri": "guardrail://skills", "name": "Skill catalog", "description": "Full Track-2 strategy skill catalog: the 4 regime-complementary ensemble-core skills plus the standalone volatility-targeted-risk-parity sizing strategy.", "mimeType": "application/json", "file": "skills/INDEX.json" }
+  ],
+  "prompts": [
+    {
+      "name": "analyze-regime",
+      "description": "Analyze the current Guardrail market regime and its risk implications.",
+      "arguments": [
+        { "name": "focus", "description": "What to emphasize (e.g. 'BTC', 'altcoin rotation').", "required": false },
+        { "name": "horizon", "description": "Time horizon for the analysis (e.g. 'the next 24h').", "required": false }
+      ]
+    },
+    {
+      "name": "explain-decision",
+      "description": "Explain a Guardrail agent decision with grounded evidence for a given audience.",
+      "arguments": [
+        { "name": "decision", "description": "The decision to explain (e.g. 'reducing BTC exposure').", "required": false },
+        { "name": "audience", "description": "Who the explanation is for (e.g. 'a risk committee').", "required": false }
+      ]
+    },
+    {
+      "name": "draft-mandate",
+      "description": "Draft a compilable natural-language Guardrail mandate from objective and risk inputs.",
+      "arguments": [
+        { "name": "objective", "description": "The trading objective.", "required": false },
+        { "name": "risk_tolerance", "description": "Risk tolerance (e.g. 'low', 'moderate', 'high').", "required": false },
+        { "name": "constraints", "description": "Explicit constraints (assets, caps, drawdown limits).", "required": false }
+      ]
+    },
+    {
+      "name": "explain-ensemble-routing",
+      "description": "Explain how the regime-routed ensemble blends the strategy skills for a given regime.",
+      "arguments": [
+        { "name": "regime", "description": "Regime to explain (e.g. 'risk_on', 'risk_off', 'chop', 'breakout'). Defaults to the current regime.", "required": false },
+        { "name": "audience", "description": "Who the explanation is for (e.g. 'a risk committee').", "required": false }
+      ]
+    },
+    {
+      "name": "summarize-journal",
+      "description": "Summarize the Guardrail decision journal (/events) into a timeline with decisions and follow-ups.",
+      "arguments": [
+        { "name": "window", "description": "Which entries to cover (e.g. 'the last hour', 'today').", "required": false },
+        { "name": "focus", "description": "What to emphasize (e.g. 'risk events', 'policy changes').", "required": false }
+      ]
+    }
+  ]
+}

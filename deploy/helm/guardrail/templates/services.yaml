@@ -1,0 +1,33 @@
+# api + exporter Services. Both select into the single core pod
+# (the agent is the sole writer / replicas 1 / Recreate).
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guardrail.api.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "guardrail.core.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.api.port }}
+      targetPort: {{ .Values.api.port }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guardrail.exporter.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: exporter
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "guardrail.core.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: metrics
+      port: {{ .Values.exporter.port }}
+      targetPort: {{ .Values.exporter.port }}

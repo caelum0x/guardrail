@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardrail-langchain"
+version = "0.3.0"
+description = "LangChain tool integration for the Guardrail Alpha read-only API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# Core has no hard runtime dependencies: the package works with the stdlib-only
+# guardrail_client SDK and falls back to plain ToolSpec objects when
+# langchain_core is not installed.
+dependencies = []
+
+[project.optional-dependencies]
+# Install with: pip install "guardrail-langchain[langchain]"
+langchain = ["langchain-core>=0.2"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["guardrail_langchain*"]

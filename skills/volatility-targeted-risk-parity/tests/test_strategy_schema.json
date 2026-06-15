@@ -1,0 +1,39 @@
+{
+  "description": "Required-output schema contract for the volatility-targeted-risk-parity-bsc Skill.",
+  "required_outputs": [
+    "market_regime",
+    "risk_weights",
+    "target_portfolio",
+    "actions",
+    "risk_policy"
+  ],
+  "market_regime_enum": ["risk_on", "risk_off", "chop", "breakout"],
+  "risk_weight_fields": ["symbol", "realised_vol", "inv_vol", "raw_parity_weight", "security_penalty", "weight_pct"],
+  "target_portfolio_fields": ["symbol", "weight_pct"],
+  "action_types": ["entry", "exit", "rebalance", "trim", "no_entry", "heartbeat"],
+  "invariants": {
+    "sizing_method": "inverse_volatility",
+    "allocation_source": "crates/portfolio-optimizer/src/lib.rs::inverse_volatility / risk_parity_lite",
+    "weight_proportional_to": "1 / realised_vol (risk parity / equal-risk-contribution)",
+    "weights_sum_pct": 100,
+    "max_position_weight_pct": 17.0,
+    "max_sleeves": 12,
+    "target_stable_reserve_pct": 15.0,
+    "min_stable_reserve_pct": 10.0,
+    "target_portfolio_vol": 0.45,
+    "target_vol_scalar_range": [0.20, 1.00],
+    "vol_floor": 0.05,
+    "realised_vol_window_hours": 168,
+    "atr_period": 14,
+    "stop_loss_pct": 15.0,
+    "atr_stop_multiple": 3.5,
+    "take_profit_pct": 0.0,
+    "rebalance_threshold_pct": 3.0,
+    "vol_rebalance_threshold": 0.20,
+    "drawdown_throttle_pct": 22.0,
+    "kill_switch_pct": 24.0,
+    "exposure_multipliers": { "breakout": 1.0, "risk_on": 1.0, "chop": 0.8, "risk_off": 0.4 },
+    "reserve_symbol": "USDT",
+    "axis": "risk-based sizing (HOW MUCH), not signal direction (WHAT) — complements the four signal-direction Skills"
+  }
+}

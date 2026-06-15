@@ -1,0 +1,30 @@
+{
+  "agent": "guardrail-alpha",
+  "registration_tx": "0x4ab19558e8b5abc54636307c5c6a124ce4d7610f37a43f8d391a165f2125c7b1",
+  "latest_report": {
+    "run_id": "run_58680f6fbebd4dbea653d1a69f307b14",
+    "cycles": 4,
+    "final_nav_usd": "9989.75",
+    "total_drawdown_pct": "0.1025",
+    "events": 75,
+    "agent_id": "e38b86d49c975f0b3428d973141b89cda5281c2b330bfc29d9c418fb078012a4",
+    "wallet_address": "0xA9e5C0FfEe0000000000000000000000000A1b2C3",
+    "policy_hash": "a25d3a24f541ed163a8e561a10ef838694362769597a1be76799200408acc1d2",
+    "report_hash": "e34f0bc422b37fab664390e057b7b57123999d10acde18fcd49480a5c6401d70",
+    "address_url": "https://bscscan.com/address/0xA9e5C0FfEe0000000000000000000000000A1b2C3",
+    "registration_tx_url": "https://bscscan.com/tx/0x4ab19558e8b5abc54636307c5c6a124ce4d7610f37a43f8d391a165f2125c7b1"
+  },
+  "run_report": {
+    "run_id": "run_58680f6fbebd4dbea653d1a69f307b14",
+    "mode": "paper",
+    "wallet_address": "0xA9e5C0FfEe0000000000000000000000000A1b2C3",
+    "nav_usd": "9989.75",
+    "starting_nav_usd": "10000",
+    "total_drawdown_pct": "0.1025",
+    "regime": "final",
+    "kill_switch": false,
+    "events": 75,
+    "policy_hash": "a25d3a24f541ed163a8e561a10ef838694362769597a1be76799200408acc1d2"
+  },
+  "source_event_id": "evt_sample_0001"
+}

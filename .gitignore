@@ -1,0 +1,15 @@
+data/
+.env
+*.db
+*.sqlite
+target/
+node_modules/
+__pycache__/
+.ipynb_checkpoints/
+.DS_Store
+dist/
+.next/
+*.tsbuildinfo
+*.log
+.vercel/
+.example-build/

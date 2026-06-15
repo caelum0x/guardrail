@@ -1,0 +1,47 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-14T00:00:00Z",
+  "_note": "TEMPLATE example — in risk_off the book de-risks to the USDT reserve regardless of the signal. A full-reserve target portfolio is validator-clean.",
+  "inputs": {
+    "fear_greed": { "value": 23, "value_classification": "extreme_fear" },
+    "market_breadth": { "breadth_pct": 31.0, "median_24h_return": -3.6 }
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "fear_greed 23 <= 30 (also breadth 31 <= 40 and median -3.6 < -2) -> risk_off; signal overridden by capital preservation",
+    "exposure_multiplier": 0.2,
+    "asset_scores": [
+      { "symbol": "BTCB", "base_score": 0.49, "tilt": 0.6, "score": 0.49, "security_penalty": 0.01 },
+      { "symbol": "WBNB", "base_score": 0.43, "tilt": 0.5, "score": 0.42, "security_penalty": 0.02 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "USDT", "weight_pct": 100.0 }
+    ],
+    "rules": {
+      "entry": [
+        "No new entries in risk_off: exposure_multiplier 0.2 and no name clears score 0.65.",
+        "Capital preservation outranks the signal: the book rotates to the USDT reserve."
+      ],
+      "exit": [
+        "Exit held risk names: score below min_score_to_hold 0.50 and regime is risk_off.",
+        "Rotate proceeds into USDT via TWAP; honour stop_loss 12%; stay flat until the regime upgrades."
+      ]
+    },
+    "actions": [
+      { "type": "exit", "symbol": "WBNB", "side": "sell", "reason": "regime risk_off; score 0.42 < min_score_to_hold 0.50; rotate to reserve", "execution": "twap" },
+      { "type": "no_entry", "reason": "No asset clears min_score_to_enter 0.65 in risk_off; allocator holds full reserve (exposure_multiplier 0.2)" },
+      { "type": "heartbeat", "symbol": "USDT", "side": "buy", "notional_pct": 0.05, "reason": "daily-trade requirement satisfied via minimal heartbeat trade (<= 0.10% NAV) while flat" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "heartbeat", "trades_today": 1 }
+  }
+}

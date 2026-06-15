@@ -1,0 +1,31 @@
+{
+  "id": "flash_crash",
+  "label": "Flash Crash",
+  "description": "A sharp, broad NAV drawdown over a single session. High-beta categories gap down hardest while stables hold. The total drawdown crosses max_total_drawdown_pct (22%) but stays below the kill_switch_drawdown_pct (24%), so the drawdown throttle must move to Hard and the engine must stop opening new risk.",
+  "stressed_inputs": {
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -16,
+      "defi": -24,
+      "meme": -38,
+      "ai": -30,
+      "rwa": -14,
+      "infrastructure": -20,
+      "other": -26,
+      "uncategorized": -26
+    },
+    "risk_state": {
+      "total_drawdown_pct": 22.5,
+      "daily_drawdown_pct": 9.0,
+      "throttle_soft_pct": 12,
+      "throttle_hard_pct": 20
+    }
+  },
+  "stressed_policy_fields": [
+    "max_total_drawdown_pct",
+    "max_daily_drawdown_pct",
+    "kill_switch_drawdown_pct"
+  ],
+  "expected_response": "throttle",
+  "expected_detail": "total_drawdown_pct (22.5) >= max_total_drawdown_pct (22) trips the total-drawdown check and the Hard throttle state; daily_drawdown_pct (9.0) >= max_daily_drawdown_pct (7) also fires the daily-loss check. New entries are blocked. Kill switch does NOT fire because 22.5 < kill_switch_drawdown_pct (24)."
+}

@@ -1,0 +1,70 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Healthy up-tape with calm-to-moderate realised vol. Full deployment (regime multiplier 1.0) and the target-vol scalar near 1.0 (book vol ~ target). Size by inverse volatility so each name contributes roughly equal risk; lowest-vol large-caps anchor the book and hit the 17% per-name cap, the rest is the USDT reserve.",
+  "inputs": {
+    "fear_greed": { "value": 60, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2450000000000, "btc_dominance_pct": 50.5 },
+    "market_breadth": { "breadth_pct": 58.0, "median_24h_return": 1.6 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 64000.0, "percent_change_1h": 0.2, "percent_change_24h": 1.4, "percent_change_7d": 4.0, "market_cap_usd": 1260000000000, "volume_24h_usd": 24000000000, "liquidity_usd": 62000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3500.0, "percent_change_1h": 0.3, "percent_change_24h": 1.9, "percent_change_7d": 5.2, "market_cap_usd": 420000000000, "volume_24h_usd": 16000000000, "liquidity_usd": 55000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 615.0, "percent_change_1h": 0.4, "percent_change_24h": 2.1, "percent_change_7d": 5.8, "market_cap_usd": 88000000000, "volume_24h_usd": 2100000000, "liquidity_usd": 43000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 15.2, "percent_change_1h": 0.5, "percent_change_24h": 2.4, "percent_change_7d": 6.4, "market_cap_usd": 9500000000, "volume_24h_usd": 460000000, "liquidity_usd": 11500000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.74, "percent_change_1h": 0.7, "percent_change_24h": 3.1, "percent_change_7d": 7.9, "market_cap_usd": 880000000, "volume_24h_usd": 185000000, "liquidity_usd": 9200000, "safety_score": 90, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "BTCB", "realised_vol": 0.40, "atr14": 1300.0, "atr_pct": 2.0 },
+      { "symbol": "ETH", "realised_vol": 0.55, "atr14": 72.0, "atr_pct": 2.1 },
+      { "symbol": "WBNB", "realised_vol": 0.65, "atr14": 15.0, "atr_pct": 2.4 },
+      { "symbol": "LINK", "realised_vol": 0.80, "atr14": 0.7, "atr_pct": 4.6 },
+      { "symbol": "CAKE", "realised_vol": 0.95, "atr14": 0.12, "atr_pct": 4.4 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 58 >= 55 AND fear_greed 60 >= 50 but median_24h_return 1.6 <= 2 -> risk_on (full deployment of the risk-parity book)",
+    "exposure_multiplier": 1.0,
+    "target_vol": { "target_portfolio_vol": 0.45, "est_book_vol": 0.50, "target_vol_scalar": 0.90, "reason": "est_book_vol 0.50 slightly above target 0.45 -> scalar 0.45/0.50 = 0.90 (mild de-risk)" },
+    "gross_pct": 85.0,
+    "gross_reason": "gross = 100 * regime_multiplier 1.0 * target_vol_scalar 0.90 = 90, clamped under the 17% cap x 5 names and the 15% reserve target to 85 deployed.",
+    "risk_weights": [
+      { "symbol": "BTCB", "realised_vol": 0.40, "inv_vol": 2.50, "raw_parity_weight": 0.330, "security_penalty": 0.01, "weight_pct": 17.0, "note": "lowest vol -> largest sleeve, capped at 17%; surplus to reserve" },
+      { "symbol": "ETH", "realised_vol": 0.55, "inv_vol": 1.82, "raw_parity_weight": 0.240, "security_penalty": 0.01, "weight_pct": 17.0, "note": "second-lowest vol, capped at 17%" },
+      { "symbol": "WBNB", "realised_vol": 0.65, "inv_vol": 1.54, "raw_parity_weight": 0.203, "security_penalty": 0.02, "weight_pct": 17.0, "note": "third sleeve at the cap" },
+      { "symbol": "LINK", "realised_vol": 0.80, "inv_vol": 1.25, "raw_parity_weight": 0.165, "security_penalty": 0.03, "weight_pct": 16.0, "note": "higher vol -> smaller sleeve, below the cap" },
+      { "symbol": "CAKE", "realised_vol": 0.95, "inv_vol": 1.05, "raw_parity_weight": 0.139, "security_penalty": 0.03, "weight_pct": 18.0, "note": "highest vol of the set -> smallest raw sleeve; shown pre-cap, capped to 17% in the book" }
+    ],
+    "risk_weights_reason": "inv_vol_i = 1/realised_vol_i; raw_parity_weight_i = inv_vol / Σ inv_vol (Σ inv_vol = 8.16). Each name's risk contribution (weight*vol) is equalised (risk parity). gross 85 distributes the parity weights; the lowest-vol names hit the 17% cap, surplus rolls to USDT.",
+    "reserve_reason": "Five sleeves at 17/17/17/16/13 = 80 deployed; CAKE trimmed under the cap and the residual rolls into the USDT reserve to reach the 15% target reserve."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "LINK", "weight_pct": 16.0 },
+      { "symbol": "CAKE", "weight_pct": 13.0 },
+      { "symbol": "USDT", "weight_pct": 20.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Hold every eligible non-stable name sized by inverse volatility (weight ∝ 1/realised_vol); no directional score gate.",
+        "Cap each name at 17%; lowest-vol names hit the cap first, surplus rolls to the USDT reserve.",
+        "Scale gross by the target-vol scalar (0.90 here) so the book's realised vol tracks the 45% target."
+      ],
+      "exit": [
+        "Rebalance toward the parity weights when a name's realised_vol drifts > 20% relative or its sleeve drifts > 3% of NAV.",
+        "Trim any name above the 17% cap; rotate the surplus to USDT.",
+        "Scale the whole book down (more USDT) if est_book_vol rises above target; exit any name that becomes ineligible."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "BTCB", "side": "buy", "target_weight_pct": 17.0, "reason": "lowest realised_vol 0.40 -> largest inverse-vol sleeve, capped at 17%", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 17.0, "reason": "realised_vol 0.55 -> inverse-vol sleeve at the cap", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "realised_vol 0.65 -> sleeve at the cap", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 16.0, "reason": "realised_vol 0.80 -> smaller sleeve under the cap", "execution": "twap" },
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 13.0, "reason": "highest realised_vol 0.95 -> smallest sleeve so it contributes equal risk", "execution": "twap" }
+    ]
+  }
+}

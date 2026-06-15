@@ -1,0 +1,32 @@
+[
+  {
+    "id": "flash_crash",
+    "label": "Flash Crash",
+    "file": "flash_crash.json",
+    "expected_response": "throttle"
+  },
+  {
+    "id": "kill_switch_trip",
+    "label": "Kill Switch Trip",
+    "file": "kill_switch_trip.json",
+    "expected_response": "kill_switch"
+  },
+  {
+    "id": "funding_spike",
+    "label": "Funding Spike",
+    "file": "funding_spike.json",
+    "expected_response": "reduce_only"
+  },
+  {
+    "id": "liquidity_crunch",
+    "label": "Liquidity Crunch",
+    "file": "liquidity_crunch.json",
+    "expected_response": "reduce_only"
+  },
+  {
+    "id": "regime_whipsaw",
+    "label": "Regime Whipsaw",
+    "file": "regime_whipsaw.json",
+    "expected_response": "throttle"
+  }
+]

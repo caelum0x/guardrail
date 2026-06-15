@@ -1,0 +1,68 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-14T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 23, "value_classification": "extreme_fear" },
+    "global": { "total_market_cap_usd": 1975000000000, "btc_dominance_pct": 55.0 },
+    "market_breadth": { "breadth_pct": 31.0, "median_24h_return": -3.6 },
+    "funding": [
+      { "symbol": "BTCB", "funding_rate_proxy": -0.10, "ret_24h": -2.4, "note": "-2.4/24 + (2.9-3)*0.01 = -0.101 -> favourable on funding alone, but regime overrides" },
+      { "symbol": "WBNB", "funding_rate_proxy": -0.19, "ret_24h": -5.1, "note": "-5.1/24 + (4.8-3)*0.01 = -0.194 -> longs paid, yet still de-risked in risk_off" },
+      { "symbol": "CAKE", "funding_rate_proxy": -0.31, "ret_24h": -7.9, "note": "-7.9/24 + (5.6-3)*0.01 = -0.303 -> approaching capitulation band" },
+      { "symbol": "DOGE", "funding_rate_proxy": -0.37, "ret_24h": -9.6, "note": "-9.6/24 + (6.4-3)*0.01 = -0.366 -> near cap_lo -0.40, forced-unwind risk" },
+      { "symbol": "INJ", "funding_rate_proxy": -0.34, "ret_24h": -8.8, "note": "-8.8/24 + (6.1-3)*0.01 = -0.336 -> capitulation territory" }
+    ],
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 62800.0, "percent_change_1h": -0.6, "percent_change_24h": -2.4, "market_cap_usd": 1240000000000, "volume_24h_usd": 31000000000, "liquidity_usd": 60000000, "volatility_1h": 2.9, "safety_score": 99, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 548.0, "percent_change_1h": -1.2, "percent_change_24h": -5.1, "market_cap_usd": 79000000000, "volume_24h_usd": 2600000000, "liquidity_usd": 40000000, "volatility_1h": 4.8, "safety_score": 96, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.31, "percent_change_1h": -1.8, "percent_change_24h": -7.9, "market_cap_usd": 670000000, "volume_24h_usd": 190000000, "liquidity_usd": 9500000, "volatility_1h": 5.6, "safety_score": 92, "security_flags": [] },
+      { "symbol": "DOGE", "price_usd": 0.118, "percent_change_1h": -2.4, "percent_change_24h": -9.6, "market_cap_usd": 17200000000, "volume_24h_usd": 690000000, "liquidity_usd": 5100000, "volatility_1h": 6.4, "safety_score": 84, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 22.4, "percent_change_1h": -2.0, "percent_change_24h": -8.8, "market_cap_usd": 2200000000, "volume_24h_usd": 240000000, "liquidity_usd": 7200000, "volatility_1h": 6.1, "safety_score": 88, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "fear_greed 23 <= 30 (also breadth 31 <= 40 and median -3.6 < -2) -> risk_off; carry is overridden by capital preservation",
+    "exposure_multiplier": 0.2,
+    "carry_scores": [
+      { "symbol": "BTCB", "base_score": 0.49, "funding_rate_proxy": -0.10, "funding_tilt": 0.86, "carry_score": 0.59, "security_penalty": 0.01 },
+      { "symbol": "WBNB", "base_score": 0.43, "funding_rate_proxy": -0.19, "funding_tilt": 0.60, "carry_score": 0.46, "security_penalty": 0.02 },
+      { "symbol": "CAKE", "base_score": 0.36, "funding_rate_proxy": -0.31, "funding_tilt": 0.26, "carry_score": 0.31, "security_penalty": 0.04 },
+      { "symbol": "INJ", "base_score": 0.34, "funding_rate_proxy": -0.34, "funding_tilt": 0.17, "carry_score": 0.27, "security_penalty": 0.06 },
+      { "symbol": "DOGE", "base_score": 0.31, "funding_rate_proxy": -0.37, "funding_tilt": 0.09, "carry_score": 0.23, "security_penalty": 0.08 }
+    ],
+    "carry_reason": "Funding is deeply negative everywhere (longs are paid), which looks tempting for a carry — but the funding tilt decays toward 0 as funding approaches cap_lo -0.40 (forced-unwind / capitulation risk), and the risk_off regime caps the exposure_multiplier at 0.2. No name clears min_score_to_enter 0.65; the allocator holds full reserve."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "USDT", "weight_pct": 100.0 }
+    ],
+    "rules": {
+      "entry": [
+        "No new entries in risk_off: exposure_multiplier 0.2 and no name clears carry_score 0.65.",
+        "Deeply-negative funding (near cap_lo -0.40) is treated as capitulation, not opportunity — tilt decays to 0.",
+        "Capital preservation outranks carry: the book rotates to the USDT reserve."
+      ],
+      "exit": [
+        "Exit held risk names: carry_score below min_score_to_hold 0.50 and regime is risk_off.",
+        "Rotate proceeds into USDT via TWAP; honour stop_loss 12%.",
+        "Stay flat until the regime upgrades out of risk_off."
+      ]
+    },
+    "actions": [
+      { "type": "exit", "symbol": "WBNB", "side": "sell", "reason": "regime risk_off; carry_score 0.46 < min_score_to_hold 0.50; rotate to reserve despite negative funding", "execution": "twap" },
+      { "type": "exit", "symbol": "CAKE", "side": "sell", "reason": "regime risk_off; carry_score 0.31 < 0.50; funding -0.31 nearing capitulation band", "execution": "twap" },
+      { "type": "no_entry", "reason": "No asset clears min_score_to_enter 0.65 in risk_off; funding tilt decays near cap_lo -0.40; allocator holds full reserve (exposure_multiplier 0.2)" },
+      { "type": "heartbeat", "symbol": "USDT", "side": "buy", "notional_pct": 0.05, "reason": "daily-trade requirement satisfied via minimal heartbeat trade (<= 0.10% NAV) while flat" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "heartbeat", "trades_today": 1 }
+  }
+}

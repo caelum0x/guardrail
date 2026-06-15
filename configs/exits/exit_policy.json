@@ -1,0 +1,10 @@
+{
+  "name": "Paper Exit Triggers",
+  "stop_loss_pct": 12,
+  "take_profit_pct": 25,
+  "warning_loss_pct": 8,
+  "warning_gain_pct": 18,
+  "ret_24h_exit_pct": -12,
+  "report_path": "data/run_report.json",
+  "universe_path": "configs/eligible_assets.bsc.json"
+}

@@ -1,0 +1,32 @@
+{
+  "id": "funding_spike",
+  "label": "Funding Spike",
+  "description": "Perpetual funding turns sharply positive as the market crowds into rich, over-leveraged longs. The synthetic funding-rate proxy saturates near its +1.0/hr cap on high-beta names. NAV is not yet in deep drawdown, so the response is preventive: keep new positions small (max_new_position_pct) and refuse to chase crowded longs into a funding unwind.",
+  "stressed_inputs": {
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": 2,
+      "defi": -3,
+      "meme": -6,
+      "ai": -4,
+      "rwa": 0,
+      "infrastructure": -1,
+      "other": -3,
+      "uncategorized": -3
+    },
+    "funding_state": {
+      "funding_rate_proxy_per_hour": 0.95,
+      "crowded_categories": ["meme", "ai", "defi"]
+    },
+    "risk_state": {
+      "total_drawdown_pct": 6.0,
+      "daily_drawdown_pct": 3.0
+    }
+  },
+  "stressed_policy_fields": [
+    "max_new_position_pct",
+    "max_position_pct"
+  ],
+  "expected_response": "reduce_only",
+  "expected_detail": "Funding proxy at +0.95/hr flags crowded longs. With NAV drawdown still shallow the kill switch and hard throttle stay dormant; instead the position-limit check caps incremental risk at max_new_position_pct (12) and refuses to add to crowded categories. Effective posture is reduce-only on the funding-rich names."
+}

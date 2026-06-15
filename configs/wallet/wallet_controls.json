@@ -1,0 +1,21 @@
+{
+  "name": "TWAK Self-Custody Controls",
+  "expected_chain_id": 56,
+  "approval_mode": "exact_or_low_cap",
+  "max_allowance_usd": 1500,
+  "require_quote_before_swap": true,
+  "require_twak_execution": true,
+  "spenders": [
+    {
+      "name": "PancakeSwap Router",
+      "address": "0x10ed43c718714eb63d5aa57b78b54704e256024e",
+      "allowance_usd": 1000
+    },
+    {
+      "name": "TWAK Competition Router",
+      "address": "0x0000000000000000000000000000000000000808",
+      "allowance_usd": 0
+    }
+  ],
+  "report_path": "data/run_report.json"
+}

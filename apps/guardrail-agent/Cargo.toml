@@ -1,0 +1,15 @@
+[package]
+name = "guardrail-agent"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+agent-runtime.workspace = true
+common.workspace = true
+observability.workspace = true
+clap.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+tracing.workspace = true
+

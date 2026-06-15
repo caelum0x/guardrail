@@ -1,0 +1,26 @@
+{
+  "description": "Smoke fixtures: minimal expected decision shape per regime for the inverse-vol / risk-parity sizing Skill. Full worked payloads live in ../examples/.",
+  "cases": [
+    {
+      "regime": "breakout",
+      "exposure_multiplier": 1.0,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "sizing_method": "inverse_volatility", "lowest_vol_largest_sleeve": true, "no_leverage": true, "max_position_weight_pct": 17.0 }
+    },
+    {
+      "regime": "risk_on",
+      "exposure_multiplier": 1.0,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "sizing_method": "inverse_volatility", "full_deployment": true, "equal_risk_contribution": true }
+    },
+    {
+      "regime": "chop",
+      "exposure_multiplier": 0.8,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "sizing_method": "inverse_volatility", "larger_reserve": true, "diversified_book": true }
+    },
+    {
+      "regime": "risk_off",
+      "exposure_multiplier": 0.4,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "de_risked": true, "target_vol_scalar_collapsed": true, "near_full_reserve": true, "heartbeat_when_flat": true }
+    }
+  ],
+  "required_outputs": ["market_regime", "risk_weights", "target_portfolio", "actions", "risk_policy"]
+}

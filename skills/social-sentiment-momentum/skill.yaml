@@ -1,0 +1,51 @@
+name: social-sentiment-momentum-bsc
+version: 1.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that drives selection from SOCIAL + SENTIMENT momentum rather than
+  pure price structure, over 20 eligible BSC tokens. Instead of asking "is the
+  chart breaking out?", it asks "is ATTENTION accelerating and is that attention
+  CONFIRMED by money?". It blends CMC trending-rank VELOCITY (a name climbing the
+  trending / most-visited board), a VOLUME SURGE (24h volume vs its trailing
+  average), and social/attention proxies, and gates the whole book on the
+  market-wide Fear & Greed REGIME: it favours names with accelerating attention
+  plus positive sentiment confirmation, FADES hype without volume (attention with
+  no money is a trap), and DE-RISKS when Fear & Greed is extreme-greed (blowoff
+  top risk) or extreme-fear (capitulation). It respects the same risk envelope
+  (per-name cap, USDT reserve, drawdown gates) as its sibling Skills. It is a
+  strategy specification, not an executor — the Rust risk engine is the final
+  authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_trending          # trending / most-visited board -> trending-rank velocity (attention)
+  - trending_rank_velocity # change in trending rank vs prior cycle (rising attention)
+  - volume_surge          # 24h volume vs trailing average -> attention CONFIRMED by money
+  - social_attention      # social/attention proxies (mentions/views momentum)
+  - cmc_fear_greed        # market-wide sentiment (0..100) -> regime gate (extreme-greed/fear de-risk)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - sentiment_scores      # per-asset 0..1 social/sentiment-momentum score + trending/volume/social component
+  - target_portfolio      # weights summing to <=100, USDT reserve remainder
+  - actions               # entry | exit | rebalance | trim | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

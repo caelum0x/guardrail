@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "guardrail": {
+      "command": "python3",
+      "args": ["clients/mcp/run.py"],
+      "env": {
+        "GUARDRAIL_BASE_URL": "http://localhost:8080"
+      }
+    }
+  }
+}

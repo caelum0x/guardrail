@@ -1,0 +1,72 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 58, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2380000000000, "btc_dominance_pct": 50.8 },
+    "market_breadth": { "breadth_pct": 58.0, "median_24h_return": 1.3 },
+    "indicators": [
+      { "symbol": "DOT", "rsi": 31.0, "percent_b": 0.24, "atr_pct": 2.4, "note": "laggard in an up-tape: RSI 31 -> rsi_score (50-31)/20 = 0.95; %B 0.24 -> pb (0.5-0.24)/0.3 = 0.867; tilt 0.6*0.95+0.4*0.867 = 0.917" },
+      { "symbol": "ATOM", "rsi": 35.0, "percent_b": 0.30, "atr_pct": 2.7, "note": "RSI 35 -> rsi_score 0.75; %B 0.30 -> pb 0.667; tilt 0.6*0.75+0.4*0.667 = 0.717" },
+      { "symbol": "WBNB", "rsi": 64.0, "percent_b": 0.78, "atr_pct": 2.2, "note": "trending up: RSI 64 toward overbought, %B 0.78 near upper band -> tilt near 0, do not fade strength" },
+      { "symbol": "AVAX", "rsi": 71.0, "percent_b": 0.92, "atr_pct": 3.4, "note": "RSI 71 >= overbought 70 (rsi_score 0); %B 0.92 >= 0.80 (pb 0) -> tilt 0" },
+      { "symbol": "INJ", "rsi": 76.0, "percent_b": 1.04, "atr_pct": 4.1, "note": "RSI 76 overbought, %B > 1 above the upper band -> tilt 0, the wrong side of a fade in a trend" }
+    ],
+    "quotes": [
+      { "symbol": "DOT", "price_usd": 6.1, "percent_change_1h": -0.2, "percent_change_24h": -0.6, "market_cap_usd": 8700000000, "volume_24h_usd": 320000000, "liquidity_usd": 9000000, "safety_score": 94, "security_flags": [] },
+      { "symbol": "ATOM", "price_usd": 7.9, "percent_change_1h": -0.3, "percent_change_24h": 0.2, "market_cap_usd": 3100000000, "volume_24h_usd": 180000000, "liquidity_usd": 5400000, "safety_score": 91, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 612.0, "percent_change_1h": 0.6, "percent_change_24h": 2.0, "market_cap_usd": 88000000000, "volume_24h_usd": 1900000000, "liquidity_usd": 42000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 39.2, "percent_change_1h": 1.0, "percent_change_24h": 3.6, "market_cap_usd": 16000000000, "volume_24h_usd": 560000000, "liquidity_usd": 8800000, "safety_score": 91, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 29.8, "percent_change_1h": 1.8, "percent_change_24h": 6.4, "market_cap_usd": 2900000000, "volume_24h_usd": 330000000, "liquidity_usd": 8600000, "safety_score": 88, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 58 >= 55 AND fear_greed 58 >= 50 (breakout not met: median 1.3 <= 2)",
+    "exposure_multiplier": 0.4,
+    "reversion_scores": [
+      { "symbol": "DOT", "base_score": 0.66, "rsi": 31.0, "percent_b": 0.24, "reversion_tilt": 0.92, "reversion_score": 0.81, "security_penalty": 0.02 },
+      { "symbol": "ATOM", "base_score": 0.62, "rsi": 35.0, "percent_b": 0.30, "reversion_tilt": 0.72, "reversion_score": 0.68, "security_penalty": 0.03 },
+      { "symbol": "WBNB", "base_score": 0.71, "rsi": 64.0, "percent_b": 0.78, "reversion_tilt": 0.07, "reversion_score": 0.52, "security_penalty": 0.02 },
+      { "symbol": "AVAX", "base_score": 0.74, "rsi": 71.0, "percent_b": 0.92, "reversion_tilt": 0.0, "reversion_score": 0.49, "security_penalty": 0.05 },
+      { "symbol": "INJ", "base_score": 0.73, "rsi": 76.0, "percent_b": 1.04, "reversion_tilt": 0.0, "reversion_score": 0.49, "security_penalty": 0.06 }
+    ],
+    "reversion_reason": "In an up-trending tape the strategy steps aside: only the laggards DOT and ATOM are oversold enough to fade (tilt 0.92 / 0.72), while the leaders (WBNB/AVAX/INJ) are overbought so their tilt collapses to ~0 and they fall below the entry bar despite strong base scores — mean-reversion refuses to short a trend or buy strength. The risk_on exposure_multiplier 0.4 shrinks the risk budget so only small opportunistic fades are funded; most of the book sits in reserve."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "DOT", "weight_pct": 16.3 },
+      { "symbol": "ATOM", "weight_pct": 13.7 },
+      { "symbol": "USDT", "weight_pct": 70.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Only small, opportunistic fades in risk_on: exposure_multiplier 0.4 shrinks the risk budget sharply.",
+        "Buy only oversold laggards (RSI in (12, 30] AND %B <= 0.20); never fade the trending leaders.",
+        "Per-name cap 17%; the remainder stays in the large USDT reserve."
+      ],
+      "exit": [
+        "Trim when a held name reverts to the mid (RSI through 55-60 or %B >= 0.50); exit when overbought.",
+        "Force-exit at stop_loss 12% or 2.5x ATR, take_profit 25%, or a breakdown (RSI <= 12).",
+        "On an upgrade to breakout, step further aside (0.2x); on risk_off rotate to USDT."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "DOT", "side": "buy", "target_weight_pct": 16.3, "reason": "reversion_score 0.81 >= 0.65; oversold laggard RSI 31, %B 0.24 (tilt 0.92); small fade within the 0.4x budget", "execution": "twap" },
+      { "type": "entry", "symbol": "ATOM", "side": "buy", "target_weight_pct": 13.7, "reason": "reversion_score 0.68 >= 0.65; RSI 35, %B 0.30 (tilt 0.72); fills the remaining 0.4x budget", "execution": "twap" },
+      { "type": "no_entry", "symbol": "WBNB", "reason": "reversion_score 0.52 < 0.65: RSI 64 / %B 0.78 near overbought (tilt 0.07) — a leader, not a fade" },
+      { "type": "no_entry", "symbol": "AVAX", "reason": "reversion_score 0.49 < 0.65: RSI 71 overbought, %B 0.92 above the upper band (tilt 0)" },
+      { "type": "no_entry", "symbol": "INJ", "reason": "reversion_score 0.49 < 0.65: RSI 76 overbought, %B > 1 (tilt 0) — never fade a strong trend" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false,
+      "note": "Mean-reversion under-performs in trends, so the risk_on 0.4x multiplier keeps the book small and reserve-heavy; surplus over caps falls back to USDT."
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 2 }
+  }
+}

@@ -1,0 +1,390 @@
+# =============================================================================
+# Momentum / Breakout (BREAKOUT-specialised) — Backtestable Strategy Spec
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, momentum /
+# breakout strategy over a fixed universe of 20 eligible BSC tokens. It is a
+# sibling of skills/cmc-regime-routed-alpha, skills/funding-rate-carry and
+# skills/mean-reversion-chop: same universe, same four-regime classifier, same
+# allocator shape and risk envelope. The DIFFERENCE is the alpha thesis: instead
+# of fading extremes or harvesting carry, this Skill BUYS STRENGTH. It enters on
+# confirmed upside breakouts and strong positive momentum (price above a rising
+# EMA stack, a positive MACD histogram, and a fresh 20-bar high) corroborated by
+# VOLUME and VOLATILITY expansion, then rides the trend with ATR-trailing stops.
+# It is deliberately MOST ACTIVE in the BREAKOUT regime (and risk_on) where trend
+# persistence pays, and it CUTS HARD in chop (whipsaw) and risk_off (failed
+# breakouts), holding a USDT reserve. This is the mirror image of the
+# mean-reversion Skill: peak exposure where reversion steps aside.
+#
+#   indicator semantics      -> crates/indicators/src/moving_average.rs (EMA, alpha=2/(n+1))
+#                               crates/indicators/src/macd.rs   (MACD 12/26/9)
+#                               crates/indicators/src/atr.rs    (Wilder ATR)
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   base alpha score         -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: trend-breakout-momentum-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  A momentum / breakout strategy specialised for the BREAKOUT regime over 20
+  eligible BSC tokens. A breakout signal combines a rising EMA stack
+  (EMA12 > EMA26 > EMA50 with price above), a positive MACD histogram
+  (MACD line above its signal line; see macd.rs, 12/26/9), and a fresh 20-bar
+  (Donchian) high, all confirmed by VOLUME expansion (24h volume above its
+  trailing average) and VOLATILITY expansion (ATR rising). Names with the
+  strongest, best-confirmed breakout score highest as buy candidates; names in a
+  downtrend, below their EMA stack, with a negative MACD histogram, or breaking
+  out on thin volume score 0. ATR scales an upside trailing stop that locks in
+  trend gains. The breakout tilt multiplies the base alpha score, the security
+  penalty is re-applied as a haircut, and a score-proportional allocator with a
+  per-name cap and a USDT reserve builds the target book. The regime exposure
+  multiplier PEAKS in breakout: highest in breakout, full in risk_on, cut in chop,
+  minimal in risk_off — because breakouts persist in trends and fail in ranges.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and never breakout candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle. Breakout is especially
+      sensitive to liquidity and volume — a breakout on a thin name is more likely
+      a spoof/illiquid spike than a tradable trend.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_ohlcv:
+    description: >
+      Hourly OHLCV candles per asset, the raw series the indicators are computed
+      over. EMA/MACD are computed from the close, ATR from high/low/close, and the
+      Donchian breakout level from the trailing high/low, using the
+      crates/indicators implementations.
+    fields: [open, high, low, close, volume, timestamp]
+    endpoint: /v2/cryptocurrency/ohlcv/historical
+  ema_stack:
+    description: >
+      EMA(12), EMA(26), EMA(50) on hourly closes (alpha = 2/(period+1), seeded
+      with the SMA of the first `period` samples). A rising, aligned stack
+      (EMA12 > EMA26 > EMA50 with price above EMA12) defines an established uptrend.
+      Matches crates/indicators/src/moving_average.rs::ema.
+    source: crates/indicators/src/moving_average.rs
+    fields: [symbol, ema12, ema26, ema50, price_above_ema12, stack_aligned]
+    periods: [12, 26, 50]
+  macd_12_26_9:
+    description: >
+      MACD (12/26/9) on hourly closes: macd = ema(12) - ema(26); signal =
+      ema(macd, 9); histogram = macd - signal. A positive, rising histogram with
+      the MACD line above its signal line confirms accelerating upside momentum.
+      Matches crates/indicators/src/macd.rs.
+    source: crates/indicators/src/macd.rs
+    fields: [symbol, macd, signal, histogram]
+    fast: 12
+    slow: 26
+    signal: 9
+  atr_14:
+    description: >
+      14-period Wilder ATR on hourly high/low/close, used both as a VOLATILITY
+      EXPANSION signal (ATR rising vs its trailing average corroborates a real
+      breakout) and to scale the upside ATR-trailing stop that rides the trend.
+      Matches crates/indicators/src/atr.rs.
+    source: crates/indicators/src/atr.rs
+    fields: [symbol, atr, atr_pct, atr_rising]
+    period: 14
+  donchian_20:
+    description: >
+      20-bar Donchian channel (highest high / lowest low over the trailing 20
+      hourly bars). Price closing above the upper channel = a confirmed 20-bar
+      breakout. Computed from the OHLCV high/low series.
+    fields: [symbol, upper, lower, breakout_above_upper]
+    period: 20
+  volume_expansion:
+    description: >
+      24h volume relative to its trailing average (volume_ratio = volume_24h /
+      avg_volume). A ratio >= 1.5 confirms the breakout is participation-backed,
+      not a low-liquidity wick.
+    fields: [symbol, volume_ratio]
+    confirm_ratio: 1.5
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+#
+# NOTE: the exposure multipliers below PEAK in breakout. Momentum/breakout pays
+# when trends persist (breakout, risk_on) and bleeds via whipsaw in ranges (chop)
+# and failed breakouts in fear (risk_off), so this Skill deploys the most capital
+# in breakout and the least in chop/risk_off — the mirror of mean-reversion-chop.
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance — the home turf for buying breakouts.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy directional risk appetite — trends persist, momentum pays.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — breakouts fail; cut to a USDT reserve.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless, range-bound market — breakouts whipsaw; trade small.
+  # Peaks in breakout: this is the strategy's home regime.
+  exposure_multipliers:
+    breakout: 1.1      # over-deployment — strongest trend persistence
+    risk_on: 1.0       # full deployment — momentum pays in an up-tape
+    chop: 0.4          # whipsaw risk — small, only the cleanest breakouts
+    risk_off: 0.15     # failed-breakout risk — minimal exposure, mostly reserve
+
+# -----------------------------------------------------------------------------
+# 4. BREAKOUT / MOMENTUM SIGNAL — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# Three trend/momentum gates locate a confirmed breakout, then two confirmation
+# gates corroborate it with participation and volatility.
+#
+#   EMA stack : EMA12 > EMA26 > EMA50 with price above EMA12 -> established uptrend
+#   MACD hist : histogram > 0 and MACD line above signal     -> accelerating momentum
+#   Donchian  : close above the 20-bar high                  -> structural breakout
+#   Volume    : volume_ratio >= 1.5                           -> participation-backed
+#   ATR rising: ATR above its trailing average                -> volatility expansion
+#
+# The buy-side breakout score peaks when ALL gates align: an aligned rising EMA
+# stack AND a positive MACD histogram AND a fresh 20-bar high, confirmed by volume
+# and volatility expansion. It decays as gates weaken and is FORCED to 0 when the
+# asset is in a downtrend (price below the EMA stack or EMA stack not aligned up),
+# the MACD histogram is negative (momentum rolling over), or a breakout prints on
+# thin volume (volume_ratio < 1.0 — likely a fakeout, not a trend).
+breakout_signal:
+  ema_stack:
+    periods: [12, 26, 50]
+    aligned_up: "EMA12 > EMA26 > EMA50 AND price > EMA12"   # established uptrend
+    downtrend: "price < EMA26 OR EMA12 < EMA50"             # trend gate fails -> score 0
+  macd:
+    fast: 12
+    slow: 26
+    signal: 9
+    bullish: "histogram > 0 AND macd > signal"              # accelerating up momentum
+    bearish: "histogram <= 0"                               # momentum rolling over -> score 0
+  donchian_breakout:
+    period: 20
+    confirmed: "close > donchian_upper(20)"                 # fresh 20-bar high
+  volume_expansion:
+    confirm_ratio: 1.5     # volume_ratio >= 1.5 -> participation-backed breakout
+    fakeout_ratio: 1.0     # volume_ratio < 1.0 on a breakout -> likely fakeout, score 0
+  volatility_expansion:
+    atr_rising: "atr > trailing_avg(atr)"                   # real breakouts expand range
+  # The gates are blended into a single buy-side breakout tilt in 0..1.
+  breakout_tilt:
+    trend_component:
+      aligned_peak: "trend_score = 1.0 when ema stack aligned_up"
+      partial:      "trend_score = 0.5 when price > EMA26 but stack not fully aligned"
+      downtrend_zero: "trend_score = 0.0 when downtrend (price < EMA26 OR EMA12 < EMA50)"
+    momentum_component:
+      bullish_peak: "macd_score = clamp01(histogram / atr) when bullish (positive, ATR-normalised)"
+      bearish_zero: "macd_score = 0.0 when histogram <= 0"
+    structure_component:
+      breakout_peak: "struct_score = 1.0 when close > donchian_upper(20) AND volume_ratio >= 1.5"
+      near:          "struct_score = 0.5 when within 1% of the 20-bar high with volume_ratio >= 1.2"
+      fakeout_zero:  "struct_score = 0.0 when volume_ratio < 1.0 (unconfirmed breakout)"
+    blend: "breakout_tilt = 0.4 * trend_score + 0.35 * momentum_component + 0.25 * struct_score"   # in [0, 1]
+  apply:
+    # The tilt re-weights the base alpha score; factor stays within [0.7, 1.3] so
+    # the breakout signal can re-rank and re-size candidates but never invents
+    # conviction beyond the base score.
+    factor: "0.7 + 0.6 * breakout_tilt"          # in [0.7, 1.3]
+    formula: "breakout_score = clamp01( base_score * (0.7 + 0.6 * breakout_tilt) * (1 - security_penalty) )"
+    note: >
+      Security penalty is re-applied multiplicatively after the tilt so a strong
+      breakout reading can never resurrect a security-flagged asset the base score
+      already haircut. breakout_score is in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor (breakout is liquidity/volume-sensitive)."
+    - "Asset has EMA(12/26/50), MACD(12/26/9) and ATR(14) readings this cycle (enough OHLCV history)."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65          # strategy_config.rs (applied to breakout_score)
+    max_positions: 5                  # top-N by breakout score
+    ordering: "descending breakout_score; ties broken by higher volume_ratio, then higher MACD histogram, then liquidity, then symbol"
+  breakout_preference:
+    - "Strongly prefer CONFIRMED breakouts: aligned rising EMA stack AND positive MACD histogram AND a fresh 20-bar high on volume_ratio >= 1.5."
+    - "Do not initiate when the asset is in a DOWNTREND (price below EMA26 or EMA12 < EMA50): wrong side of the trend."
+    - "Treat a breakout on thin volume (volume_ratio < 1.0) as a FAKEOUT, not a trend — no-initiate."
+    - "Only chase breakouts with conviction in breakout/risk_on; in chop the exposure multiplier shrinks the book sharply (whipsaw)."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  trend_intact_hold:
+    - "HOLD a winning name while the trend is intact: price above the ATR-trailing stop, EMA stack still aligned up, MACD histogram still positive."
+    - "TRIM into parabolic extension only if a single name exceeds the per-name cap after a run-up (surplus to reserve)."
+  trend_break:
+    - "EXIT when the ATR-trailing stop is hit: trail at (highest_close_since_entry - atr_trail_multiple * ATR)."
+    - "EXIT when momentum rolls over: MACD histogram turns negative (macd crosses below signal) while held."
+    - "EXIT when the trend structure breaks: price closes back below EMA26 (the trend that justified the entry is gone)."
+  score_decay:
+    min_score_to_hold: 0.50           # below this breakout_score, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+  protective:
+    # ATR-scaled TRAILING stop is the primary exit; a hard floor backstops it.
+    stop_loss_pct: 12.0               # hard floor force-exit at -12% vs avg cost
+    atr_trail_multiple: 3.0           # trailing stop at 3.0x ATR below the highest close since entry
+    take_profit_pct: 40.0             # let winners run; force-exit only at a generous +40% vs avg cost
+    fakeout_exit: "If a fresh entry fails to hold the breakout (price closes back inside the 20-bar channel within 2 bars), exit: the breakout was a fakeout."
+  regime_exit:
+    - "On transition to chop, cut to the 0.4x multiplier (whipsaw): keep only the cleanest, strongest trends and trail the rest tight."
+    - "On transition to risk_off, cut to the 0.15x multiplier and rotate to the USDT reserve — breakouts fail in fear."
+    - "On a continuing breakout/risk_on, hold/add: ride the trend with the ATR-trailing stop, scaling exposure up to the 1.1x/1.0x budget."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional          # proportional to breakout_score
+  steps:
+    - "Select entries with breakout_score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold full reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - min_stable_reserve]."
+    - "Per name: weight = risk_budget * (breakout_score / Σ selected_breakout_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder — small in breakout/risk_on, large in chop/risk_off)."
+  parameters:
+    # A SMALL reserve target: breakout deploys aggressively into confirmed trends.
+    target_stable_reserve_pct: 12.0   # strategy_config.rs analogue (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+  # Exposure profile that PEAKS in breakout (mirror of mean-reversion-chop).
+  regime_exposure_multiplier:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.4
+    risk_off: 0.15
+  note: >
+    In breakout the 1.1x multiplier lets the risk budget exceed (100 - reserve),
+    but the per-name 17% cap and the >= 10% min_stable_reserve floor still bound
+    the book; surplus over caps falls back to the USDT reserve. The allocator and
+    the Rust risk engine clamp any over-allocation.
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no signal-driven trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. This Skill is flat for
+    long stretches (chop with no clean breakout, or risk_off). When flat a minimal
+    heartbeat trade keeps the agent compliant while the kill switch / throttle
+    still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The breakout tilt can re-rank and re-size candidates but cannot override
+    risk — proposals that violate caps are clamped or rejected, including the 1.1x
+    breakout over-deployment which is clamped back under the per-name cap and the
+    min_stable_reserve floor.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  breakout_scores: "list of { symbol, base_score, trend_score, macd_histogram, volume_ratio, breakout_tilt, breakout_score, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/trim/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

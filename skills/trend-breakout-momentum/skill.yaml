@@ -1,0 +1,50 @@
+name: trend-breakout-momentum-bsc
+version: 1.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that runs a momentum / breakout strategy specialised for the
+  BREAKOUT (strong, broad, well-bid advance) regime over 20 eligible BSC tokens.
+  It ENTERS on confirmed upside breakouts and strong positive momentum (price
+  above a rising EMA stack, a positive MACD histogram, and a 20-bar high
+  breakout) that is corroborated by VOLUME and VOLATILITY expansion, then rides
+  the trend with ATR-trailing stops. It scales exposure UP in breakout / risk_on
+  and CUTS HARD in chop / risk_off — the mirror image of the mean-reversion
+  Skill. It respects the same risk envelope (per-name cap, stable reserve,
+  drawdown gates) as its sibling Skills. It is a strategy specification, not an
+  executor — the Rust risk engine is the final authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_ohlcv             # hourly candles -> EMA/MACD/ATR + breakout levels (crates/indicators)
+  - ema_stack             # EMA(12/26/50) -> trend direction + alignment (crates/indicators)
+  - macd_12_26_9          # MACD line/signal/histogram -> momentum confirmation
+  - atr_14                # 14-period Wilder ATR -> trailing stop + volatility expansion
+  - donchian_20           # 20-bar high/low channel -> breakout level
+  - volume_expansion      # 24h volume vs trailing average -> breakout confirmation
+  - cmc_fear_greed        # market-wide sentiment (0..100)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - breakout_scores       # per-asset 0..1 breakout/momentum score + EMA/MACD/volume component
+  - target_portfolio      # weights summing to <=100, USDT reserve remainder
+  - actions               # entry | exit | rebalance | trim | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

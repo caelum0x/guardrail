@@ -1,0 +1,293 @@
+# =============================================================================
+# Funding-Rate / Basis Carry — Backtestable Strategy Specification
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, funding-aware,
+# regime-routed carry strategy over a fixed universe of 20 eligible BSC tokens.
+# It is a sibling of skills/cmc-regime-routed-alpha: same universe, regime model,
+# allocator and risk envelope. The difference is a FUNDING-CARRY TILT layered on
+# top of the per-asset alpha score, derived from the synthetic per-hour
+# funding-rate proxy the API already computes:
+#
+#   funding proxy           -> apps/guardrail-api/src/funding.rs
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   base alpha score         -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: funding-rate-carry-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  Turns a synthetic per-hour perpetual-swap funding-rate proxy (24h-return slice
+  plus a volatility-deviation term, clamped to [-1, 1]) into a long basis-carry
+  tilt over 20 eligible BSC tokens. A market-regime classifier routes overall
+  exposure; a funding tilt up-weights assets with favourable funding (negative or
+  only mildly positive — longs cheap or paid) and fades richly-positive, crowded
+  longs; the tilt multiplies the base alpha score, the security penalty is
+  re-applied as a haircut, and a score-proportional allocator with a per-name cap
+  and a stable reserve builds the target book. Explicit entry/exit and risk rules
+  govern every position. In risk_off the book de-risks to reserve regardless of
+  funding.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and have no funding — never carry candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the
+      config (core/stable: 1,000,000; defi/major: 500,000; long-tail:
+      200,000-300,000). An asset below its floor is ineligible this cycle.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  funding_rate_proxy:
+    description: >
+      Synthetic per-hour funding-rate proxy per non-stable asset, the core carry
+      signal. Positive = longs pay (crowded/expensive); negative = longs are paid
+      (cheap). Computed and served by apps/guardrail-api/src/funding.rs.
+    source: apps/guardrail-api/src/funding.rs
+    fields: [symbol, price_usd, ret_24h, funding_rate_proxy]
+    formula: "clamp(ret_24h_pct / 24 + (volatility_1h - 3.0) * 0.01, -1.0, 1.0)"
+    bounds: { min: -1.0, max: 1.0 }
+    endpoint: /funding
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  asset_scores:
+    description: >
+      Base per-asset alpha score (0..1) reused from the regime-routed-bsc-alpha
+      Skill (momentum + volume + volatility + liquidity + sentiment +
+      execution-quality, minus security penalty). The funding tilt is applied on
+      top of this.
+    fields: [symbol, base_score, security_penalty]
+    source: crates/strategy-engine/src/alpha_score.rs
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy risk appetite.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — de-risk regardless of funding.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless market.
+  exposure_multipliers:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 4. FUNDING-CARRY TILT — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# The funding proxy f (per hour, in [-1, 1]) is mapped to a tilt in [0, 1] with a
+# triangular preference: the tilt peaks across the favourable-for-longs band
+# (longs cheap or only mildly paying) and decays toward 0 as funding turns richly
+# positive (crowded, expensive longs we fade) or deeply negative (capitulation /
+# forced-unwind risk we avoid leaning into).
+#
+#   favourable band : f in [FAV_LO, FAV_HI]  -> tilt = 1.0   (best carry)
+#   above band      : f in (FAV_HI, FADE_HI] -> tilt decays 1 -> 0 (crowded longs)
+#   at/above FADE_HI: tilt = 0.0                              (fully faded)
+#   below band      : f in [CAP_LO, FAV_LO)  -> tilt decays 0 -> 1 (recovering)
+#   at/below CAP_LO : tilt = 0.0                              (capitulation)
+funding_tilt:
+  signal: funding_rate_proxy           # per-hour proxy, source funding.rs
+  thresholds:
+    fav_lo: -0.05                       # favourable band lower edge (longs paid)
+    fav_hi: 0.10                        # favourable band upper edge (mildly positive)
+    fade_hi: 0.30                       # at/above this funding is too rich -> tilt 0
+    cap_lo: -0.40                       # at/below this is capitulation -> tilt 0
+  mapping:
+    favourable: "tilt = 1.0  when fav_lo <= f <= fav_hi"
+    overheated: "tilt = clamp01((fade_hi - f) / (fade_hi - fav_hi))  when fav_hi < f < fade_hi"
+    faded:      "tilt = 0.0  when f >= fade_hi"
+    recovering: "tilt = clamp01((f - cap_lo) / (fav_lo - cap_lo))  when cap_lo < f < fav_lo"
+    capitulating: "tilt = 0.0  when f <= cap_lo"
+  apply:
+    # The tilt re-weights the base alpha score; factor stays within [0.7, 1.3] so
+    # carry can re-rank and re-size candidates but never invents conviction.
+    factor: "0.7 + 0.6 * funding_tilt"          # in [0.7, 1.3]
+    formula: "carry_score = clamp01( base_score * (0.7 + 0.6 * funding_tilt) * (1 - security_penalty) )"
+    note: >
+      Security penalty is re-applied multiplicatively after the tilt so a
+      favourable funding reading can never resurrect a security-flagged asset the
+      base score already haircut. carry_score is in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor."
+    - "Asset has a funding_rate_proxy reading this cycle (stables excluded)."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65          # strategy_config.rs (applied to carry_score)
+    max_positions: 5                  # top-N by carry score
+    ordering: "descending carry_score; ties broken by higher funding tilt, then liquidity, then symbol"
+  funding_preference:
+    - "Strongly prefer assets in the favourable funding band (tilt = 1.0)."
+    - "Do not initiate a new long in an asset with funding >= fade_hi (0.30): crowded, expensive long."
+    - "Treat deeply-negative funding (<= cap_lo, -0.40) as a no-initiate: capitulation risk."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  score_decay:
+    min_score_to_hold: 0.50           # below this carry_score, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+  funding_exit:
+    - "If a held asset's funding rises above fade_hi (0.30), trim/exit: the carry has turned into a crowded, paying-to-be-long position."
+    - "If funding collapses below cap_lo (-0.40), de-risk that name: forced-unwind / capitulation."
+  protective:
+    stop_loss_pct: 12.0               # force-exit at -12% vs avg cost
+    take_profit_pct: 25.0             # force-exit at +25% vs avg cost
+  regime_exit:
+    - "On transition to risk_off, cut risk exposure toward the 0.2x multiplier (rotate into reserve) regardless of funding."
+    - "On transition to chop, halve risk exposure (0.5x multiplier)."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional          # proportional to carry_score
+  steps:
+    - "Select entries with carry_score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold 100% reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - reserve]."
+    - "Per name: weight = risk_budget * (carry_score / Σ selected_carry_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder)."
+  parameters:
+    target_stable_reserve_pct: 15.0   # strategy_config.rs (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+  regime_exposure_multiplier:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.5
+    risk_off: 0.2
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no signal-driven trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. When the strategy is
+    flat (e.g. deep risk_off, or no asset in the favourable funding band) a
+    minimal heartbeat trade keeps the agent compliant while the kill switch /
+    throttle still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The funding tilt can re-rank and re-size candidates but cannot override
+    risk — proposals that violate caps are clamped or rejected.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  carry_scores: "list of { symbol, base_score, funding_rate_proxy, funding_tilt, carry_score, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

@@ -1,0 +1,16 @@
+{
+  "name": "@guardrail/client",
+  "version": "0.1.0",
+  "description": "Typed TypeScript client for the Guardrail Alpha read-only API.",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "example": "tsc src/index.ts src/types.ts src/proof.ts examples/verify-and-journal.ts --outDir .example-build --module ESNext --moduleResolution Bundler --target ES2022 --lib ES2022,DOM --skipLibCheck --esModuleInterop && node .example-build/examples/verify-and-journal.js"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "license": "MIT"
+}

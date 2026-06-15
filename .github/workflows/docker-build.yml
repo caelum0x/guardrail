@@ -1,0 +1,19 @@
+name: Docker Build
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f infra/Dockerfile.agent .
+      - run: docker build -f infra/Dockerfile.api .
+      - run: docker build -f infra/Dockerfile.monitor .
+      - run: docker build -f infra/Dockerfile.exporter .
+      - run: docker build -f infra/Dockerfile.replay .
+      - run: docker build -f infra/Dockerfile.sim .
+      - run: docker build -f infra/Dockerfile.dashboard .
+

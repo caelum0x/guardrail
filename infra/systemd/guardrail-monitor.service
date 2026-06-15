@@ -1,0 +1,11 @@
+[Unit]
+Description=Guardrail Alpha Monitor
+
+[Service]
+WorkingDirectory=/opt/guardrail-alpha
+ExecStart=/usr/local/bin/guardrail-monitor
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

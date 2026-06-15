@@ -1,0 +1,370 @@
+# =============================================================================
+# Volatility-Targeted Risk Parity — Backtestable Strategy Spec
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, RISK-BASED
+# SIZING strategy over a fixed universe of 20 eligible BSC tokens. It is a
+# sibling of skills/cmc-regime-routed-alpha, skills/funding-rate-carry,
+# skills/mean-reversion-chop and skills/trend-breakout-momentum: same universe,
+# same four-regime classifier, same risk envelope. The DIFFERENCE is the AXIS.
+#
+# The four sibling Skills are SIGNAL-DIRECTION Skills: they each decide WHAT to
+# buy (a multi-factor alpha blend, a funding-carry tilt, a counter-trend
+# reversion tilt, a breakout/momentum tilt). This Skill is a RISK-SIZING Skill:
+# it decides HOW MUCH of each to hold. It does not try to forecast direction;
+# instead it builds a balanced book where EACH HOLDING CONTRIBUTES ROUGHLY EQUAL
+# RISK (risk parity), by weighting each name in proportion to the INVERSE of its
+# realised volatility (low-vol names get more capital, high-vol names get less),
+# and then SCALES GROSS EXPOSURE up or down to hit a TARGET PORTFOLIO VOLATILITY.
+# When realised vol rises (typically risk_off) the target-vol scalar shrinks the
+# book toward the USDT reserve; when vol is calm it deploys more.
+#
+#   allocation methods       -> crates/portfolio-optimizer/src/lib.rs
+#                                 ::inverse_volatility(vols, budget)   (weight ∝ 1/vol)
+#                                 ::risk_parity_lite(vols, budget)     (ERC approximation == inverse_vol)
+#                                 ::AllocationMethod::{InverseVolatility, RiskParity}
+#                                 ::allocate(method, scores, vols, budget)
+#   volatility proxy         -> crates/indicators/src/atr.rs    (Wilder ATR, vol proxy)
+#                                 realised vol from OHLCV returns (stddev of hourly log-returns, annualised)
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   position sizing / caps   -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                                 crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: volatility-targeted-risk-parity-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  A risk-based sizing strategy over 20 eligible BSC tokens. Each eligible,
+  liquid, security-clean, non-stable name is sized in proportion to the INVERSE
+  of its trailing realised volatility (weight_i ∝ 1/vol_i), so every holding
+  contributes roughly EQUAL RISK to the book — an equal-risk-contribution (risk
+  parity) approximation that mirrors
+  crates/portfolio-optimizer::inverse_volatility / risk_parity_lite. The raw
+  risk-parity weights are then SCALED by a target-volatility multiplier that
+  pulls the portfolio's realised volatility toward a fixed target: when measured
+  book vol exceeds target the gross is scaled down (de-risk), when it is below
+  target the gross is scaled up (within caps). A regime exposure multiplier
+  further trims gross in risk_off / chop and allows full deployment in
+  risk_on / breakout. Per name the weight is capped at 17%; surplus and the
+  un-deployed gross fall to the USDT reserve. This Skill expresses NO directional
+  view — it is the sizing layer that the four signal-direction Skills can be
+  composed with.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and never risk-parity sleeves.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle. Risk parity needs a
+      USABLE realised-vol reading: a name with no/zero realised vol (too little
+      OHLCV history, or a stale/pegged series) is dropped — inverse_volatility
+      assigns weight 0 to any non-positive or non-finite vol (see
+      crates/portfolio-optimizer/src/lib.rs).
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_ohlcv:
+    description: >
+      Hourly OHLCV candles per asset, the raw series realised volatility and ATR
+      are computed over. Realised vol = standard deviation of hourly log-returns
+      over the trailing window (annualised); ATR(14) from high/low/close.
+    fields: [open, high, low, close, volume, timestamp]
+    endpoint: /v2/cryptocurrency/ohlcv/historical
+  realised_vol:
+    description: >
+      Trailing realised volatility per asset — the DRIVER of the inverse-vol
+      weights. realised_vol = stdev(ln(close_t / close_{t-1})) over the trailing
+      window, annualised; expressed here as a fraction (e.g. 0.85 = 85% annual).
+      This is the `vols` slice passed to
+      crates/portfolio-optimizer::inverse_volatility / risk_parity_lite — lower
+      vol => larger weight; a non-positive / non-finite vol => weight 0.
+    source: crates/portfolio-optimizer/src/lib.rs
+    fields: [symbol, realised_vol, vol_window_hours]
+    window_hours: 168          # trailing 7 days of hourly candles
+  atr_14:
+    description: >
+      14-period Wilder ATR on hourly high/low/close — a robust intraday
+      volatility proxy used to corroborate realised_vol and to scale protective
+      stops. Matches crates/indicators/src/atr.rs.
+    source: crates/indicators/src/atr.rs
+    fields: [symbol, atr, atr_pct]
+    period: 14
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty and eligibility (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+#
+# NOTE: the regime multiplier here is a SECONDARY gross-exposure scalar. The
+# PRIMARY gross scalar is the target-volatility multiplier (section 5): the book
+# is sized to a target realised vol, and the regime multiplier then trims the
+# result so the Skill never runs full gross into a fearful tape. Both bottom out
+# into a larger USDT reserve in risk_off (de-risk).
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance — calm-to-rising vol; deploy full balanced book.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy directional risk appetite — full deployment of the risk-parity book.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — realised vol spikes; the target-vol scalar de-risks hard.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless, range-bound market — moderate gross, balanced by inverse vol.
+  # Secondary gross scalar (the target-vol scalar is primary). De-risks in risk_off.
+  exposure_multipliers:
+    breakout: 1.0      # full deployment of the balanced book
+    risk_on: 1.0       # full deployment
+    chop: 0.8          # modest trim — directionless, keep some dry powder
+    risk_off: 0.4      # DE-RISK: vol spikes, cut gross sharply toward the USDT reserve
+
+# -----------------------------------------------------------------------------
+# 4. RISK-PARITY SIZING SIGNAL — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# This Skill carries NO directional alpha tilt. Its "signal" is purely the
+# realised-volatility vector. The sizing layer is:
+#
+#   1. Eligibility gate (signal-light): non-stable, enabled, liquid, security-
+#      clean, with a usable realised_vol > 0.
+#   2. Inverse-vol weights: inv_vol_i = 1 / realised_vol_i; raw_parity_weight_i =
+#      inv_vol_i / Σ inv_vol_j  (each name contributes ~equal risk).
+#      -> mirrors crates/portfolio-optimizer::inverse_volatility(vols, budget),
+#         which returns budget * (1/vol_i) / Σ (1/vol_j), and risk_parity_lite,
+#         which is the equal-risk-contribution approximation reducing to it.
+#   3. Target-vol scalar: estimate the book's realised vol from the parity weights
+#      and per-name vols, then scale gross so estimated book vol -> target_vol.
+#   4. Regime trim + per-name cap + USDT reserve remainder.
+risk_parity_signal:
+  realised_vol:
+    window_hours: 168
+    formula: "realised_vol_i = stdev(ln(close_t / close_{t-1})) over trailing window, annualised (fraction)"
+    floor: 0.05            # clamp tiny vols up to 5% so a near-flat series cannot dominate the book
+    drop_if_non_positive: true   # vol <= 0 or non-finite -> weight 0 (inverse_volatility semantics)
+  inverse_vol_weights:
+    method: inverse_volatility        # crates/portfolio-optimizer::inverse_volatility / risk_parity_lite
+    inv_vol: "inv_vol_i = 1 / max(realised_vol_i, floor)"
+    raw_parity_weight: "raw_parity_weight_i = inv_vol_i / Σ_j inv_vol_j"   # sums to 1 across eligible names
+    equal_risk_contribution: >
+      Under the inverse-vol approximation each name's risk contribution
+      (weight_i * vol_i) is equalised: weight_i * vol_i ∝ (1/vol_i) * vol_i = 1.
+      This is the risk_parity_lite (ERC) approximation in
+      crates/portfolio-optimizer/src/lib.rs.
+  security_haircut:
+    apply: "raw_parity_weight_i *= (1 - security_penalty_i)"   # flagged names sized smaller, re-normalised
+    note: >
+      The security penalty (from cmc_token_security) shrinks a flagged name's
+      sleeve and the remaining weights are re-normalised, so a risky token never
+      receives a large risk-parity sleeve just because its vol happens to be low.
+  target_vol:
+    target_portfolio_vol: 0.45        # 45% annualised target realised volatility for the book
+    estimate_book_vol: >
+      A conservative (correlation=1) upper-bound estimate:
+      est_book_vol = Σ_i (raw_parity_weight_i * realised_vol_i). Because parity
+      weights ∝ 1/vol, this collapses toward (n_eligible) * (1/Σ inv_vol), i.e.
+      the harmonic-mean vol of the book.
+    target_vol_scalar: "clamp( target_portfolio_vol / est_book_vol, min_scalar, max_scalar )"
+    min_scalar: 0.20                  # never below 20% gross from the vol target alone
+    max_scalar: 1.00                  # never lever above 1.0x gross (spot-only, no leverage)
+    rationale: >
+      When realised vol is high (est_book_vol > target) the scalar < 1 and the
+      book is DE-RISKED (more USDT reserve). When vol is calm (est_book_vol <
+      target) the scalar rises toward 1.0 (full deployment, but never levered).
+      This is the volatility-TARGETING layer on top of risk PARITY.
+
+# -----------------------------------------------------------------------------
+# 5. POSITION SIZING — mirrors allocator.rs::build_targets() + portfolio-optimizer
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: inverse_volatility          # weight ∝ 1/vol (risk parity), then vol-targeted + regime-trimmed
+  steps:
+    - "Build the eligible set: non-stable, enabled, liquid, security-clean, realised_vol > 0."
+    - "If none qualify -> hold full reserve (USDT)."
+    - "Compute inv_vol_i = 1 / max(realised_vol_i, vol_floor) and raw_parity_weight_i = inv_vol_i / Σ inv_vol_j."
+    - "Apply the security haircut and re-normalise the parity weights to sum to 1."
+    - "gross = 100 * regime.exposure_multiplier * target_vol_scalar, clamped to [0, 100 - min_stable_reserve]."
+    - "Per name: weight_i = gross * raw_parity_weight_i."
+    - "Cap each weight at max_position_weight_pct (17%); surplus over the cap falls to the USDT reserve (low-vol names hit the cap first)."
+    - "Stable reserve = 100 - Σ allocated (the remainder — small when vol is calm, large when vol spikes / risk_off)."
+  parameters:
+    target_stable_reserve_pct: 15.0   # strategy_config.rs analogue (target; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+    vol_floor: 0.05                   # realised-vol clamp floor (see realised_vol.floor)
+    max_sleeves: 12                   # diversify across up to 12 names (risk parity is a many-name book)
+  # Gross-exposure profile. The PRIMARY scalar is target_vol_scalar; the regime
+  # multiplier is a secondary trim. The book de-risks in risk_off.
+  regime_exposure_multiplier:
+    breakout: 1.0
+    risk_on: 1.0
+    chop: 0.8
+    risk_off: 0.4
+  note: >
+    Unlike the signal-direction Skills, this allocator is NOT score-proportional:
+    it is inverse-vol (risk parity). It deliberately diversifies across many
+    low-vol names rather than concentrating in a few high-score names. The
+    per-name 17% cap and the >= 10% min_stable_reserve floor still bound the book;
+    surplus over caps and the un-deployed gross fall back to the USDT reserve. The
+    allocator and the Rust risk engine clamp any over-allocation.
+
+# -----------------------------------------------------------------------------
+# 6. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor."
+    - "Asset has a usable realised_vol (> 0) and an ATR(14) reading this cycle (enough OHLCV history)."
+    - "Asset is security-clean enough that the security haircut does not zero its sleeve."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    rule: "Hold every eligible name, sized by inverse vol — there is NO min_score_to_enter cut, because this Skill expresses no directional view."
+    max_sleeves: 12                   # cap breadth so each sleeve is meaningful and tradable
+    ordering: "by ascending realised_vol (lowest-vol names anchor the book and hit the cap first), ties broken by higher liquidity, then symbol"
+  sizing_preference:
+    - "Prefer LOW-volatility, liquid names — they receive the largest inverse-vol sleeves and stabilise the book."
+    - "Down-weight (do not exclude) high-volatility names — they receive small sleeves so they contribute equal risk."
+    - "When realised vol is broadly elevated, the target-vol scalar shrinks gross — hold more USDT, fewer/smaller sleeves."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 7. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  rebalance_to_parity:
+    - "HOLD a name while it stays eligible and its inverse-vol sleeve is within the rebalance band of its target."
+    - "REBALANCE toward the parity weights when realised vols drift: a name whose vol fell gets a larger target sleeve; a name whose vol rose gets trimmed."
+    - "TRIM any single name that exceeds the per-name cap after a price move (surplus to reserve)."
+  de_risk:
+    - "When est_book_vol rises above target, the target_vol_scalar falls -> SCALE THE WHOLE BOOK DOWN proportionally (rotate the cut to USDT)."
+    - "EXIT a name that becomes ineligible (drops below its liquidity floor, loses its realised-vol reading, or trips a new security flag)."
+  drift:
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+    vol_rebalance_threshold: 0.20     # re-solve parity weights when a name's realised_vol moves > 20% relative
+  protective:
+    # No directional stop thesis; risk is managed by SIZING. ATR backstops tail moves.
+    stop_loss_pct: 15.0               # generous hard floor force-exit at -15% vs avg cost (sizing is the primary control)
+    atr_stop_multiple: 3.5            # protective ATR(14) stop at 3.5x ATR below avg cost
+    take_profit_pct: 0.0              # none — this is a sizing/risk book, not a directional trade; let parity re-balance
+  regime_exit:
+    - "On transition to risk_off, drop the regime multiplier to 0.4 AND let the rising-vol target scalar cut gross — rotate the difference to USDT."
+    - "On transition to chop, trim to the 0.8 multiplier; keep the balanced book but hold more dry powder."
+    - "On a continuing risk_on/breakout with calm vol, run the full vol-targeted parity book up to the gross cap."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no rebalance trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    A risk-parity book is low-turnover — on a calm day no sleeve drifts past the
+    rebalance band, so no signal-driven trade fires. A minimal heartbeat trade
+    keeps the agent compliant while the kill switch / throttle still gate
+    everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The inverse-vol / target-vol sizing can size and re-size sleeves but
+    cannot override risk — proposals that violate caps are clamped or rejected,
+    and the >= 10% min_stable_reserve floor is always honoured.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  risk_weights: "list of { symbol, realised_vol, inv_vol, raw_parity_weight, security_penalty, weight_pct }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/trim/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

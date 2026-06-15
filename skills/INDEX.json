@@ -1,0 +1,109 @@
+[
+  {
+    "id": "cmc-regime-routed-alpha",
+    "name": "regime-routed-bsc-alpha",
+    "path": "skills/cmc-regime-routed-alpha",
+    "summary": "Turns CoinMarketCap market, OHLCV, DEX-liquidity, token-security, trending, global and Fear & Greed data into a regime-routed long/stable rotation over 20 eligible BSC tokens. A market-regime classifier routes overall exposure; a multi-factor alpha blend (momentum + RSI + MACD + volume + volatility + liquidity + sentiment + execution-quality, minus a security penalty) ranks candidates; a score-proportional allocator with a per-name cap and stable reserve builds the target book.",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_ohlcv",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_trending",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/cmc-regime-routed-alpha/strategy_spec.yaml"
+  },
+  {
+    "id": "funding-rate-carry",
+    "name": "funding-rate-carry-bsc",
+    "path": "skills/funding-rate-carry",
+    "summary": "Turns a synthetic per-hour perpetual-swap funding-rate proxy (24h-return slice plus a volatility-deviation term, clamped to [-1, 1]) into a long basis-carry tilt over 20 eligible BSC tokens. A market-regime classifier routes overall exposure; a funding tilt up-weights assets with favourable funding (negative or only mildly positive) and fades richly-positive, crowded longs; the tilt multiplies the base alpha score, the security penalty is re-applied as a haircut, and a score-proportional allocator with a per-name cap and stable reserve builds the target book.",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "funding_rate_proxy",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "asset_scores",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/funding-rate-carry/strategy_spec.yaml"
+  },
+  {
+    "id": "mean-reversion-chop",
+    "name": "mean-reversion-chop-bsc",
+    "path": "skills/mean-reversion-chop",
+    "summary": "A mean-reversion / range-fade strategy specialised for the CHOP (range-bound) regime over 20 eligible BSC tokens. A reversion signal blends RSI(14, Wilder) and the Bollinger(20, 2-sigma) %B band position: oversold names (low RSI, price at/below the lower band) score highest as buy candidates while overbought names (high RSI, price at/above the upper band) are trimmed/avoided, and ATR(14) scales protective stops. The tilt multiplies the base alpha score, the security penalty is re-applied as a haircut, and a score-proportional allocator with a per-name cap and a large stable reserve builds the target book. The regime exposure multiplier is inverted relative to the momentum Skills: most active in chop (1.0), low in trending risk_on/breakout (0.4/0.2), minimal in risk_off (0.15).",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_ohlcv",
+      "rsi_14",
+      "bollinger_20_2",
+      "atr_14",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/mean-reversion-chop/strategy_spec.yaml"
+  },
+  {
+    "id": "trend-breakout-momentum",
+    "name": "trend-breakout-momentum-bsc",
+    "path": "skills/trend-breakout-momentum",
+    "summary": "A momentum / breakout strategy specialised for the BREAKOUT (strong, broad, well-bid advance) regime over 20 eligible BSC tokens. A breakout signal combines a rising EMA(12/26/50) stack, a positive MACD histogram, and a 20-bar Donchian high breakout confirmed by volume expansion (volume_ratio >= 1.5): breakout_tilt = 0.4*trend_score + 0.35*momentum_component + 0.25*struct_score, where an unconfirmed breakout (volume_ratio < 1.0) collapses struct_score to 0 (fakeout). The tilt multiplies the base alpha score, the security penalty is re-applied as a haircut, ATR(14) sets the trailing stop, and a score-proportional allocator with a per-name cap and a USDT reserve builds the target book. The regime exposure multiplier PEAKS in breakout (1.1) and is full in risk_on (1.0), cut in chop (0.4), minimal in risk_off (0.15) — the mirror image of mean-reversion-chop.",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_ohlcv",
+      "ema_stack",
+      "macd_12_26_9",
+      "atr_14",
+      "donchian_20",
+      "volume_expansion",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/trend-breakout-momentum/strategy_spec.yaml"
+  },
+  {
+    "id": "volatility-targeted-risk-parity",
+    "name": "volatility-targeted-risk-parity-bsc",
+    "path": "skills/volatility-targeted-risk-parity",
+    "summary": "A risk-based SIZING strategy on a new axis from the four signal-direction Skills: instead of deciding what to buy, it decides how much of each to hold. It sizes every eligible, liquid, security-clean, non-stable name by the INVERSE of its trailing realised volatility (weight ∝ 1/realised_vol) so each holding contributes roughly EQUAL RISK (risk parity / equal-risk contribution, mirroring crates/portfolio-optimizer::inverse_volatility / risk_parity_lite), then SCALES GROSS EXPOSURE to hit a 45% target portfolio volatility via target_vol_scalar = clamp(0.45 / est_book_vol, 0.20, 1.00) (never levered). It DE-RISKS in risk_off (rising realised vol shrinks gross toward the USDT reserve). A regime multiplier trims gross (breakout/risk_on 1.0, chop 0.8, risk_off 0.4); per name capped at 17%, USDT reserve remainder. Registered as an additional standalone strategy — the four-skill regime-complementary ensemble core (ensemble.json) is unchanged.",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_ohlcv",
+      "realised_vol",
+      "atr_14",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/volatility-targeted-risk-parity/strategy_spec.yaml"
+  }
+]

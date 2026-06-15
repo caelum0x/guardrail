@@ -1,0 +1,254 @@
+# Guardrail Alpha — full local stack.
+#
+# A complete, self-contained Compose stack that mirrors the production topology
+# described in deploy/k8s and deploy/helm, but optimized for running everything
+# on one machine:
+#
+#   agent      — the trading agent; SOLE WRITER of the shared SQLite event log
+#                and run report. No published port (internal only).
+#   api        — read-only dashboard/JSON API           (:8080)
+#   exporter   — Prometheus metrics exporter            (:9100)
+#   monitor    — watchdog/readiness sidecar (no port)
+#   dashboard  — Next.js read-only UI                   (:3000)
+#   prometheus — scrapes api + exporter                 (:9090)  [profile: monitoring]
+#   grafana    — dashboards over prometheus             (:3001)  [profile: monitoring]
+#   alert-relay— polls api /alerts -> chat/email sinks           [profile: alerts]
+#
+# Build contexts point back at the repo root (../..) so the existing
+# infra/Dockerfile.* and integrations/alert-relay/Dockerfile are reused verbatim.
+#
+# Bring it up (core services):
+#   docker compose -f deploy/compose/docker-compose.full.yml up --build
+#
+# Add monitoring (Prometheus + Grafana):
+#   docker compose -f deploy/compose/docker-compose.full.yml --profile monitoring up
+#
+# Add the alert relay (off by default; needs sink secrets in the environment):
+#   docker compose -f deploy/compose/docker-compose.full.yml --profile alerts up
+#
+# Configuration lives in a .env file next to this compose file. Copy the
+# template first:  cp deploy/compose/.env.example deploy/compose/.env
+#
+# NOTE: all paths below are RELATIVE TO THIS FILE (deploy/compose/), so the
+# repo root is ../.. and shared infra config is ../../infra/...
+name: guardrail-full
+
+# ---------------------------------------------------------------------------
+# Reusable anchors.
+# ---------------------------------------------------------------------------
+x-repo-build: &repo-build
+  context: ../..
+
+x-restart: &restart
+  restart: unless-stopped
+
+services:
+  # -------------------------------------------------------------------------
+  # Agent — the only writer of the shared data volume. No published port.
+  # -------------------------------------------------------------------------
+  agent:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: infra/Dockerfile.agent
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite://data/guardrail_alpha.db}
+      GUARDRAIL_REPORT: ${GUARDRAIL_REPORT:-data/run_report.json}
+      RUST_LOG: ${RUST_LOG:-info}
+    command: ["--config", "${AGENT_CONFIG:-configs/paper.toml}"]
+    volumes:
+      - guardrail-data:/app/data
+      - ../../configs:/app/configs:ro
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # API — read-only HTTP/JSON API consumed by the dashboard and alert relay.
+  # -------------------------------------------------------------------------
+  api:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: infra/Dockerfile.api
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite://data/guardrail_alpha.db}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "${API_PORT:-8080}:8080"
+    volumes:
+      - guardrail-data:/app/data
+    depends_on:
+      agent:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8080/health"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Exporter — exposes Prometheus metrics derived from the event log + report.
+  # -------------------------------------------------------------------------
+  exporter:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: infra/Dockerfile.exporter
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-sqlite://data/guardrail_alpha.db}
+      GUARDRAIL_REPORT: ${GUARDRAIL_REPORT:-data/run_report.json}
+      EXPORTER_ADDR: ${EXPORTER_ADDR:-0.0.0.0:9100}
+      RUST_LOG: ${RUST_LOG:-info}
+    ports:
+      - "${EXPORTER_PORT:-9100}:9100"
+    volumes:
+      - guardrail-data:/app/data
+    depends_on:
+      agent:
+        condition: service_started
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Monitor — watchdog sidecar; reads the run report, never writes. No port.
+  # -------------------------------------------------------------------------
+  monitor:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: infra/Dockerfile.monitor
+    environment:
+      GUARDRAIL_REPORT: ${GUARDRAIL_REPORT:-data/run_report.json}
+      GUARDRAIL_MONITOR_CHECKS: ${GUARDRAIL_MONITOR_CHECKS:-0} # 0 = run forever
+      RUST_LOG: ${RUST_LOG:-info}
+    volumes:
+      - guardrail-data:/app/data
+    depends_on:
+      agent:
+        condition: service_started
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Dashboard — Next.js UI. The browser talks to the API via NEXT_PUBLIC_API_URL.
+  # -------------------------------------------------------------------------
+  dashboard:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: infra/Dockerfile.dashboard
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8080}
+    ports:
+      - "${DASHBOARD_PORT:-3000}:3000"
+    depends_on:
+      api:
+        condition: service_started
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Prometheus — scrapes api:8080/metrics and exporter:9100/metrics.
+  # Reuses the existing scrape config + alert rules under infra/prometheus.
+  # Enabled with:  --profile monitoring
+  # -------------------------------------------------------------------------
+  prometheus:
+    <<: *restart
+    image: prom/prometheus:latest
+    profiles: ["monitoring"]
+    volumes:
+      - ../../infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    depends_on:
+      api:
+        condition: service_started
+      exporter:
+        condition: service_started
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Grafana — provisioned dashboards over the Prometheus datasource.
+  # Reuses infra/grafana provisioning + dashboards. Enabled with: --profile monitoring
+  # The admin password is read from the environment; the default is a NON-secret
+  # placeholder — override GRAFANA_ADMIN_PASSWORD in .env for anything exposed.
+  # -------------------------------------------------------------------------
+  grafana:
+    <<: *restart
+    image: grafana/grafana:latest
+    profiles: ["monitoring"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-guardrail}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ../../infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ../../infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    depends_on:
+      prometheus:
+        condition: service_started
+    networks: [guardrail]
+
+  # -------------------------------------------------------------------------
+  # Alert relay — OPTIONAL, off by default. Polls the API /alerts feed and
+  # forwards to chat/email sinks. It holds no keys of its own; sink credentials
+  # are supplied at run time as env vars referenced by the config (env:VAR_NAME).
+  # The image contains NO secrets. Enabled with:  --profile alerts
+  #
+  # By default this runs the offline-safe DRY-RUN loop so it never reaches out
+  # to any sink. Flip RELAY_ARGS to "--live" (with the relevant secrets set) for
+  # real delivery.
+  # -------------------------------------------------------------------------
+  alert-relay:
+    <<: *restart
+    build:
+      <<: *repo-build
+      dockerfile: integrations/alert-relay/Dockerfile
+    profiles: ["alerts"]
+    environment:
+      PYTHONUNBUFFERED: "1"
+      CONFIG_PATH: /app/configs/alerts.example.json
+      # Sink credentials (all OPTIONAL; only needed when running --live with the
+      # matching sink enabled). Empty by default — supply via .env or your shell.
+      GUARDRAIL_API_BASE_URL: ${GUARDRAIL_API_BASE_URL:-http://api:8080}
+      GUARDRAIL_TELEGRAM_BOT_TOKEN: ${GUARDRAIL_TELEGRAM_BOT_TOKEN:-}
+      GUARDRAIL_TELEGRAM_CHAT_ID: ${GUARDRAIL_TELEGRAM_CHAT_ID:-}
+      GUARDRAIL_DISCORD_WEBHOOK_URL: ${GUARDRAIL_DISCORD_WEBHOOK_URL:-}
+      GUARDRAIL_GENERIC_WEBHOOK_URL: ${GUARDRAIL_GENERIC_WEBHOOK_URL:-}
+      GUARDRAIL_SLACK_WEBHOOK_URL: ${GUARDRAIL_SLACK_WEBHOOK_URL:-}
+      GUARDRAIL_SMTP_HOST: ${GUARDRAIL_SMTP_HOST:-}
+      GUARDRAIL_SMTP_SENDER: ${GUARDRAIL_SMTP_SENDER:-}
+      GUARDRAIL_SMTP_RECIPIENTS: ${GUARDRAIL_SMTP_RECIPIENTS:-}
+      GUARDRAIL_SMTP_USERNAME: ${GUARDRAIL_SMTP_USERNAME:-}
+      GUARDRAIL_SMTP_PASSWORD: ${GUARDRAIL_SMTP_PASSWORD:-}
+    # Default to the offline-safe dry-run loop. Set RELAY_ALERT_ARGS=--live (with
+    # secrets) for real delivery. Args REPLACE the image's default CMD.
+    command: ["${RELAY_ALERT_ARGS:---config}", "${RELAY_ALERT_CONFIG:-/app/configs/alerts.example.json}"]
+    depends_on:
+      api:
+        condition: service_started
+    networks: [guardrail]
+
+# ---------------------------------------------------------------------------
+# Named volumes.
+#   guardrail-data — the SHARED data volume written by the agent and read by
+#                    api/exporter/monitor (SQLite event log + run report).
+# ---------------------------------------------------------------------------
+volumes:
+  guardrail-data:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  guardrail:
+    driver: bridge

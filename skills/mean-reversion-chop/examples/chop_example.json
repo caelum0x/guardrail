@@ -1,0 +1,74 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-14T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 46, "value_classification": "neutral" },
+    "global": { "total_market_cap_usd": 2195000000000, "btc_dominance_pct": 52.6 },
+    "market_breadth": { "breadth_pct": 49.0, "median_24h_return": -0.2 },
+    "indicators": [
+      { "symbol": "BTCB", "rsi": 27.0, "percent_b": 0.12, "atr_pct": 1.8, "note": "RSI 27 <= oversold 30 (rsi_score 1.0); %B 0.12 <= 0.20 lower band (pb 1.0) -> tilt 1.0" },
+      { "symbol": "ETH", "rsi": 29.0, "percent_b": 0.18, "atr_pct": 2.1, "note": "RSI 29 oversold (1.0); %B 0.18 <= 0.20 (pb 1.0) -> tilt 1.0" },
+      { "symbol": "LINK", "rsi": 33.0, "percent_b": 0.22, "atr_pct": 2.6, "note": "RSI 33 -> rsi_score (50-33)/20 = 0.85; %B 0.22 -> pb (0.5-0.22)/0.3 = 0.933; tilt 0.6*0.85+0.4*0.933 = 0.883" },
+      { "symbol": "ADA", "rsi": 26.0, "percent_b": 0.05, "atr_pct": 3.0, "note": "RSI 26 oversold (1.0); %B 0.05 below lower band (pb 1.0) -> tilt 1.0" },
+      { "symbol": "CAKE", "rsi": 72.0, "percent_b": 0.85, "atr_pct": 3.2, "note": "RSI 72 >= overbought 70 (rsi_score 0); %B 0.85 >= 0.80 (pb 0) -> tilt 0, wrong side of the fade" }
+    ],
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 63100.0, "percent_change_1h": -0.4, "percent_change_24h": -1.3, "market_cap_usd": 1250000000000, "volume_24h_usd": 28000000000, "liquidity_usd": 60000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3320.0, "percent_change_1h": -0.5, "percent_change_24h": -1.6, "market_cap_usd": 399000000000, "volume_24h_usd": 11000000000, "liquidity_usd": 54000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 14.2, "percent_change_1h": -0.3, "percent_change_24h": -1.1, "market_cap_usd": 8900000000, "volume_24h_usd": 410000000, "liquidity_usd": 11000000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "ADA", "price_usd": 0.44, "percent_change_1h": -0.6, "percent_change_24h": -2.0, "market_cap_usd": 15600000000, "volume_24h_usd": 370000000, "liquidity_usd": 6800000, "safety_score": 90, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.05, "percent_change_1h": 1.1, "percent_change_24h": 3.4, "market_cap_usd": 890000000, "volume_24h_usd": 350000000, "liquidity_usd": 13000000, "safety_score": 92, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breakout/risk_on not met (breadth 49 < 55), risk_off not met (breadth 49 > 40, fg 46 > 30, median -0.2 > -2) -> default chop, the strategy's home regime",
+    "exposure_multiplier": 1.0,
+    "reversion_scores": [
+      { "symbol": "BTCB", "base_score": 0.66, "rsi": 27.0, "percent_b": 0.12, "reversion_tilt": 1.0, "reversion_score": 0.85, "security_penalty": 0.01 },
+      { "symbol": "LINK", "base_score": 0.69, "rsi": 33.0, "percent_b": 0.22, "reversion_tilt": 0.88, "reversion_score": 0.82, "security_penalty": 0.03 },
+      { "symbol": "ETH", "base_score": 0.62, "rsi": 29.0, "percent_b": 0.18, "reversion_tilt": 1.0, "reversion_score": 0.80, "security_penalty": 0.01 },
+      { "symbol": "ADA", "base_score": 0.55, "rsi": 26.0, "percent_b": 0.05, "reversion_tilt": 1.0, "reversion_score": 0.68, "security_penalty": 0.05 },
+      { "symbol": "CAKE", "base_score": 0.60, "rsi": 72.0, "percent_b": 0.85, "reversion_tilt": 0.0, "reversion_score": 0.40, "security_penalty": 0.04 }
+    ],
+    "reversion_reason": "In a flat, range-bound tape (chop), BTCB/ETH/ADA are deeply oversold (RSI <= 30, price at/below the lower band) so their reversion tilt is 1.0 and their score is boosted above the entry bar; LINK is recovering toward the mid (tilt 0.88) but still qualifies; CAKE is overbought (RSI 72, %B 0.85) so its tilt collapses to 0 — it is a trim candidate, never a buy. The chop exposure_multiplier 1.0 means full deployment of the risk budget."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 17.0 },
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 17.0 },
+      { "symbol": "ADA", "weight_pct": 16.2 },
+      { "symbol": "USDT", "weight_pct": 32.8 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter oversold names with reversion_score >= 0.65, max 5; chop deploys the full 1.0x risk budget.",
+        "Prefer RSI in (12, 30] AND %B <= 0.20; never initiate when overbought (RSI >= 70 or %B >= 0.80).",
+        "Per-name cap 17%; route by reversion_score share of the risk budget; hold the large reserve remainder."
+      ],
+      "exit": [
+        "Trim when a held name reverts to the mid (RSI through 55-60 or %B >= 0.50); full exit when overbought (RSI >= 70 or %B >= 0.80).",
+        "Force-exit at stop_loss 12% or 2.5x ATR, take_profit 25%, or a breakdown (RSI <= 12) after entry.",
+        "On an upgrade to breakout/risk_on (a trend), step aside; on risk_off rotate to USDT."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "BTCB", "side": "buy", "target_weight_pct": 17.0, "reason": "reversion_score 0.85 >= 0.65; oversold RSI 27, %B 0.12 (tilt 1.0); per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "reversion_score 0.82 >= 0.65; RSI 33 recovering, %B 0.22 (tilt 0.88); per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 17.0, "reason": "reversion_score 0.80 >= 0.65; oversold RSI 29, %B 0.18 (tilt 1.0); per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "ADA", "side": "buy", "target_weight_pct": 16.2, "reason": "reversion_score 0.68 >= 0.65; deeply oversold RSI 26, %B 0.05 (tilt 1.0); fills remaining risk budget", "execution": "twap" },
+      { "type": "no_entry", "symbol": "CAKE", "reason": "reversion_score 0.40 < 0.65: RSI 72 overbought and %B 0.85 above the upper band (tilt 0) — wrong side of the fade, trim candidate not a buy" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false,
+      "note": "Chop is the home regime: full 1.0x risk budget deployed, but the 17% per-name cap and 25% reserve target still bound exposure; surplus over caps falls back to USDT."
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 4 }
+  }
+}

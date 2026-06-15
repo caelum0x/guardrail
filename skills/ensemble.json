@@ -1,0 +1,63 @@
+{
+  "version": "1.0.0",
+  "name": "guardrail-regime-ensemble",
+  "description": "Meta-allocator that blends the four Track-2 strategy skills by market regime. For a classified regime, each skill contributes its example target portfolio with the weight listed below; the ensemble takes the weighted average of the per-skill target weights, renormalizes to <= 100, and holds the remainder as a USDT reserve. The Rust risk engine remains the sole execution gate; this config only proposes a blended target book.",
+  "skills": {
+    "cmc-regime-routed-alpha": {
+      "label": "general regime-routed alpha",
+      "examples_dir": "skills/cmc-regime-routed-alpha/examples"
+    },
+    "funding-rate-carry": {
+      "label": "funding-rate / basis carry",
+      "examples_dir": "skills/funding-rate-carry/examples"
+    },
+    "mean-reversion-chop": {
+      "label": "mean-reversion / range-fade",
+      "examples_dir": "skills/mean-reversion-chop/examples"
+    },
+    "trend-breakout-momentum": {
+      "label": "trend / breakout momentum",
+      "examples_dir": "skills/trend-breakout-momentum/examples"
+    }
+  },
+  "reserve_symbol": "USDT",
+  "max_risk_allocation_pct": 100.0,
+  "regimes": {
+    "risk_on": {
+      "rationale": "A broad, well-bid up-tape. Trend/breakout momentum and the general regime-routed alpha both deploy near full exposure (1.0x), so they lead. Funding carry adds a complementary tilt by leaning into cheaply-funded longs. Mean-reversion is suppressed because fading strength bleeds in a trending market.",
+      "weights": {
+        "trend-breakout-momentum": 0.35,
+        "cmc-regime-routed-alpha": 0.35,
+        "funding-rate-carry": 0.25,
+        "mean-reversion-chop": 0.05
+      }
+    },
+    "risk_off": {
+      "rationale": "Falling-knife risk. Every skill de-risks to a large USDT reserve in risk_off, so the blend is dominated by capital preservation. The general regime-routed alpha (which rotates fully to USDT in risk_off) and funding carry (which de-risks regardless of funding) carry the most weight; the trend and reversion specialists are minimized because both bleed when initiating positions into a down-tape.",
+      "weights": {
+        "cmc-regime-routed-alpha": 0.45,
+        "funding-rate-carry": 0.35,
+        "mean-reversion-chop": 0.10,
+        "trend-breakout-momentum": 0.10
+      }
+    },
+    "chop": {
+      "rationale": "A flat, range-bound tape. Mean-reversion is in its home regime (1.0x exposure) and earns the largest weight: fading oversold dips and trimming overbought rips is what pays in ranges. The general alpha provides a steady, diversified backbone. Trend/breakout and funding carry are cut hard because breakouts whipsaw and carry signals are noisy when there is no directional drift.",
+      "weights": {
+        "mean-reversion-chop": 0.50,
+        "cmc-regime-routed-alpha": 0.30,
+        "funding-rate-carry": 0.12,
+        "trend-breakout-momentum": 0.08
+      }
+    },
+    "breakout": {
+      "rationale": "A strong, broad, confirmed advance. Trend/breakout momentum peaks here (1.1x exposure) and leads decisively. The general regime-routed alpha adds breadth across the strongest names. Funding carry contributes a small complementary tilt; mean-reversion is minimized because fading a confirmed breakout is the worst trade in this regime.",
+      "weights": {
+        "trend-breakout-momentum": 0.50,
+        "cmc-regime-routed-alpha": 0.30,
+        "funding-rate-carry": 0.15,
+        "mean-reversion-chop": 0.05
+      }
+    }
+  }
+}

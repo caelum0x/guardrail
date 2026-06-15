@@ -1,0 +1,17 @@
+[
+  {
+    "id": "track1_balanced",
+    "label": "Track 1 Balanced",
+    "mandate": "Trade only BSC eligible assets through TWAK. Keep total drawdown below 22 percent, daily drawdown below 7 percent, position size below 18 percent, new position size below 12 percent, stable reserve at least 10 percent, slippage below 0.8 percent, and satisfy one daily trade."
+  },
+  {
+    "id": "defensive_demo",
+    "label": "Defensive Demo",
+    "mandate": "Trade only through TWAK on BSC. Keep total drawdown below 15 percent, daily drawdown below 4 percent, position size below 12 percent, new position size below 8 percent, stable reserve at least 25 percent, and slippage below 0.5 percent."
+  },
+  {
+    "id": "aggressive_rotation",
+    "label": "Aggressive Rotation",
+    "mandate": "Use TWAK only for BSC trading. Keep total drawdown below 23 percent, daily drawdown below 9 percent, position size below 20 percent, new position size below 15 percent, stable reserve at least 8 percent, slippage below 1.0 percent, and maintain daily trade activity."
+  }
+]

@@ -1,0 +1,14 @@
+{
+  "name": "ERC-8183 Local Job Simulator",
+  "chain_id": 56,
+  "provider_wallet": "0xA9e5C0FfEe0000000000000000000000000A1b2C3",
+  "contracts": {
+    "commerce": "0xea4daa3100a767e86fded867729ae7446476eba6",
+    "router": "0x51895229e12f9876011789b04f8698af06ccd6da",
+    "policy": "0x9c01845705b3078aa2e8cff7520a6376fd766de5"
+  },
+  "selected_service_id": "submission_evidence_pack",
+  "agent_services_path": "configs/bnb/agent_services.json",
+  "deliverable_url": "http://localhost:8080/audit-manifest",
+  "status_sequence": ["open", "funded", "submitted", "completed"]
+}

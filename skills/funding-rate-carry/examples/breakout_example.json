@@ -1,0 +1,73 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 71, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2615000000000, "btc_dominance_pct": 49.2 },
+    "market_breadth": { "breadth_pct": 70.0, "median_24h_return": 3.6 },
+    "funding": [
+      { "symbol": "WBNB", "funding_rate_proxy": 0.19, "ret_24h": 4.4, "note": "4.4/24 + (2.9-3)*0.01 = 0.182 -> overheated band, partial tilt" },
+      { "symbol": "CAKE", "funding_rate_proxy": 0.18, "ret_24h": 4.4, "note": "favourable-to-overheated edge, still tradable" },
+      { "symbol": "AVAX", "funding_rate_proxy": 0.10, "ret_24h": 2.5, "note": "2.5/24 + (3.7-3)*0.01 = 0.111 ~ top of favourable band, tilt ~1.0" },
+      { "symbol": "INJ", "funding_rate_proxy": 0.39, "ret_24h": 9.4, "note": "9.4/24 + (3.6-3)*0.01 = 0.398 -> richly positive, crowded, fade" },
+      { "symbol": "DOGE", "funding_rate_proxy": 0.53, "ret_24h": 11.8, "note": "11.8/24 + (7.2-3)*0.01 = 0.534 -> very crowded long, fully faded" }
+    ],
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 648.0, "percent_change_1h": 1.2, "percent_change_24h": 4.4, "market_cap_usd": 93000000000, "volume_24h_usd": 2300000000, "liquidity_usd": 45000000, "volatility_1h": 2.9, "safety_score": 96, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.18, "percent_change_1h": 1.6, "percent_change_24h": 4.4, "market_cap_usd": 920000000, "volume_24h_usd": 360000000, "liquidity_usd": 13500000, "volatility_1h": 3.3, "safety_score": 92, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 40.6, "percent_change_1h": 0.9, "percent_change_24h": 2.5, "market_cap_usd": 16500000000, "volume_24h_usd": 600000000, "liquidity_usd": 8900000, "volatility_1h": 3.7, "safety_score": 91, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 31.8, "percent_change_1h": 2.6, "percent_change_24h": 9.4, "market_cap_usd": 3100000000, "volume_24h_usd": 540000000, "liquidity_usd": 9800000, "volatility_1h": 3.6, "safety_score": 88, "security_flags": [] },
+      { "symbol": "DOGE", "price_usd": 0.142, "percent_change_1h": 3.1, "percent_change_24h": 11.8, "market_cap_usd": 20700000000, "volume_24h_usd": 1100000000, "liquidity_usd": 6300000, "volatility_1h": 7.2, "safety_score": 84, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 70 >= 65 AND median_24h_return 3.6 > 2 AND fear_greed 71 >= 60 -> breakout",
+    "exposure_multiplier": 1.1,
+    "carry_scores": [
+      { "symbol": "AVAX", "base_score": 0.81, "funding_rate_proxy": 0.10, "funding_tilt": 1.0, "carry_score": 1.0, "security_penalty": 0.05 },
+      { "symbol": "CAKE", "base_score": 0.85, "funding_rate_proxy": 0.18, "funding_tilt": 0.6, "carry_score": 0.90, "security_penalty": 0.04 },
+      { "symbol": "WBNB", "base_score": 0.78, "funding_rate_proxy": 0.19, "funding_tilt": 0.55, "carry_score": 0.81, "security_penalty": 0.02 },
+      { "symbol": "INJ", "base_score": 0.83, "funding_rate_proxy": 0.39, "funding_tilt": 0.0, "carry_score": 0.55, "security_penalty": 0.06 },
+      { "symbol": "DOGE", "base_score": 0.66, "funding_rate_proxy": 0.53, "funding_tilt": 0.0, "carry_score": 0.42, "security_penalty": 0.08 }
+    ],
+    "carry_reason": "AVAX sits at the top of the favourable band (tilt 1.0), getting boosted to the front; CAKE/WBNB are in the overheated band so their tilt is partial (0.6/0.55); INJ and DOGE have rich funding (0.39/0.53 >= fade_hi 0.30) so their tilt is 0 and they fall below the entry bar despite strong momentum — even in breakout the strategy refuses to add to the most crowded longs."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "CAKE", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 49.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter carry_score >= 0.65, max 5, ordered by carry_score; breakout deploys a 1.1x risk budget.",
+        "Down-weight overheated funding (partial tilt); never initiate when funding >= fade_hi 0.30.",
+        "Per-name cap 17%; surplus over caps falls back to the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when carry_score < 0.50, or when a held name's funding rises above fade_hi 0.30.",
+        "Force-exit at stop_loss 12% or take_profit 25%.",
+        "Rotate to USDT on a downgrade to chop (0.5x) or risk_off (0.2x)."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "carry_score 1.0 >= 0.65; favourable funding 0.10 (tilt 1.0); per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 17.0, "reason": "carry_score 0.90 >= 0.65; overheated funding 0.18 (tilt 0.6) but still tradable; per-name cap 17", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "carry_score 0.81 >= 0.65; overheated funding 0.19 (tilt 0.55); per-name cap 17", "execution": "twap" },
+      { "type": "no_entry", "symbol": "INJ", "reason": "carry_score 0.55 < 0.65: funding 0.39 >= fade_hi 0.30 collapses the tilt — crowded long not added even in breakout" },
+      { "type": "no_entry", "symbol": "DOGE", "reason": "carry_score 0.42 < 0.65: funding 0.53 is deeply rich (tilt 0) and volatility far from ideal" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false,
+      "note": "Even in breakout, the funding tilt fades the most crowded longs and the 17% per-name cap plus 15% reserve floor bound exposure; surplus over caps falls back to USDT."
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 3 }
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "id": "regime_whipsaw",
+  "label": "Regime Whipsaw",
+  "description": "The market flips rapidly between risk_on and risk_off across consecutive windows (fear/greed and breadth swing hard each step). This stresses the regime router and the per-day trade pacing: the engine must damp exposure churn and respect the heartbeat trade cap (max_heartbeat_trade_pct) so whipsaw does not turn into over-trading or runaway drawdown.",
+  "stressed_inputs": {
+    "regime_path": [
+      { "fear_greed": 80, "breadth_pct": 68, "median_24h_return": 3.5, "expected_regime": "risk_on" },
+      { "fear_greed": 22, "breadth_pct": 34, "median_24h_return": -3.8, "expected_regime": "risk_off" },
+      { "fear_greed": 78, "breadth_pct": 64, "median_24h_return": 2.6, "expected_regime": "risk_on" },
+      { "fear_greed": 25, "breadth_pct": 38, "median_24h_return": -2.4, "expected_regime": "risk_off" }
+    ],
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -8,
+      "defi": -13,
+      "meme": -22,
+      "ai": -17,
+      "rwa": -7,
+      "infrastructure": -11,
+      "other": -14,
+      "uncategorized": -14
+    },
+    "risk_state": {
+      "total_drawdown_pct": 14.0,
+      "daily_drawdown_pct": 6.5,
+      "throttle_soft_pct": 12,
+      "throttle_hard_pct": 20
+    }
+  },
+  "stressed_policy_fields": [
+    "max_daily_drawdown_pct",
+    "max_new_position_pct",
+    "daily_trade_requirement.max_heartbeat_trade_pct"
+  ],
+  "expected_response": "throttle",
+  "expected_detail": "Rapid risk_on<->risk_off flips push total_drawdown_pct (14.0) past throttle_soft_pct (12) into the Soft throttle band, and daily_drawdown_pct (6.5) approaches max_daily_drawdown_pct (7). The engine throttles exposure changes and caps rebalance size at max_new_position_pct, while the heartbeat trade cap (max_heartbeat_trade_pct = 2) prevents whipsaw-driven over-trading."
+}

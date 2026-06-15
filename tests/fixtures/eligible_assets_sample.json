@@ -1,0 +1,6 @@
+[
+  { "symbol": "USDT", "chain_id": 56, "enabled": true },
+  { "symbol": "WBNB", "chain_id": 56, "enabled": true },
+  { "symbol": "CAKE", "chain_id": 56, "enabled": true }
+]
+

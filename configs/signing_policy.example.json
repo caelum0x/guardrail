@@ -1,0 +1,91 @@
+{
+  "$comment": "Example TWAK (Trust Wallet Agent Kit) signing policy for the Guardrail self-custody demo. This is illustrative configuration: it documents the authorization envelope the user's wallet enforces. Keys and signing authority NEVER leave the user's wallet — the agent only requests authorizations, and TWAK is the sole signer and execution venue. See docs/TWAK_SELF_CUSTODY_DEMO.md and docs/SELF_CUSTODY.md.",
+  "name": "Guardrail TWAK Self-Custody Signing Policy (example)",
+  "version": "1.0.0",
+  "mode": "strict_default",
+  "chain_id": 56,
+  "network": "bsc-mainnet",
+
+  "custody": {
+    "model": "self_custody",
+    "keys_held_by": "user_wallet",
+    "signer": "twak",
+    "agent_can_sign": false,
+    "agent_holds_keys": false,
+    "agent_role": "proposes_intents_and_authorization_requests_only",
+    "note": "The agent builds OrderIntents and authorization payloads. Only TWAK, holding the user's keys, can sign or broadcast. execute_swap requires a risk-engine-minted ApprovedOrder, so signing without prior risk approval is structurally unrepresentable."
+  },
+
+  "caps": {
+    "per_tx": {
+      "max_notional_usd": "500",
+      "max_position_pct": 18,
+      "max_new_position_pct": 12
+    },
+    "daily": {
+      "max_total_notional_usd": "2000",
+      "max_tx_count": 12,
+      "max_drawdown_pct": 7
+    },
+    "session": {
+      "validity_window_seconds": 600,
+      "max_future_validity_seconds": 900
+    }
+  },
+
+  "slippage": {
+    "max_slippage_pct": 0.8,
+    "require_quote_before_swap": true,
+    "quote_timeout_ms": 8000
+  },
+
+  "allowed_actions": [
+    "quote_swap",
+    "execute_swap",
+    "register_competition",
+    "x402_sign_authorization"
+  ],
+
+  "forbidden_actions": [
+    "launch_token",
+    "borrow_without_policy",
+    "custodial_signing",
+    "trade_non_eligible_assets",
+    "bypass_twak",
+    "key_export",
+    "delegate_signing"
+  ],
+
+  "allowed_contracts": {
+    "competition_contract": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+    "payment_token": "0xcE24439F2D9C6a2289F741120FE202248B666666",
+    "$comment": "Only contracts listed here may be targeted by a signed authorization. The competition contract mirrors apps/guardrail-api/src/compete.rs; payment_token mirrors configs/x402/signing_policy.json."
+  },
+
+  "allowed_assets": [
+    "USDT", "USDC", "WBNB", "ETH", "BTCB", "CAKE", "UNI", "AAVE", "LINK",
+    "DOT", "ATOM", "FIL", "INJ", "XRP", "ADA", "LTC", "DOGE", "SHIB", "TWT", "AVAX"
+  ],
+
+  "x402": {
+    "payment_header": "X-PAYMENT",
+    "accepts_header": "X-PAYMENT-ACCEPTS",
+    "max_per_call_base_units": "100000",
+    "session_budget_base_units": "1000000",
+    "primary_type_allowlist": [
+      "TransferWithAuthorization",
+      "ReceiveWithAuthorization"
+    ],
+    "primary_type_denylist": [
+      "Permit",
+      "PermitSingle",
+      "PermitBatch"
+    ]
+  },
+
+  "execution": {
+    "execution_layer": "twak_only",
+    "require_reconciliation": true,
+    "risk_gate": "No RiskDecision::Approved means no TWAK swap"
+  }
+}

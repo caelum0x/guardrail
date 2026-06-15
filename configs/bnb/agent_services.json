@@ -1,0 +1,45 @@
+{
+  "name": "Guardrail Alpha ERC-8183 Provider Services",
+  "provider": "Guardrail Alpha",
+  "network": "bsc-mainnet",
+  "currency": "US",
+  "commerce_config_path": "configs/bnb/erc8183_commerce.json",
+  "services": [
+    {
+      "id": "market_decision_framework",
+      "label": "Market Decision Framework",
+      "price_usd": 1.0,
+      "sla_minutes": 5,
+      "endpoint": "/briefing",
+      "deliverables": ["/briefing", "/regime", "/watchlist", "/funding"],
+      "required_inputs": ["asset universe", "market snapshot", "risk policy"]
+    },
+    {
+      "id": "risk_gate_audit",
+      "label": "Risk Gate Audit",
+      "price_usd": 1.5,
+      "sla_minutes": 5,
+      "endpoint": "/risk",
+      "deliverables": ["/risk", "/drift", "/exit-triggers", "/wallet-controls"],
+      "required_inputs": ["run report", "risk policy", "wallet controls"]
+    },
+    {
+      "id": "submission_evidence_pack",
+      "label": "Submission Evidence Pack",
+      "price_usd": 2.0,
+      "sla_minutes": 10,
+      "endpoint": "/audit-manifest",
+      "deliverables": ["/scorecard", "/audit-manifest", "/prizes", "/export/submission.md"],
+      "required_inputs": ["run report", "artifact manifest", "event log"]
+    },
+    {
+      "id": "twak_execution_readiness",
+      "label": "TWAK Execution Readiness",
+      "price_usd": 1.0,
+      "sla_minutes": 5,
+      "endpoint": "/compete",
+      "deliverables": ["/compete", "/heartbeat", "/quotes", "/signing-policy"],
+      "required_inputs": ["competition contract", "TWAK mode", "x402 signing policy"]
+    }
+  ]
+}

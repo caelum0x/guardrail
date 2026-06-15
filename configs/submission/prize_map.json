@@ -1,0 +1,37 @@
+[
+  {
+    "id": "track_1_autonomous_trading",
+    "label": "Track 1 Autonomous Trading",
+    "claim": "CMC-driven autonomous BSC trading with TWAK self-custody execution and daily trade evidence.",
+    "evidence_paths": ["/compete", "/heartbeat", "/scorecard", "/readiness", "/trades", "/proof", "/report"],
+    "required_facts": ["report_present", "wallet_present", "policy_hash_present", "confirmed_txs", "daily_trade"]
+  },
+  {
+    "id": "trust_wallet_agent_kit",
+    "label": "Trust Wallet Agent Kit",
+    "claim": "All execution is routed through TWAK quote/swap surfaces; dashboard and API remain read-only.",
+    "evidence_paths": ["/quotes", "/costs", "/rebalance", "/proof", "/signing-policy"],
+    "required_facts": ["wallet_present", "confirmed_txs"]
+  },
+  {
+    "id": "coinmarketcap_data",
+    "label": "CoinMarketCap Data",
+    "claim": "Eligible universe, market snapshots, regimes, funding proxy, watchlist, and scenario stress are derived from CMC-style market data.",
+    "evidence_paths": ["/assets", "/watchlist", "/regime", "/funding", "/scenarios"],
+    "required_facts": ["report_present"]
+  },
+  {
+    "id": "bnb_identity_proof",
+    "label": "BNB Identity Proof",
+    "claim": "Agent wallet, policy hash, proof page, and registration/readiness surfaces expose judge-verifiable identity facts.",
+    "evidence_paths": ["/proof", "/compete", "/briefing", "/bnb-sdk", "/commerce", "/scorecard", "/export/submission.md"],
+    "required_facts": ["wallet_present", "policy_hash_present"]
+  },
+  {
+    "id": "operator_experience",
+    "label": "Operator Experience",
+    "claim": "The operator can inspect readiness, alerts, drift, budget, playbook actions, and submission briefing without executing trades from the UI.",
+    "evidence_paths": ["/", "/alerts", "/drift", "/budget", "/playbook", "/briefing", "/scorecard", "/audit-manifest"],
+    "required_facts": ["report_present"]
+  }
+]

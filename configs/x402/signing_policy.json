@@ -1,0 +1,41 @@
+{
+  "name": "TWAK x402 Signing Policy",
+  "chain_id": 56,
+  "mode": "strict_default",
+  "payment_header": "X-PAYMENT",
+  "accepts_header": "X-PAYMENT-ACCEPTS",
+  "payer_wallet_env": "CMC_X402_FROM",
+  "fallback_payer_wallet": "0xA9e5C0FfEe0000000000000000000000000A1b2C3",
+  "payment_token": "0xcE24439F2D9C6a2289F741120FE202248B666666",
+  "max_per_call_base_units": "100000",
+  "session_budget_base_units": "1000000",
+  "validity_window_seconds": 600,
+  "max_future_validity_seconds": 900,
+  "primary_type_allowlist": [
+    "TransferWithAuthorization",
+    "ReceiveWithAuthorization"
+  ],
+  "primary_type_denylist": [
+    "Permit",
+    "PermitSingle",
+    "PermitBatch"
+  ],
+  "resources": [
+    {
+      "label": "CMC premium quotes",
+      "resource": "https://pro-api.coinmarketcap.com/v2/cryptocurrency/quotes/latest",
+      "scheme": "exact",
+      "network": "bsc",
+      "amount_base_units": "100000",
+      "pay_to": "0x000000000000000000000000000000000000dEaD"
+    },
+    {
+      "label": "TWAK routed execution metadata",
+      "resource": "twak://swap/quote",
+      "scheme": "exact",
+      "network": "bsc",
+      "amount_base_units": "50000",
+      "pay_to": "0x0000000000000000000000000000000000000808"
+    }
+  ]
+}

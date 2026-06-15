@@ -1,0 +1,7 @@
+{
+  "quote_timeout_ms": 8000,
+  "max_attempts": 3,
+  "require_reconciliation": true,
+  "twak_only": true
+}
+

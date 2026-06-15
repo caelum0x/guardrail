@@ -1,0 +1,31 @@
+{
+  "id": "kill_switch_trip",
+  "label": "Kill Switch Trip",
+  "description": "An extended, deeper drawdown that pushes total drawdown to or beyond kill_switch_drawdown_pct (24%). This is the hard stop: the kill switch must trigger, halting all new and existing risk-increasing actions and forcing the desk reduce-only / flat.",
+  "stressed_inputs": {
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -18,
+      "defi": -28,
+      "meme": -45,
+      "ai": -36,
+      "rwa": -16,
+      "infrastructure": -24,
+      "other": -30,
+      "uncategorized": -30
+    },
+    "risk_state": {
+      "total_drawdown_pct": 25.0,
+      "daily_drawdown_pct": 11.0,
+      "throttle_soft_pct": 12,
+      "throttle_hard_pct": 20
+    }
+  },
+  "stressed_policy_fields": [
+    "kill_switch_drawdown_pct",
+    "max_total_drawdown_pct",
+    "max_daily_drawdown_pct"
+  ],
+  "expected_response": "kill_switch",
+  "expected_detail": "total_drawdown_pct (25.0) >= kill_switch_drawdown_pct (24) -> should_trigger returns true and the kill switch fires. The total-drawdown check emits the kill-switch reason and the engine goes reduce-only / flat. This is the deepest protection and supersedes the plain throttle."
+}

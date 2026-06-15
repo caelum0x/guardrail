@@ -1,0 +1,44 @@
+# =============================================================================
+# <PLACEHOLDER_SKILL_NAME> — Track-2 Strategy Skill manifest
+# =============================================================================
+# Copy this directory with scripts/new_skill.sh and replace every <PLACEHOLDER>.
+# Keep the four examples/*.json VALIDATOR-CLEAN (validate_example == []).
+name: <PLACEHOLDER_SKILL_NAME>          # e.g. my-new-strategy-bsc (kebab-case)
+version: 0.1.0
+track: "Track 2 — Strategy Skills"
+description: >
+  <PLACEHOLDER one-paragraph thesis> — a CMC-data-driven, backtestable strategy
+  spec that turns market data into a regime-routed long/stable rotation over the
+  same fixed universe of 20 eligible BSC tokens, honouring the shared regime model
+  and risk envelope. It is a strategy specification, not an executor — the Rust
+  risk engine in crates/risk-engine remains the final authority over every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_fear_greed        # market-wide sentiment (0..100)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - asset_scores          # per-asset 0..1 base alpha score (reused/derived)
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+  # - <PLACEHOLDER add any signal feeds unique to this skill>
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - asset_scores          # per-asset 0..1 final score (rename to your tilt, e.g. carry_scores)
+  - target_portfolio      # weights summing to <=100, USDT reserve is the remainder
+  - actions               # entry | exit | rebalance | no_entry | reject | heartbeat
+  - risk_policy           # the effective caps applied this cycle
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

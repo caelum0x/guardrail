@@ -1,0 +1,11 @@
+[Unit]
+Description=Guardrail Alpha API
+
+[Service]
+WorkingDirectory=/opt/guardrail-alpha
+ExecStart=/usr/local/bin/guardrail-api
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+

@@ -1,0 +1,9 @@
+{
+  "momentum": 0.30,
+  "volume_acceleration": 0.20,
+  "volatility": 0.15,
+  "liquidity": 0.15,
+  "sentiment": 0.10,
+  "execution_quality": 0.10
+}
+

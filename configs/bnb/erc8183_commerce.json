@@ -1,0 +1,30 @@
+{
+  "name": "Guardrail Alpha ERC-8183 Commerce Surface",
+  "network": "bsc-mainnet",
+  "chain_id": 56,
+  "agent_role": "provider",
+  "service_price_usd": 1.0,
+  "payment_token_symbol": "US",
+  "payment_token": "0xcE24439F2D9C6a2289F741120FE202248B666666",
+  "commerce_proxy": "0xea4daa3100a767e86fded867729ae7446476eba6",
+  "router_proxy": "0x51895229e12f9876011789b04f8698af06ccd6da",
+  "policy": "0x9c01845705b3078aa2e8cff7520a6376fd766de5",
+  "erc8004_registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432",
+  "agent_endpoint": "/skill",
+  "negotiate_endpoint": "/commerce",
+  "status_endpoint": "/commerce",
+  "report_path": "data/run_report.json",
+  "job_lifecycle": [
+    { "state": "open", "description": "Client creates a job against the Guardrail provider identity.", "guardrail_surface": "configs/bnb/erc8183_commerce.json" },
+    { "state": "funded", "description": "Client escrows the agreed budget in the ERC-8183 commerce contract.", "guardrail_surface": "BNB Agent SDK ERC8183Client fund flow" },
+    { "state": "submitted", "description": "Guardrail publishes a signed market decision framework and report hash.", "guardrail_surface": "/report, /export/submission.md, /audit-manifest" },
+    { "state": "completed", "description": "Optimistic policy approves after the dispute window or rejects on voter quorum.", "guardrail_surface": "BNB Agent SDK OptimisticPolicy" }
+  ],
+  "deliverables": [
+    "/briefing",
+    "/report",
+    "/export/submission.md",
+    "/audit-manifest",
+    "/skill"
+  ]
+}

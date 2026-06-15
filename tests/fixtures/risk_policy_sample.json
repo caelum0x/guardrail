@@ -1,0 +1,12 @@
+{
+  "max_total_drawdown_pct": 22,
+  "max_daily_drawdown_pct": 7,
+  "max_position_pct": 18,
+  "max_new_position_pct": 12,
+  "min_stable_reserve_pct": 10,
+  "max_slippage_pct": 0.8,
+  "kill_switch_drawdown_pct": 24,
+  "allowed_assets": ["USDT", "WBNB", "CAKE"],
+  "execution_layer": "twak_only"
+}
+

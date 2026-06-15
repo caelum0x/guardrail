@@ -1,0 +1,11 @@
+{
+  "name": "Track-1 Paper Budget",
+  "daily_trade_target": 1,
+  "planned_competition_days": 7,
+  "operator_gas_float_usd": 25,
+  "max_daily_execution_cost_usd": 5,
+  "max_cost_bps_per_trade": 25,
+  "min_nav_usd": 9000,
+  "cost_config_path": "configs/costs/bsc_execution_costs.json",
+  "report_path": "data/run_report.json"
+}

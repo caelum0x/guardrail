@@ -1,0 +1,344 @@
+# =============================================================================
+# Mean-Reversion / Range-Fade (CHOP-specialised) — Backtestable Strategy Spec
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, mean-reversion
+# strategy over a fixed universe of 20 eligible BSC tokens. It is a sibling of
+# skills/cmc-regime-routed-alpha and skills/funding-rate-carry: same universe,
+# same four-regime classifier, same allocator shape and risk envelope. The
+# DIFFERENCE is the alpha thesis: instead of riding momentum or funding carry,
+# this Skill FADES extremes back toward the statistical mean. It buys oversold
+# weakness (low RSI / lower-Bollinger-band touches) and trims overbought
+# strength (high RSI / upper-band touches), and it is deliberately MOST ACTIVE
+# in the CHOP (range-bound) regime where mean-reversion pays, while it largely
+# STEPS ASIDE in trending risk_on / breakout (where buying weakness bleeds) and
+# de-risks to a large reserve in risk_off.
+#
+#   indicator semantics      -> crates/indicators/src/rsi.rs   (Wilder RSI, [0,100])
+#                               crates/indicators/src/bollinger.rs (SMA +/- k*std)
+#                               crates/indicators/src/atr.rs   (Wilder ATR)
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   base alpha score         -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: mean-reversion-chop-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  A mean-reversion / range-fade strategy specialised for the CHOP regime over 20
+  eligible BSC tokens. A reversion signal combines RSI (Wilder, 0..100) and the
+  Bollinger %B position (where price sits within the 20-period, 2-sigma band):
+  oversold names (low RSI, price at/below the lower band) score highest as buy
+  candidates; overbought names (high RSI, price at/above the upper band) are
+  trimmed/avoided. ATR scales protective stops/targets. The reversion score
+  multiplies the base alpha score, the security penalty is re-applied as a
+  haircut, and a score-proportional allocator with a per-name cap and a LARGE
+  stable reserve builds the target book. The regime exposure multiplier is
+  inverted relative to the momentum Skills: highest in chop, low in trending
+  regimes, minimal in risk_off — because fading extremes works in ranges and
+  bleeds in trends.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and never mean-reversion candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle. Mean-reversion is
+      especially sensitive to liquidity — a band-touch on a thin name is more
+      likely noise than a tradable dislocation.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_ohlcv:
+    description: >
+      Hourly OHLCV candles per asset, the raw series the indicators are computed
+      over. RSI, Bollinger and ATR are derived from the close (RSI/Bollinger) and
+      high/low/close (ATR) using the crates/indicators implementations.
+    fields: [open, high, low, close, volume, timestamp]
+    endpoint: /v2/cryptocurrency/ohlcv/historical
+  rsi_14:
+    description: >
+      14-period Wilder RSI on hourly closes, bounded [0, 100]. Low RSI = oversold
+      (buy candidate); high RSI = overbought (trim/avoid). Matches the warm-up and
+      smoothing of crates/indicators/src/rsi.rs.
+    source: crates/indicators/src/rsi.rs
+    fields: [symbol, rsi]
+    bounds: { min: 0.0, max: 100.0 }
+    period: 14
+  bollinger_20_2:
+    description: >
+      20-period, 2-sigma Bollinger Bands (population std) on hourly closes. The
+      %B position = (price - lower) / (upper - lower) locates price within the
+      band: <= 0 at/below the lower band (oversold), >= 1 at/above the upper band
+      (overbought), 0.5 at the mid (SMA). Matches crates/indicators/src/bollinger.rs.
+    source: crates/indicators/src/bollinger.rs
+    fields: [symbol, mid, upper, lower, percent_b]
+    period: 20
+    k: 2.0
+  atr_14:
+    description: >
+      14-period Wilder ATR on hourly high/low/close, used to scale protective
+      stops/targets to each asset's volatility (a wide-range token gets a wider
+      stop than a quiet one). Matches crates/indicators/src/atr.rs.
+    source: crates/indicators/src/atr.rs
+    fields: [symbol, atr, atr_pct]
+    period: 14
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+#
+# NOTE: the exposure multipliers below are DELIBERATELY INVERTED relative to the
+# momentum / carry Skills. Mean-reversion pays in ranges and bleeds in trends, so
+# this Skill deploys the most capital in chop and the least in trending regimes.
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance — a trend, not a range. Fading it bleeds.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy directional risk appetite — mean-reversion under-performs.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — oversold can stay oversold; de-risk to reserve.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless, range-bound market — the home turf for fading extremes.
+  # Inverted vs the momentum Skills: chop is the most active regime here.
+  exposure_multipliers:
+    chop: 1.0          # full deployment — this is the strategy's home regime
+    risk_on: 0.4       # trend bleeds reversion — small, opportunistic fades only
+    breakout: 0.2      # strong trend — step aside, barely any fading
+    risk_off: 0.15     # falling knife risk — minimal exposure, mostly reserve
+
+# -----------------------------------------------------------------------------
+# 4. MEAN-REVERSION SIGNAL — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# Two oscillators locate dislocation, then a triangular preference scores it.
+#
+#   RSI    : low  = oversold (buy)        high = overbought (trim/avoid)
+#   %B     : <= 0 at/below lower band     >= 1 at/above upper band   0.5 at mid
+#
+# The buy-side reversion score peaks when an asset is OVERSOLD-but-not-broken:
+# RSI in the oversold band AND price near/below the lower band. It decays toward
+# 0 as price returns to the mid (nothing to revert) and is FORCED to 0 when the
+# asset is overbought (we never initiate a long into strength) or when RSI is so
+# crushed it signals a breakdown rather than a fadeable dip.
+mean_reversion_signal:
+  rsi:
+    period: 14
+    oversold: 30          # RSI <= 30 -> oversold, prime buy zone
+    overbought: 70        # RSI >= 70 -> overbought, trim/avoid
+    breakdown: 12         # RSI <= 12 -> capitulation/breakdown, not a fadeable dip
+  bollinger_percent_b:
+    # percent_b = (price - lower) / (upper - lower); see bollinger.rs
+    buy_zone_hi: 0.20     # %B <= 0.20 -> price hugging/below the lower band
+    mid: 0.50             # SMA — no dislocation to fade
+    trim_zone_lo: 0.80    # %B >= 0.80 -> price hugging/above the upper band
+  # The two oscillators are blended into a single buy-side reversion tilt in 0..1.
+  reversion_tilt:
+    rsi_component:
+      favourable: "rsi_score = clamp01((overbought_ref - rsi) / (overbought_ref - oversold)) for rsi in [oversold, overbought_ref]"
+      oversold_peak: "rsi_score = 1.0 when breakdown < rsi <= oversold"
+      breakdown_zero: "rsi_score = 0.0 when rsi <= breakdown (broken, not fadeable)"
+      overbought_zero: "rsi_score = 0.0 when rsi >= overbought (trim, never initiate)"
+      overbought_ref: 50    # the neutral midpoint RSI decays toward
+    percent_b_component:
+      oversold_peak: "pb_score = 1.0 when percent_b <= buy_zone_hi (at/below lower band)"
+      decay_to_mid:  "pb_score = clamp01((mid - percent_b) / (mid - buy_zone_hi)) when buy_zone_hi < percent_b < mid"
+      mid_or_above:  "pb_score = 0.0 when percent_b >= mid (no oversold dislocation)"
+    blend: "reversion_tilt = 0.6 * rsi_score + 0.4 * pb_score"   # in [0, 1]
+  apply:
+    # The tilt re-weights the base alpha score; factor stays within [0.7, 1.3] so
+    # reversion can re-rank and re-size candidates but never invents conviction.
+    factor: "0.7 + 0.6 * reversion_tilt"          # in [0.7, 1.3]
+    formula: "reversion_score = clamp01( base_score * (0.7 + 0.6 * reversion_tilt) * (1 - security_penalty) )"
+    note: >
+      Security penalty is re-applied multiplicatively after the tilt so an
+      attractive oversold reading can never resurrect a security-flagged asset the
+      base score already haircut. reversion_score is in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor (mean-reversion is liquidity-sensitive)."
+    - "Asset has RSI(14) and Bollinger(20,2) readings this cycle (enough OHLCV history)."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65          # strategy_config.rs (applied to reversion_score)
+    max_positions: 5                  # top-N by reversion score
+    ordering: "descending reversion_score; ties broken by lower RSI, then lower %B, then liquidity, then symbol"
+  reversion_preference:
+    - "Strongly prefer OVERSOLD-but-not-broken names: RSI in (breakdown 12, oversold 30] AND %B <= 0.20."
+    - "Do not initiate a new long when an asset is OVERBOUGHT (RSI >= 70 or %B >= 0.80): wrong side of the fade."
+    - "Treat RSI <= breakdown (12) as a breakdown, not a dip — no-initiate (oversold can stay oversold)."
+    - "Only fade with conviction in chop; in trending regimes the exposure multiplier shrinks the book sharply."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  reversion_complete:
+    - "TRIM a held name when it mean-reverts back to the centre: RSI crosses up through 55-60 or %B returns to >= mid (0.50)."
+    - "Full EXIT when overbought: RSI >= overbought (70) or %B >= trim_zone_lo (0.80) — the fade has played out, bank it."
+  score_decay:
+    min_score_to_hold: 0.50           # below this reversion_score, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+  protective:
+    # ATR-scaled stop: a dip that keeps falling past the volatility-scaled stop is
+    # a breakdown, not a reversion — cut it.
+    stop_loss_pct: 12.0               # hard floor force-exit at -12% vs avg cost
+    atr_stop_multiple: 2.5            # soft stop at 2.5x ATR below entry (whichever is tighter)
+    take_profit_pct: 25.0             # force-exit at +25% vs avg cost
+    breakdown_exit: "If RSI falls to <= breakdown (12) after entry, exit: the dip became a breakdown."
+  regime_exit:
+    - "On transition to breakout, step aside (0.2x multiplier): trending markets punish fading — rotate to reserve."
+    - "On transition to risk_on, cut to the 0.4x multiplier (small opportunistic fades only)."
+    - "On transition to risk_off, cut to the 0.15x multiplier and rotate to the USDT reserve regardless of how oversold names look."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional          # proportional to reversion_score
+  steps:
+    - "Select entries with reversion_score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold full reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - reserve]."
+    - "Per name: weight = risk_budget * (reversion_score / Σ selected_reversion_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder — large by design in this Skill)."
+  parameters:
+    # A deliberately LARGE reserve target: mean-reversion holds plenty of dry
+    # powder so it can keep buying dips as a range oscillates.
+    target_stable_reserve_pct: 25.0   # strategy_config.rs analogue (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+  # Inverted exposure profile (see regime_model): most active in chop.
+  regime_exposure_multiplier:
+    chop: 1.0
+    risk_on: 0.4
+    breakout: 0.2
+    risk_off: 0.15
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no signal-driven trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. This Skill is flat for
+    long stretches (trending regimes, or chop with nothing oversold). When flat a
+    minimal heartbeat trade keeps the agent compliant while the kill switch /
+    throttle still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The reversion tilt can re-rank and re-size candidates but cannot
+    override risk — proposals that violate caps are clamped or rejected.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  reversion_scores: "list of { symbol, base_score, rsi, percent_b, reversion_tilt, reversion_score, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/trim/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

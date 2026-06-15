@@ -1,0 +1,58 @@
+{{- if .Values.dashboard.enabled }}
+# Dashboard Deployment + Service. Runs separately from the core pod and talks
+# to the API over the api Service (browser uses NEXT_PUBLIC_API_URL).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guardrail.dashboard.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "guardrail.dashboard.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "guardrail.dashboard.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: dashboard
+          image: "{{ .Values.dashboard.image.repository }}:{{ .Values.dashboard.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          env:
+            # Browser-facing API URL; set to the externally-routable API address.
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.dashboard.apiUrl | quote }}
+            {{- range $k, $v := .Values.dashboard.env }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.dashboard.port }}
+          resources:
+            {{- toYaml .Values.dashboard.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "guardrail.dashboard.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dashboard
+spec:
+  type: {{ .Values.service.type }}
+  selector:
+    {{- include "guardrail.dashboard.selectorLabels" . | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.dashboard.port }}
+      targetPort: {{ .Values.dashboard.port }}
+{{- end }}

@@ -1,0 +1,71 @@
+{
+  "source_repo": "https://github.com/bnb-chain/bnbagent-sdk.git",
+  "local_clone": "integrations/bnbagent-sdk",
+  "network": "bsc-mainnet",
+  "chain_id": 56,
+  "competition_contract": "0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+  "competition_contract_bsctrace": "https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5",
+  "sdk_modules": [
+    {
+      "module": "ERC-8004 Identity",
+      "sdk_path": "bnbagent/erc8004",
+      "guardrail_surface": "crates/bnb-agent/src/erc8004.rs, guardrail-cli identity, /proof",
+      "status": "mirrored"
+    },
+    {
+      "module": "ERC-8183 Agentic Commerce",
+      "sdk_path": "bnbagent/erc8183",
+      "guardrail_surface": "crates/bnb-agent/src/erc8183.rs, configs/bnb/erc8183_commerce.json, /commerce",
+      "status": "implemented"
+    },
+    {
+      "module": "x402 Payment Signing",
+      "sdk_path": "bnbagent/x402",
+      "guardrail_surface": "crates/twak-client/src/x402.rs, configs/x402/signing_policy.json, /signing-policy",
+      "status": "implemented"
+    },
+    {
+      "module": "Signing Policy",
+      "sdk_path": "bnbagent/signing",
+      "guardrail_surface": "configs/x402/signing_policy.json, configs/wallet/wallet_controls.json, /signing-policy, /wallet-controls",
+      "status": "implemented"
+    },
+    {
+      "module": "Wallet Providers",
+      "sdk_path": "bnbagent/wallets",
+      "guardrail_surface": "crates/twak-client, guardrail-cli register",
+      "status": "integrated-through-twak"
+    },
+    {
+      "module": "Network Addresses",
+      "sdk_path": "bnbagent/networks/addresses.py",
+      "guardrail_surface": "crates/common/src/constants.rs, configs/bnb/bnb_agent_sdk_map.json",
+      "status": "referenced"
+    },
+    {
+      "module": "Storage Providers",
+      "sdk_path": "bnbagent/storage",
+      "guardrail_surface": "data/run_report.json, /export/submission.md, /audit-manifest",
+      "status": "local-artifacts"
+    },
+    {
+      "module": "ERC-20 Client",
+      "sdk_path": "bnbagent/erc20",
+      "guardrail_surface": "configs/eligible_assets.bsc.json, /assets, /quotes",
+      "status": "token-universe"
+    },
+    {
+      "module": "Paymaster and Nonce Manager",
+      "sdk_path": "bnbagent/core",
+      "guardrail_surface": "guardrail-cli register, TWAK execution adapter",
+      "status": "adapter-ready"
+    }
+  ],
+  "sdk_contracts": {
+    "payment_token": "0xcE24439F2D9C6a2289F741120FE202248B666666",
+    "commerce_proxy": "0xea4daa3100a767e86fded867729ae7446476eba6",
+    "router_proxy": "0x51895229e12f9876011789b04f8698af06ccd6da",
+    "policy": "0x9c01845705b3078aa2e8cff7520a6376fd766de5",
+    "erc8004_registry": "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432"
+  }
+}

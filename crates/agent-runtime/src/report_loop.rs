@@ -1,0 +1,1 @@
+pub const DEFAULT_REPORT_LOOP_SECONDS: u64 = 86_400;

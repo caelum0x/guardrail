@@ -1,0 +1,14 @@
+name: Security
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  cargo-deny:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cargo-deny --locked
+      - run: cargo deny check
+

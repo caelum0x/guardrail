@@ -1,0 +1,1 @@
+pub const SQLITE_SCHEMA_VERSION: u32 = 5;

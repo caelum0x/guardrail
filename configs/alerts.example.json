@@ -1,0 +1,46 @@
+{
+  "$comment": "Example config for integrations/alert-relay. Copy to alerts.json and customize. Secrets MUST be supplied via env vars referenced as 'env:VAR_NAME' - never paste real tokens here.",
+  "poll_interval_seconds": 60,
+  "sink_timeout_seconds": 10,
+  "severity_threshold": "warning",
+  "include_readiness": true,
+  "api": {
+    "base_url": "http://127.0.0.1:8080"
+  },
+  "sinks": [
+    {
+      "kind": "telegram",
+      "enabled": false,
+      "token": "env:GUARDRAIL_TELEGRAM_BOT_TOKEN",
+      "chat_id": "env:GUARDRAIL_TELEGRAM_CHAT_ID",
+      "api_base": "https://api.telegram.org"
+    },
+    {
+      "kind": "discord",
+      "enabled": false,
+      "webhook_url": "env:GUARDRAIL_DISCORD_WEBHOOK_URL"
+    },
+    {
+      "kind": "webhook",
+      "enabled": false,
+      "url": "env:GUARDRAIL_GENERIC_WEBHOOK_URL"
+    },
+    {
+      "kind": "slack",
+      "enabled": false,
+      "webhook_url": "env:GUARDRAIL_SLACK_WEBHOOK_URL"
+    },
+    {
+      "kind": "email",
+      "enabled": false,
+      "host": "env:GUARDRAIL_SMTP_HOST",
+      "port": 587,
+      "use_tls": true,
+      "sender": "env:GUARDRAIL_SMTP_SENDER",
+      "recipients": "env:GUARDRAIL_SMTP_RECIPIENTS",
+      "username": "env:GUARDRAIL_SMTP_USERNAME",
+      "password": "env:GUARDRAIL_SMTP_PASSWORD",
+      "subject_prefix": "[Guardrail]"
+    }
+  ]
+}

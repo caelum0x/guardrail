@@ -1,0 +1,33 @@
+{
+  "id": "liquidity_crunch",
+  "label": "Liquidity Crunch",
+  "description": "Pool depth collapses on long-tail names and realized swap slippage spikes past max_slippage_pct (0.8%). Quotes either come back with slippage above policy or with zero/unavailable liquidity. The pre-trade slippage and liquidity checks must reject the swap before it executes.",
+  "stressed_inputs": {
+    "category_shocks_pct": {
+      "stable": 0,
+      "core": -6,
+      "defi": -16,
+      "meme": -30,
+      "ai": -24,
+      "rwa": -11,
+      "infrastructure": -15,
+      "other": -20,
+      "uncategorized": -20
+    },
+    "quote_state": {
+      "slippage_pct": 2.4,
+      "liquidity_usd": 0,
+      "depth_collapse": true
+    },
+    "risk_state": {
+      "total_drawdown_pct": 9.0,
+      "daily_drawdown_pct": 4.5
+    }
+  },
+  "stressed_policy_fields": [
+    "max_slippage_pct",
+    "require_quote_before_swap"
+  ],
+  "expected_response": "reduce_only",
+  "expected_detail": "quote slippage_pct (2.4) > max_slippage_pct (0.8) trips the slippage check, and liquidity_usd <= 0 trips the liquidity check. The swap is rejected pre-trade (require_quote_before_swap is true). The desk holds / goes reduce-only on illiquid names rather than executing at a bad fill."
+}

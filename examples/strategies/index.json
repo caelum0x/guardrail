@@ -1,0 +1,39 @@
+[
+  {
+    "name": "conservative-core",
+    "mandate": "Trade BTCB, ETH and WBNB on BSC. Keep max drawdown at 15%, daily loss 4%, max position 12%, stable reserve 30%, slippage 0.4%, kill switch at 18%, at least 1 trade per day, no leverage.",
+    "preset": "conservative",
+    "file": "conservative-core.md"
+  },
+  {
+    "name": "momentum-rotator",
+    "mandate": "Trade WBNB, ETH, BTCB, CAKE and LINK on BSC. Max drawdown 22%, daily loss 7%, max position 18%, stable reserve 12%, slippage 0.8%, kill switch 26%, 2 trades per day, no leverage.",
+    "preset": "balanced",
+    "file": "momentum-rotator.md"
+  },
+  {
+    "name": "sentiment-contrarian",
+    "mandate": "Trade CAKE, UNI, AAVE, LINK and DOT on BSC. Max drawdown 28%, daily loss 9%, max position 20%, stable reserve 8%, slippage 1.0%, kill switch 32%, 3 trades per day, no leverage.",
+    "preset": "aggressive",
+    "file": "sentiment-contrarian.md"
+  },
+  {
+    "name": "defensive-stablefirst",
+    "mandate": "Trade BTCB and WBNB on BSC. Keep max drawdown at 10%, daily loss 3%, max position 8%, stable reserve 40%, slippage 0.3%, kill switch at 12%, at least 1 trade per day, no leverage.",
+    "preset": "conservative",
+    "file": "defensive-stablefirst.md"
+  },
+  {
+    "name": "breakout-rider",
+    "mandate": "Trade WBNB, ETH, CAKE, AVAX and INJ on BSC. Max drawdown 25%, daily loss 8%, max position 20%, stable reserve 10%, slippage 0.9%, kill switch 28%, 2 trades per day, no leverage.",
+    "preset": "balanced",
+    "file": "breakout-rider.md"
+  },
+  {
+    "name": "regime-ensemble",
+    "kind": "meta-allocator",
+    "mandate": "Meta-strategy: blend the four Track-2 strategy skills (trend-breakout-momentum, cmc-regime-routed-alpha, funding-rate-carry, mean-reversion-chop) by the currently classified market regime, using the per-regime weights in skills/ensemble.json. Renormalize blended risk to <= 100% and hold the remainder as a USDT reserve. The Rust risk engine remains the sole execution gate.",
+    "preset": "balanced",
+    "file": "regime-ensemble.md"
+  }
+]

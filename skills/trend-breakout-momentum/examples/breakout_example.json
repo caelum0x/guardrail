@@ -1,0 +1,73 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Home regime: a broad, well-bid advance. Exposure multiplier peaks (1.1); deploy the most capital into the strongest confirmed breakouts, five names at the 17% per-name cap with a 15% USDT reserve.",
+  "inputs": {
+    "fear_greed": { "value": 72, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2620000000000, "btc_dominance_pct": 49.5 },
+    "market_breadth": { "breadth_pct": 71.0, "median_24h_return": 3.4 },
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 642.0, "percent_change_1h": 1.1, "percent_change_24h": 6.2, "percent_change_7d": 14.8, "market_cap_usd": 92000000000, "volume_24h_usd": 3100000000, "liquidity_usd": 44000000, "volatility_1h": 3.4, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3720.0, "percent_change_1h": 0.9, "percent_change_24h": 5.1, "percent_change_7d": 12.0, "market_cap_usd": 446000000000, "volume_24h_usd": 19000000000, "liquidity_usd": 56000000, "volatility_1h": 3.0, "safety_score": 98, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.05, "percent_change_1h": 1.6, "percent_change_24h": 9.4, "percent_change_7d": 22.0, "market_cap_usd": 980000000, "volume_24h_usd": 240000000, "liquidity_usd": 9500000, "volatility_1h": 4.2, "safety_score": 90, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 31.2, "percent_change_1h": 1.4, "percent_change_24h": 8.8, "percent_change_7d": 19.6, "market_cap_usd": 3050000000, "volume_24h_usd": 410000000, "liquidity_usd": 8800000, "volatility_1h": 4.6, "safety_score": 88, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 41.5, "percent_change_1h": 1.0, "percent_change_24h": 6.9, "percent_change_7d": 15.2, "market_cap_usd": 16500000000, "volume_24h_usd": 720000000, "liquidity_usd": 14000000, "volatility_1h": 3.8, "safety_score": 93, "security_flags": [] },
+      { "symbol": "SHIB", "price_usd": 0.0000182, "percent_change_1h": 0.4, "percent_change_24h": 7.1, "percent_change_7d": 16.0, "market_cap_usd": 10700000000, "volume_24h_usd": 380000000, "liquidity_usd": 4300000, "volatility_1h": 6.4, "safety_score": 71, "security_flags": ["high_holder_concentration"] }
+    ],
+    "indicators": [
+      { "symbol": "WBNB", "ema12": 631.0, "ema26": 618.0, "ema50": 602.0, "macd_hist": 2.6, "atr14": 21.0, "donchian_upper": 636.0, "breakout_above_upper": true, "volume_ratio": 1.9 },
+      { "symbol": "ETH", "ema12": 3672.0, "ema26": 3610.0, "ema50": 3540.0, "macd_hist": 18.0, "atr14": 96.0, "donchian_upper": 3700.0, "breakout_above_upper": true, "volume_ratio": 1.7 },
+      { "symbol": "CAKE", "ema12": 2.92, "ema26": 2.80, "ema50": 2.66, "macd_hist": 0.06, "atr14": 0.13, "donchian_upper": 3.00, "breakout_above_upper": true, "volume_ratio": 2.1 },
+      { "symbol": "INJ", "ema12": 30.0, "ema26": 28.9, "ema50": 27.4, "macd_hist": 0.74, "atr14": 1.5, "donchian_upper": 30.8, "breakout_above_upper": true, "volume_ratio": 1.8 },
+      { "symbol": "AVAX", "ema12": 40.2, "ema26": 38.9, "ema50": 37.1, "macd_hist": 0.55, "atr14": 1.9, "donchian_upper": 41.0, "breakout_above_upper": true, "volume_ratio": 1.6 },
+      { "symbol": "SHIB", "ema12": 0.0000176, "ema26": 0.0000170, "ema50": 0.0000164, "macd_hist": 0.0000003, "atr14": 0.0000009, "donchian_upper": 0.0000180, "breakout_above_upper": true, "volume_ratio": 1.5 }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 71 >= 60 AND median_24h_return 3.4 > 2 AND fear_greed 72 >= 50 -> breakout (broad, well-bid advance)",
+    "exposure_multiplier": 1.1,
+    "risk_budget_pct": 90.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.1 = 96.8, clamped to 100 - min_stable_reserve 10 = 90; five names at the 17% cap = 85, remainder is the USDT reserve.",
+    "breakout_scores": [
+      { "symbol": "CAKE", "trend_score": 0.95, "momentum_component": 0.88, "struct_score": 1.00, "breakout_tilt": 0.94, "base_score": 0.78, "security_penalty": 0.03, "breakout_score": 0.91, "components": "EMA12>26>50 rising; macd_hist>0; close>donchian_upper with volume_ratio 2.1>=1.5 -> struct 1.0" },
+      { "symbol": "WBNB", "trend_score": 0.92, "momentum_component": 0.84, "struct_score": 1.00, "breakout_tilt": 0.92, "base_score": 0.76, "security_penalty": 0.02, "breakout_score": 0.90, "components": "aligned EMA stack; positive MACD hist; confirmed donchian breakout, volume_ratio 1.9" },
+      { "symbol": "INJ", "trend_score": 0.90, "momentum_component": 0.82, "struct_score": 1.00, "breakout_tilt": 0.90, "base_score": 0.74, "security_penalty": 0.06, "breakout_score": 0.86, "components": "strong momentum, confirmed breakout volume_ratio 1.8" },
+      { "symbol": "AVAX", "trend_score": 0.88, "momentum_component": 0.78, "struct_score": 1.00, "breakout_tilt": 0.88, "base_score": 0.72, "security_penalty": 0.04, "breakout_score": 0.84, "components": "aligned trend, breakout confirmed volume_ratio 1.6" },
+      { "symbol": "ETH", "trend_score": 0.86, "momentum_component": 0.80, "struct_score": 1.00, "breakout_tilt": 0.87, "base_score": 0.71, "security_penalty": 0.01, "breakout_score": 0.83, "components": "large-cap trend leg, confirmed breakout volume_ratio 1.7" },
+      { "symbol": "SHIB", "trend_score": 0.80, "momentum_component": 0.74, "struct_score": 1.00, "breakout_tilt": 0.84, "base_score": 0.55, "security_penalty": 0.40, "breakout_score": 0.41, "components": "confirmed breakout but security penalty 0.40 (high_holder_concentration) haircuts the score below the entry bar" }
+    ],
+    "breakout_reason": "All five lead names print a confirmed Donchian breakout (close > 20-bar high) on volume_ratio >= 1.5 with an aligned rising EMA stack and positive MACD histogram, so struct_score = 1.0 and breakout_score clears 0.65. SHIB's identical structural breakout is dominated by its security penalty."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "CAKE", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "INJ", "weight_pct": 17.0 },
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 15.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with breakout_score >= 0.65, max 5, ordered by breakout_score.",
+        "Require a confirmed Donchian breakout (close > 20-bar high) AND volume_ratio >= 1.5 (participation-backed); reject fakeouts where volume_ratio < 1.0.",
+        "Require an aligned rising EMA stack (EMA12 > EMA26 > EMA50) and a positive MACD histogram.",
+        "Per-name weight capped at 17%; route by breakout_score share of the risk budget; surplus falls to the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when breakout_score < min_score_to_hold 0.50 on the next rebalance (trend exhaustion).",
+        "Ride winners with an ATR(14) trailing stop; exit when price closes back below the trailing stop or below EMA26.",
+        "Force-exit at stop_loss 12% or take_profit 40% vs average cost; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.91; confirmed donchian breakout, volume_ratio 2.1", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.90; aligned EMA stack + confirmed breakout", "execution": "twap" },
+      { "type": "entry", "symbol": "INJ", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.86; strong momentum, confirmed breakout", "execution": "twap" },
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.84; confirmed breakout volume_ratio 1.6", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.83; large-cap trend leg", "execution": "twap" },
+      { "type": "reject", "symbol": "SHIB", "reason": "breakout_score 0.41 < 0.65; security penalty 0.40 (high_holder_concentration) dominates the confirmed breakout" }
+    ]
+  }
+}

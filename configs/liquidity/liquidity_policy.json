@@ -1,0 +1,8 @@
+{
+  "name": "Paper Liquidity Policy",
+  "max_pool_usage_pct": 0.5,
+  "warning_pool_usage_pct": 0.35,
+  "min_liquidity_usd": 500000,
+  "default_order_notional_usd": 1000,
+  "universe_path": "configs/eligible_assets.bsc.json"
+}

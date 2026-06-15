@@ -1,0 +1,82 @@
+{{- if .Values.alertRelay.enabled }}
+# Optional alert relay (integrations/alert-relay): a stdlib-only daemon that
+# polls the api /alerts feed and forwards new alerts to chat/email sinks.
+#
+# Two objects, gated entirely by alertRelay.enabled:
+#   * a ConfigMap holding the relay's alerts.json (NO secrets; credential
+#     fields are env:VAR_NAME references), mounted read-only into the pod;
+#   * a Deployment running the relay. Secret-backed credentials are pulled in
+#     via envFrom on an EXISTING Secret named in alertRelay.secretName — this
+#     chart never creates the Secret nor inlines any secret value.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "guardrail.alertRelay.name" . }}-config
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alert-relay
+data:
+  # The relay loads this file at /app/configs/alerts.json. Rendered from
+  # .Values.alertRelay.config so operators tune sinks/thresholds via values.
+  alerts.json: |-
+    {{- toJson .Values.alertRelay.config | nindent 4 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "guardrail.alertRelay.name" . }}
+  labels:
+    {{- include "guardrail.labels" . | nindent 4 }}
+    app.kubernetes.io/component: alert-relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "guardrail.alertRelay.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "guardrail.alertRelay.selectorLabels" . | nindent 8 }}
+      annotations:
+        # Roll the pod when the relay config changes.
+        checksum/config: {{ toJson .Values.alertRelay.config | sha256sum }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.securityContext | nindent 8 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "guardrail.alertRelay.name" . }}-config
+      containers:
+        - name: alert-relay
+          image: "{{ .Values.alertRelay.image.repository }}:{{ .Values.alertRelay.image.tag }}"
+          imagePullPolicy: {{ .Values.imagePullPolicy }}
+          {{- with .Values.alertRelay.args }}
+          args:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.alertRelay.env }}
+          env:
+            {{- range $k, $v := . }}
+            - name: {{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
+          {{- end }}
+          {{- if .Values.alertRelay.secretName }}
+          # Sink credentials (env:VAR_NAME refs in the config) are sourced from
+          # this EXISTING Secret. Never inline secrets in the chart.
+          envFrom:
+            - secretRef:
+                name: {{ .Values.alertRelay.secretName | quote }}
+          {{- end }}
+          volumeMounts:
+            - name: config
+              mountPath: /app/configs
+              readOnly: true
+          resources:
+            {{- toYaml .Values.alertRelay.resources | nindent 12 }}
+{{- end }}

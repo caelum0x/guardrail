@@ -1,0 +1,26 @@
+{
+  "description": "TEMPLATE smoke fixtures: minimal expected decision shape per regime. Full worked payloads live in ../examples/. Replace the expectations with your skill's behaviour.",
+  "cases": [
+    {
+      "regime": "risk_on",
+      "exposure_multiplier": 1.0,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT" }
+    },
+    {
+      "regime": "risk_off",
+      "exposure_multiplier": 0.2,
+      "expect": { "has_risk_positions": false, "reserve_symbol": "USDT", "full_reserve_possible": true, "signal_overridden_by_regime": true }
+    },
+    {
+      "regime": "chop",
+      "exposure_multiplier": 0.5,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "reduced_risk_budget": true }
+    },
+    {
+      "regime": "breakout",
+      "exposure_multiplier": 1.1,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "max_positions": 5 }
+    }
+  ],
+  "required_outputs": ["market_regime", "asset_scores", "target_portfolio", "actions", "risk_policy"]
+}

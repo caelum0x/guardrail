@@ -1,0 +1,41 @@
+{
+  "name": "Guardrail Alpha Judge Scorecard",
+  "threshold_ready_pct": 85,
+  "sections": [
+    {
+      "id": "track_1",
+      "label": "Track 1 Autonomous Trading",
+      "weight": 30,
+      "evidence_routes": ["/compete", "/heartbeat", "/readiness", "/trades", "/proof"],
+      "required_facts": ["registered", "daily_trade", "confirmed_txs", "wallet_present", "policy_hash_present"]
+    },
+    {
+      "id": "twak",
+      "label": "Trust Wallet AgentKit",
+      "weight": 20,
+      "evidence_routes": ["/quotes", "/rebalance", "/costs", "/wallet-controls", "/signing-policy"],
+      "required_facts": ["wallet_present", "confirmed_txs", "twak_only"]
+    },
+    {
+      "id": "cmc_agent_hub",
+      "label": "CoinMarketCap Agent Hub",
+      "weight": 18,
+      "evidence_routes": ["/assets", "/watchlist", "/regime", "/funding", "/skill"],
+      "required_facts": ["report_present", "eligible_assets", "skill_present"]
+    },
+    {
+      "id": "bnb_sdk",
+      "label": "BNB AI Agent SDK",
+      "weight": 18,
+      "evidence_routes": ["/bnb-sdk", "/sdk-catalog", "/agent-card", "/commerce", "/agent-services", "/job-simulator", "/proof", "/audit-manifest"],
+      "required_facts": ["wallet_present", "policy_hash_present", "bnb_sdk_mapped", "commerce_ready"]
+    },
+    {
+      "id": "operator_experience",
+      "label": "Operator Experience",
+      "weight": 14,
+      "evidence_routes": ["/", "/alerts", "/drift", "/budget", "/playbook", "/briefing", "/audit-manifest"],
+      "required_facts": ["report_present", "audit_ready"]
+    }
+  ]
+}

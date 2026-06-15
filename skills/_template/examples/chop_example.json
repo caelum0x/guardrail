@@ -1,0 +1,49 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-14T00:00:00Z",
+  "_note": "TEMPLATE example — chop halves the risk budget (0.5x), so fewer names are funded and most of the book stays in the USDT reserve.",
+  "inputs": {
+    "fear_greed": { "value": 48, "value_classification": "neutral" },
+    "market_breadth": { "breadth_pct": 50.0, "median_24h_return": 0.1 }
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breakout/risk_on not met (breadth 50 < 55), risk_off not met (breadth 50 > 40, fg 48 > 30, median 0.1 > -2) -> default chop",
+    "exposure_multiplier": 0.5,
+    "asset_scores": [
+      { "symbol": "LINK", "base_score": 0.69, "tilt": 1.0, "score": 0.87, "security_penalty": 0.03 },
+      { "symbol": "BTCB", "base_score": 0.66, "tilt": 1.0, "score": 0.85, "security_penalty": 0.01 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "BTCB", "weight_pct": 16.6 },
+      { "symbol": "USDT", "weight_pct": 66.4 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter score >= 0.65, max 5; chop halves the risk budget (0.5x) so far fewer names are funded.",
+        "Per-name cap 17%; route by score share of the reduced risk budget."
+      ],
+      "exit": [
+        "Trim/exit when score < 0.50 on a held name; force-exit at stop_loss 12% or take_profit 25%.",
+        "On a downgrade to risk_off, rotate to USDT regardless of the signal."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.87 >= 0.65; per-name cap 17 within halved budget", "execution": "twap" },
+      { "type": "entry", "symbol": "BTCB", "side": "buy", "target_weight_pct": 16.6, "reason": "score 0.85 >= 0.65; fills remaining halved budget", "execution": "twap" },
+      { "type": "no_entry", "symbol": "ETH", "reason": "qualifies on score but no risk budget left this cycle (chop 0.5x)" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 2 }
+  }
+}

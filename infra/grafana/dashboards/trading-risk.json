@@ -1,0 +1,64 @@
+{
+  "uid": "guardrail-risk",
+  "title": "Guardrail Alpha — Trading Risk",
+  "tags": ["guardrail", "risk"],
+  "schemaVersion": 39,
+  "version": 1,
+  "time": { "from": "now-6h", "to": "now" },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Total Drawdown (%)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 10 },
+              { "color": "red", "value": 20 }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "guardrail_total_drawdown_pct", "legendFormat": "drawdown", "refId": "A" }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Kill Switch",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 0 },
+      "fieldConfig": {
+        "defaults": {
+          "mappings": [
+            { "type": "value", "options": { "0": { "text": "ARMED", "color": "green" } } },
+            { "type": "value", "options": { "1": { "text": "ENGAGED", "color": "red" } } }
+          ]
+        },
+        "overrides": []
+      },
+      "targets": [
+        { "expr": "guardrail_kill_switch", "legendFormat": "kill_switch", "refId": "A" }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Risk Decisions (rejections cumulative)",
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 9 },
+      "targets": [
+        { "expr": "guardrail_risk_rejections_total", "legendFormat": "rejections", "refId": "A" }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+[package]
+name = "execution"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common.workspace = true
+risk-engine.workspace = true
+twak-client.workspace = true
+portfolio.workspace = true
+event-store.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+async-trait.workspace = true
+rust_decimal.workspace = true
+tracing.workspace = true
+tokio.workspace = true
+
+[dev-dependencies]
+tokio.workspace = true

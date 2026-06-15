@@ -1,0 +1,18 @@
+[package]
+name = "risk-engine"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common.workspace = true
+portfolio.workspace = true
+market-data.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+anyhow.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+tracing.workspace = true
+

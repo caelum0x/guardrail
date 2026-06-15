@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Guardrail Alpha Risk Policy",
+  "type": "object",
+  "required": [
+    "max_total_drawdown_pct",
+    "max_daily_drawdown_pct",
+    "max_position_pct",
+    "max_new_position_pct",
+    "min_stable_reserve_pct",
+    "max_slippage_pct",
+    "kill_switch_drawdown_pct",
+    "execution_layer"
+  ],
+  "properties": {
+    "max_total_drawdown_pct": { "type": "number" },
+    "max_daily_drawdown_pct": { "type": "number" },
+    "max_position_pct": { "type": "number" },
+    "max_new_position_pct": { "type": "number" },
+    "min_stable_reserve_pct": { "type": "number" },
+    "max_slippage_pct": { "type": "number" },
+    "kill_switch_drawdown_pct": { "type": "number" },
+    "allowed_assets": { "type": "array", "items": { "type": "string" } },
+    "allowed_chains": { "type": "array", "items": { "type": "integer" } },
+    "execution_layer": { "const": "twak_only" },
+    "require_quote_before_swap": { "type": "boolean" }
+  }
+}
+

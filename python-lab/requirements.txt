@@ -1,0 +1,11 @@
+pandas
+numpy
+matplotlib
+plotly
+duckdb
+pyarrow
+jupyter
+pydantic
+sqlalchemy
+rich
+

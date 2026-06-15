@@ -1,0 +1,123 @@
+name: guardrail-alpha
+
+services:
+  agent:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.agent
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite://data/guardrail_alpha.db
+      RUST_LOG: info
+    volumes:
+      - ./data:/app/data
+      - ./configs:/app/configs
+    command: ["--config", "configs/paper.toml"]
+    restart: unless-stopped
+    networks: [guardrail]
+
+  api:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.api
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite://data/guardrail_alpha.db
+      RUST_LOG: info
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - agent
+    restart: unless-stopped
+    networks: [guardrail]
+
+  monitor:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.monitor
+    env_file:
+      - .env
+    environment:
+      GUARDRAIL_REPORT: data/run_report.json
+      GUARDRAIL_MONITOR_CHECKS: "0" # 0 = run forever
+      RUST_LOG: info
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - agent
+    restart: unless-stopped
+    networks: [guardrail]
+
+  dashboard:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.dashboard
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    restart: unless-stopped
+    networks: [guardrail]
+
+  exporter:
+    build:
+      context: .
+      dockerfile: infra/Dockerfile.exporter
+    environment:
+      DATABASE_URL: sqlite://data/guardrail_alpha.db
+      GUARDRAIL_REPORT: data/run_report.json
+      EXPORTER_ADDR: 0.0.0.0:9100
+      RUST_LOG: info
+    ports:
+      - "9100:9100"
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - agent
+    restart: unless-stopped
+    networks: [guardrail]
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./infra/prometheus:/etc/prometheus:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    depends_on:
+      - api
+      - exporter
+    restart: unless-stopped
+    networks: [guardrail]
+
+  grafana:
+    image: grafana/grafana:latest
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-guardrail}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infra/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./infra/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "3001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+    networks: [guardrail]
+
+volumes:
+  prometheus-data:
+  grafana-data:
+
+networks:
+  guardrail:
+    driver: bridge

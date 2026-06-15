@@ -1,0 +1,40 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardrail-dashboard
+  namespace: guardrail
+  labels:
+    app.kubernetes.io/name: guardrail-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: guardrail-dashboard
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardrail-dashboard
+    spec:
+      containers:
+        - name: dashboard
+          image: guardrail/dashboard:latest
+          env:
+            # Browser-facing API URL; set to the externally-routable API address.
+            - { name: NEXT_PUBLIC_API_URL, value: "http://localhost:8080" }
+            - { name: NODE_ENV, value: production }
+          ports:
+            - { name: http, containerPort: 3000 }
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: guardrail-dashboard
+  namespace: guardrail
+spec:
+  selector:
+    app.kubernetes.io/name: guardrail-dashboard
+  ports:
+    - { name: http, port: 3000, targetPort: 3000 }

@@ -1,0 +1,67 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Constructive up-tape but breakout breadth not yet confirmed. Full deployment (multiplier 1.0); take only the cleanest breakouts, four names, with a larger USDT reserve than the breakout regime.",
+  "inputs": {
+    "fear_greed": { "value": 58, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2410000000000, "btc_dominance_pct": 51.0 },
+    "market_breadth": { "breadth_pct": 57.0, "median_24h_return": 1.4 },
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 614.0, "percent_change_1h": 0.6, "percent_change_24h": 2.4, "percent_change_7d": 6.1, "market_cap_usd": 88000000000, "volume_24h_usd": 2000000000, "liquidity_usd": 43000000, "volatility_1h": 2.8, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3460.0, "percent_change_1h": 0.4, "percent_change_24h": 1.9, "percent_change_7d": 4.8, "market_cap_usd": 415000000000, "volume_24h_usd": 15000000000, "liquidity_usd": 55000000, "volatility_1h": 2.4, "safety_score": 98, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 15.4, "percent_change_1h": 0.7, "percent_change_24h": 3.1, "percent_change_7d": 7.7, "market_cap_usd": 9600000000, "volume_24h_usd": 470000000, "liquidity_usd": 11500000, "volatility_1h": 3.2, "safety_score": 95, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.78, "percent_change_1h": 0.5, "percent_change_24h": 2.6, "percent_change_7d": 6.9, "market_cap_usd": 900000000, "volume_24h_usd": 190000000, "liquidity_usd": 9200000, "volatility_1h": 3.9, "safety_score": 90, "security_flags": [] },
+      { "symbol": "DOT", "price_usd": 7.2, "percent_change_1h": -0.1, "percent_change_24h": 0.6, "percent_change_7d": 1.2, "market_cap_usd": 10200000000, "volume_24h_usd": 280000000, "liquidity_usd": 9000000, "volatility_1h": 2.9, "safety_score": 94, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "WBNB", "ema12": 608.0, "ema26": 600.0, "ema50": 590.0, "macd_hist": 1.2, "atr14": 16.0, "donchian_upper": 612.0, "breakout_above_upper": true, "volume_ratio": 1.6 },
+      { "symbol": "ETH", "ema12": 3438.0, "ema26": 3402.0, "ema50": 3360.0, "macd_hist": 9.0, "atr14": 78.0, "donchian_upper": 3450.0, "breakout_above_upper": true, "volume_ratio": 1.5 },
+      { "symbol": "LINK", "ema12": 15.0, "ema26": 14.6, "ema50": 14.1, "macd_hist": 0.18, "atr14": 0.7, "donchian_upper": 15.2, "breakout_above_upper": true, "volume_ratio": 1.7 },
+      { "symbol": "CAKE", "ema12": 2.71, "ema26": 2.63, "ema50": 2.55, "macd_hist": 0.04, "atr14": 0.12, "donchian_upper": 2.76, "breakout_above_upper": true, "volume_ratio": 1.6 },
+      { "symbol": "DOT", "ema12": 7.18, "ema26": 7.20, "ema50": 7.22, "macd_hist": -0.02, "atr14": 0.31, "donchian_upper": 7.40, "breakout_above_upper": false, "volume_ratio": 0.9 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 57 >= 55 AND fear_greed 58 >= 50 but median_24h_return 1.4 <= 2 -> risk_on (breakout breadth not yet met)",
+    "exposure_multiplier": 1.0,
+    "risk_budget_pct": 88.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.0 = 88; four confirmed breakouts share it under the 17% cap, remainder is the USDT reserve.",
+    "breakout_scores": [
+      { "symbol": "LINK", "trend_score": 0.86, "momentum_component": 0.74, "struct_score": 1.00, "breakout_tilt": 0.85, "base_score": 0.71, "security_penalty": 0.03, "breakout_score": 0.82, "components": "rising EMA stack, macd_hist>0, close>donchian_upper volume_ratio 1.7" },
+      { "symbol": "WBNB", "trend_score": 0.84, "momentum_component": 0.72, "struct_score": 1.00, "breakout_tilt": 0.84, "base_score": 0.70, "security_penalty": 0.02, "breakout_score": 0.81, "components": "confirmed breakout volume_ratio 1.6" },
+      { "symbol": "CAKE", "trend_score": 0.82, "momentum_component": 0.70, "struct_score": 1.00, "breakout_tilt": 0.82, "base_score": 0.68, "security_penalty": 0.03, "breakout_score": 0.78, "components": "confirmed breakout volume_ratio 1.6" },
+      { "symbol": "ETH", "trend_score": 0.80, "momentum_component": 0.72, "struct_score": 1.00, "breakout_tilt": 0.82, "base_score": 0.69, "security_penalty": 0.01, "breakout_score": 0.78, "components": "large-cap, confirmed breakout volume_ratio 1.5 (just at the confirm threshold)" },
+      { "symbol": "DOT", "trend_score": 0.30, "momentum_component": 0.28, "struct_score": 0.00, "breakout_tilt": 0.22, "base_score": 0.52, "security_penalty": 0.03, "breakout_score": 0.34, "components": "no breakout (close<donchian_upper), macd_hist<0, volume_ratio 0.9 unconfirmed -> struct 0" }
+    ],
+    "breakout_reason": "Four names print a confirmed breakout (volume_ratio >= 1.5, aligned EMA stack, positive MACD hist). DOT fails every gate (no new high, negative histogram, volume_ratio 0.9) so its struct_score collapses to 0 and it stays out."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "CAKE", "weight_pct": 16.0 },
+      { "symbol": "ETH", "weight_pct": 16.0 },
+      { "symbol": "USDT", "weight_pct": 34.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with breakout_score >= 0.65, max 5, ordered by breakout_score.",
+        "Require a confirmed Donchian breakout AND volume_ratio >= 1.5; reject unconfirmed breakouts (volume_ratio < 1.0).",
+        "Per-name weight capped at 17%; route by breakout_score share of the risk budget; surplus to USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when breakout_score < 0.50 on the next rebalance.",
+        "Trail with ATR(14); exit on a close back below EMA26 or the trailing stop.",
+        "Force-exit at stop_loss 12% or take_profit 40%; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.82; confirmed breakout volume_ratio 1.7", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "breakout_score 0.81; confirmed breakout volume_ratio 1.6", "execution": "twap" },
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 16.0, "reason": "breakout_score 0.78; confirmed breakout volume_ratio 1.6", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 16.0, "reason": "breakout_score 0.78; confirmed breakout at the volume threshold", "execution": "twap" },
+      { "type": "no_entry", "symbol": "DOT", "reason": "breakout_score 0.34 < 0.65: no new high, negative MACD histogram, volume_ratio 0.9 (unconfirmed)" }
+    ]
+  }
+}

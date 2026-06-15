@@ -1,0 +1,17 @@
+[package]
+name = "market-data"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common.workspace = true
+cmc-client.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+rust_decimal.workspace = true
+rust_decimal_macros.workspace = true
+tracing.workspace = true
+tokio.workspace = true

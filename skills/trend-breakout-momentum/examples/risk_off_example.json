@@ -1,0 +1,59 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Fearful, broadly declining tape — breakouts fail. Exposure minimal (multiplier 0.15); cut to a near-full USDT reserve, hold at most one resilient leader tiny, and place a heartbeat trade to satisfy the daily-trade requirement while protective exits run.",
+  "inputs": {
+    "fear_greed": { "value": 24, "value_classification": "fear" },
+    "global": { "total_market_cap_usd": 2050000000000, "btc_dominance_pct": 55.0 },
+    "market_breadth": { "breadth_pct": 33.0, "median_24h_return": -3.2 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 61000.0, "percent_change_1h": -0.4, "percent_change_24h": -1.8, "percent_change_7d": -5.0, "market_cap_usd": 1200000000000, "volume_24h_usd": 22000000000, "liquidity_usd": 60000000, "volatility_1h": 2.6, "safety_score": 99, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 560.0, "percent_change_1h": -0.9, "percent_change_24h": -4.6, "percent_change_7d": -10.2, "market_cap_usd": 80000000000, "volume_24h_usd": 2400000000, "liquidity_usd": 41000000, "volatility_1h": 4.0, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3150.0, "percent_change_1h": -1.1, "percent_change_24h": -5.2, "percent_change_7d": -11.0, "market_cap_usd": 378000000000, "volume_24h_usd": 17000000000, "liquidity_usd": 53000000, "volatility_1h": 3.8, "safety_score": 98, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.30, "percent_change_1h": -1.6, "percent_change_24h": -7.8, "percent_change_7d": -16.0, "market_cap_usd": 740000000, "volume_24h_usd": 210000000, "liquidity_usd": 8500000, "volatility_1h": 5.6, "safety_score": 90, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "BTCB", "ema12": 61500.0, "ema26": 62200.0, "ema50": 63000.0, "macd_hist": -260.0, "atr14": 1500.0, "donchian_upper": 63500.0, "breakout_above_upper": false, "volume_ratio": 1.1 },
+      { "symbol": "WBNB", "ema12": 575.0, "ema26": 588.0, "ema50": 600.0, "macd_hist": -7.0, "atr14": 22.0, "donchian_upper": 600.0, "breakout_above_upper": false, "volume_ratio": 1.3 },
+      { "symbol": "ETH", "ema12": 3220.0, "ema26": 3300.0, "ema50": 3380.0, "macd_hist": -42.0, "atr14": 110.0, "donchian_upper": 3400.0, "breakout_above_upper": false, "volume_ratio": 1.2 },
+      { "symbol": "CAKE", "ema12": 2.45, "ema26": 2.58, "ema50": 2.66, "macd_hist": -0.07, "atr14": 0.16, "donchian_upper": 2.70, "breakout_above_upper": false, "volume_ratio": 1.4 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "breadth_pct 33 < 45 AND median_24h_return -3.2 < -2 AND fear_greed 24 (fear) -> risk_off (broad decline; breakouts fail)",
+    "exposure_multiplier": 0.15,
+    "risk_budget_pct": 13.2,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 0.15 = 13.2; no name prints a valid up-breakout, so the book is a near-full USDT reserve with one tiny resilient-leader heartbeat starter.",
+    "breakout_scores": [
+      { "symbol": "BTCB", "trend_score": 0.35, "momentum_component": 0.30, "struct_score": 0.00, "breakout_tilt": 0.28, "base_score": 0.58, "security_penalty": 0.01, "breakout_score": 0.40, "components": "most resilient large-cap but EMA stack falling and no up-breakout (close<donchian_upper)" },
+      { "symbol": "WBNB", "trend_score": 0.18, "momentum_component": 0.15, "struct_score": 0.00, "breakout_tilt": 0.14, "base_score": 0.45, "security_penalty": 0.02, "breakout_score": 0.24, "components": "falling stack, negative histogram, no breakout" },
+      { "symbol": "ETH", "trend_score": 0.16, "momentum_component": 0.14, "struct_score": 0.00, "breakout_tilt": 0.13, "base_score": 0.44, "security_penalty": 0.01, "breakout_score": 0.22, "components": "downtrend, macd_hist<0, no breakout" },
+      { "symbol": "CAKE", "trend_score": 0.12, "momentum_component": 0.10, "struct_score": 0.00, "breakout_tilt": 0.10, "base_score": 0.38, "security_penalty": 0.03, "breakout_score": 0.17, "components": "steep downtrend, no breakout" }
+    ],
+    "breakout_reason": "No asset prints a valid upside breakout in a falling tape (every EMA stack is inverted and every Donchian gate is below its upper band), so all breakout_scores sit below 0.65. The Skill holds a near-full USDT reserve; a single tiny BTCB heartbeat trade keeps the agent daily-trade compliant while protective exits run."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 6.0 },
+      { "symbol": "USDT", "weight_pct": 94.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Do not initiate breakout entries in risk_off (failed-breakout regime); hold the USDT reserve.",
+        "If a daily heartbeat trade is required, place the smallest compliant clip in the single most resilient large-cap (highest breakout_score) and immediately bring exposure back to the reserve.",
+        "Per-name weight capped at 17%; min_stable_reserve floor 10% always honoured."
+      ],
+      "exit": [
+        "Exit any inherited breakout position whose breakout_score < 0.50 or that closes back inside its Donchian channel.",
+        "Force-exit at stop_loss 12% or take_profit 40%; on the risk_off transition rotate all risk into USDT.",
+        "Stay flat until breadth and momentum recover into risk_on/breakout."
+      ]
+    },
+    "actions": [
+      { "type": "exit", "symbol": "WBNB", "side": "sell", "target_weight_pct": 0.0, "reason": "risk_off transition + breakout_score 0.24 < 0.50 -> rotate to USDT", "execution": "twap" },
+      { "type": "exit", "symbol": "ETH", "side": "sell", "target_weight_pct": 0.0, "reason": "downtrend, no breakout -> rotate to USDT", "execution": "twap" },
+      { "type": "heartbeat", "symbol": "BTCB", "side": "buy", "target_weight_pct": 6.0, "reason": "smallest compliant daily-trade clip in the most resilient large-cap; satisfies min_trades_per_day 1 without taking real breakout risk", "execution": "twap" }
+    ]
+  }
+}

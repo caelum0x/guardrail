@@ -1,0 +1,17 @@
+[package]
+name = "backtester"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+common.workspace = true
+market-data.workspace = true
+strategy-engine.workspace = true
+risk-engine.workspace = true
+portfolio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+rust_decimal.workspace = true
+tracing.workspace = true
+

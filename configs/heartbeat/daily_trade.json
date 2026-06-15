@@ -1,0 +1,17 @@
+{
+  "name": "Track 1 Daily Trade Heartbeat",
+  "report_path": "data/run_report.json",
+  "universe_path": "configs/eligible_assets.bsc.json",
+  "quote_symbol": "USDT",
+  "preferred_pair": {
+    "from": "USDT",
+    "to": "WBNB"
+  },
+  "min_trades_per_day": 1,
+  "max_heartbeat_trade_pct": 2,
+  "min_notional_usd": 25,
+  "target_notional_usd": 100,
+  "max_notional_usd": 200,
+  "cooldown_hours": 24,
+  "execution_path": "risk_gate -> TWAK quote -> final risk -> TWAK swap"
+}

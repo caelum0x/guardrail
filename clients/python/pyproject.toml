@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "guardrail-client"
+version = "0.1.0"
+description = "Stdlib-only Python client for the Guardrail Alpha read-only API."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+# No runtime dependencies: this client uses only the Python standard library.
+dependencies = []
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["guardrail_client*"]

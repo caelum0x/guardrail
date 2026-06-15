@@ -1,0 +1,75 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Broad, well-bid advance with calm-to-moderate realised vol (orderly trend, not panic). Full deployment (regime multiplier 1.0) and a target-vol scalar near 1.0; run the full vol-targeted risk-parity book — six low-vol sleeves, the lowest-vol names at the 17% cap, small USDT reserve.",
+  "inputs": {
+    "fear_greed": { "value": 70, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2600000000000, "btc_dominance_pct": 49.5 },
+    "market_breadth": { "breadth_pct": 70.0, "median_24h_return": 3.0 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 66500.0, "percent_change_1h": 0.4, "percent_change_24h": 2.6, "percent_change_7d": 8.4, "market_cap_usd": 1310000000000, "volume_24h_usd": 27000000000, "liquidity_usd": 63000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3700.0, "percent_change_1h": 0.6, "percent_change_24h": 3.4, "percent_change_7d": 11.0, "market_cap_usd": 444000000000, "volume_24h_usd": 19000000000, "liquidity_usd": 56000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 638.0, "percent_change_1h": 0.7, "percent_change_24h": 4.1, "percent_change_7d": 12.5, "market_cap_usd": 91000000000, "volume_24h_usd": 3000000000, "liquidity_usd": 44000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 16.1, "percent_change_1h": 0.9, "percent_change_24h": 5.0, "percent_change_7d": 14.0, "market_cap_usd": 10000000000, "volume_24h_usd": 500000000, "liquidity_usd": 12000000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "XRP", "price_usd": 0.66, "percent_change_1h": 0.5, "percent_change_24h": 3.8, "percent_change_7d": 9.6, "market_cap_usd": 37000000000, "volume_24h_usd": 1700000000, "liquidity_usd": 19000000, "safety_score": 94, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 40.0, "percent_change_1h": 0.8, "percent_change_24h": 5.6, "percent_change_7d": 15.5, "market_cap_usd": 16000000000, "volume_24h_usd": 700000000, "liquidity_usd": 14000000, "safety_score": 93, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "BTCB", "realised_vol": 0.44, "atr14": 1400.0, "atr_pct": 2.1 },
+      { "symbol": "XRP", "realised_vol": 0.52, "atr14": 0.014, "atr_pct": 2.1 },
+      { "symbol": "ETH", "realised_vol": 0.60, "atr14": 78.0, "atr_pct": 2.1 },
+      { "symbol": "WBNB", "realised_vol": 0.70, "atr14": 16.0, "atr_pct": 2.5 },
+      { "symbol": "LINK", "realised_vol": 0.85, "atr14": 0.78, "atr_pct": 4.8 },
+      { "symbol": "AVAX", "realised_vol": 1.00, "atr14": 2.0, "atr_pct": 5.0 }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 70 >= 65 AND median_24h_return 3.0 > 2 AND fear_greed 70 >= 60 -> breakout (broad, well-bid advance)",
+    "exposure_multiplier": 1.0,
+    "target_vol": { "target_portfolio_vol": 0.45, "est_book_vol": 0.50, "target_vol_scalar": 0.90, "reason": "orderly trend: est_book_vol 0.50 modestly above target 0.45 -> scalar 0.45/0.50 = 0.90 (near-full deployment, never levered)" },
+    "gross_pct": 90.0,
+    "gross_reason": "gross = 100 * regime_multiplier 1.0 * target_vol_scalar 0.90 = 90; the full vol-targeted risk-parity book deploys, the lowest-vol names hit the 17% cap.",
+    "risk_weights": [
+      { "symbol": "BTCB", "realised_vol": 0.44, "inv_vol": 2.27, "raw_parity_weight": 0.222, "security_penalty": 0.01, "weight_pct": 17.0, "note": "lowest vol -> largest sleeve, capped at 17%" },
+      { "symbol": "XRP", "realised_vol": 0.52, "inv_vol": 1.92, "raw_parity_weight": 0.188, "security_penalty": 0.02, "weight_pct": 17.0, "note": "second-lowest vol, capped at 17%" },
+      { "symbol": "ETH", "realised_vol": 0.60, "inv_vol": 1.67, "raw_parity_weight": 0.163, "security_penalty": 0.01, "weight_pct": 15.0, "note": "mid sleeve" },
+      { "symbol": "WBNB", "realised_vol": 0.70, "inv_vol": 1.43, "raw_parity_weight": 0.140, "security_penalty": 0.02, "weight_pct": 13.0, "note": "smaller sleeve" },
+      { "symbol": "LINK", "realised_vol": 0.85, "inv_vol": 1.18, "raw_parity_weight": 0.115, "security_penalty": 0.03, "weight_pct": 10.0, "note": "higher vol -> smaller sleeve" },
+      { "symbol": "AVAX", "realised_vol": 1.00, "inv_vol": 1.00, "raw_parity_weight": 0.098, "security_penalty": 0.04, "weight_pct": 8.0, "note": "highest vol of the set -> smallest sleeve so it contributes equal risk" }
+    ],
+    "risk_weights_reason": "inv_vol = 1/realised_vol; raw_parity_weight = inv_vol / Σ inv_vol (Σ inv_vol = 10.47). Each name's risk contribution (weight*vol) is equalised (risk parity). gross 90 distributes the parity weights; the two lowest-vol names hit the 17% cap, surplus rolls to USDT.",
+    "reserve_reason": "Six sleeves 17+17+15+13+10+8 = 80 deployed; the remaining 20 is the USDT reserve (small, full deployment in an orderly breakout)."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 17.0 },
+      { "symbol": "XRP", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 15.0 },
+      { "symbol": "WBNB", "weight_pct": 13.0 },
+      { "symbol": "LINK", "weight_pct": 10.0 },
+      { "symbol": "AVAX", "weight_pct": 8.0 },
+      { "symbol": "USDT", "weight_pct": 20.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Run the full vol-targeted inverse-vol book (weight ∝ 1/realised_vol) across the lowest-vol eligible names; no directional score gate.",
+        "Full deployment in breakout/risk_on when vol is calm; the lowest-vol names hit the 17% cap, surplus rolls to USDT.",
+        "Cap gross at the no-leverage ceiling (target_vol_scalar <= 1.0) — never lever even in a strong tape."
+      ],
+      "exit": [
+        "Rebalance toward parity when a name's realised_vol drifts > 20% relative or its sleeve drifts > 3% of NAV.",
+        "Scale the whole book down if realised vol spikes (est_book_vol > target); rotate the cut to USDT.",
+        "Trim any name above the 17% cap; exit any name that becomes ineligible."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "BTCB", "side": "buy", "target_weight_pct": 17.0, "reason": "lowest realised_vol 0.44 -> largest inverse-vol sleeve, capped at 17%", "execution": "twap" },
+      { "type": "entry", "symbol": "XRP", "side": "buy", "target_weight_pct": 17.0, "reason": "realised_vol 0.52 -> inverse-vol sleeve at the cap", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 15.0, "reason": "realised_vol 0.60 -> mid sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 13.0, "reason": "realised_vol 0.70 -> smaller sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 10.0, "reason": "realised_vol 0.85 -> small sleeve", "execution": "twap" },
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 8.0, "reason": "highest realised_vol 1.00 -> smallest sleeve so it contributes equal risk", "execution": "twap" }
+    ]
+  }
+}

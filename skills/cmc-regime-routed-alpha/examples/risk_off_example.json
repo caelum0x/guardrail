@@ -1,0 +1,49 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-13T00:00:00Z",
+  "inputs": {
+    "fear_greed": { "value": 24, "value_classification": "extreme_fear" },
+    "global": { "total_market_cap_usd": 1980000000000, "btc_dominance_pct": 54.8 },
+    "market_breadth": { "breadth_pct": 32.0, "median_24h_return": -3.4 },
+    "trending": ["BTCB", "USDT"],
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 548.0, "percent_change_1h": -1.2, "percent_change_24h": -5.1, "market_cap_usd": 79000000000, "volume_24h_usd": 2600000000, "liquidity_usd": 40000000, "volatility_1h": 4.8, "safety_score": 96, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.31, "percent_change_1h": -1.8, "percent_change_24h": -7.9, "market_cap_usd": 670000000, "volume_24h_usd": 190000000, "liquidity_usd": 9500000, "volatility_1h": 5.6, "safety_score": 92, "security_flags": [] },
+      { "symbol": "BTCB", "price_usd": 64800.0, "percent_change_1h": -0.6, "percent_change_24h": -2.4, "market_cap_usd": 1280000000000, "volume_24h_usd": 31000000000, "liquidity_usd": 60000000, "volatility_1h": 2.9, "safety_score": 99, "security_flags": [] },
+      { "symbol": "DOGE", "price_usd": 0.118, "percent_change_1h": -2.4, "percent_change_24h": -9.6, "market_cap_usd": 17200000000, "volume_24h_usd": 690000000, "liquidity_usd": 5100000, "volatility_1h": 6.4, "safety_score": 84, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 22.4, "percent_change_1h": -2.0, "percent_change_24h": -8.8, "market_cap_usd": 2200000000, "volume_24h_usd": 240000000, "liquidity_usd": 7200000, "volatility_1h": 6.1, "safety_score": 88, "security_flags": [] }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "fear_greed 24 <= 30 (also breadth 32 <= 40 and median -3.4 < -2) -> risk_off",
+    "exposure_multiplier": 0.2,
+    "asset_scores": [
+      { "symbol": "BTCB", "score": 0.49, "components": { "momentum": 0.46, "volume": 0.22, "volatility": 0.98, "liquidity": 0.80, "sentiment": 0.32, "execution_quality": 0.99 }, "security_penalty": 0.01 },
+      { "symbol": "WBNB", "score": 0.43, "components": { "momentum": 0.40, "volume": 0.35, "volatility": 0.70, "liquidity": 0.76, "sentiment": 0.32, "execution_quality": 0.99 }, "security_penalty": 0.02 },
+      { "symbol": "CAKE", "score": 0.36, "components": { "momentum": 0.34, "volume": 0.51, "volatility": 0.57, "liquidity": 0.66, "sentiment": 0.32, "execution_quality": 0.96 }, "security_penalty": 0.04 },
+      { "symbol": "INJ", "score": 0.34, "components": { "momentum": 0.33, "volume": 0.43, "volatility": 0.48, "liquidity": 0.62, "sentiment": 0.32, "execution_quality": 0.93 }, "security_penalty": 0.06 },
+      { "symbol": "DOGE", "score": 0.31, "components": { "momentum": 0.30, "volume": 0.39, "volatility": 0.43, "liquidity": 0.58, "sentiment": 0.32, "execution_quality": 0.92 }, "security_penalty": 0.08 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "USDT", "weight_pct": 100.0 }
+    ],
+    "actions": [
+      { "type": "exit", "symbol": "CAKE", "side": "sell", "reason": "regime risk_off; score 0.36 < min_score_to_hold 0.50; rotate to reserve", "execution": "twap" },
+      { "type": "exit", "symbol": "INJ", "side": "sell", "reason": "regime risk_off; score 0.34 < min_score_to_hold 0.50", "execution": "twap" },
+      { "type": "no_entry", "reason": "No asset clears min_score_to_enter 0.65 in risk_off; allocator holds full reserve (exposure_multiplier 0.2)" },
+      { "type": "heartbeat", "symbol": "USDT", "side": "buy", "notional_pct": 0.05, "reason": "daily-trade requirement satisfied via minimal heartbeat trade (<= 0.10% NAV) while flat" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "heartbeat", "trades_today": 1 }
+  }
+}

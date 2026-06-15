@@ -1,0 +1,51 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "_note": "TEMPLATE example — replace numbers/symbols with your skill's worked case. Keep it validator-clean: a non-empty market_regime, a target_portfolio of {symbol, weight_pct} summing to <=100 (remainder is the USDT reserve), and if you keep the rules block, both entry and exit must be present.",
+  "inputs": {
+    "fear_greed": { "value": 57, "value_classification": "greed" },
+    "market_breadth": { "breadth_pct": 57.0, "median_24h_return": 1.1 }
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 57 >= 55 AND fear_greed 57 >= 50 (breakout not met: median 1.1 <= 2)",
+    "exposure_multiplier": 1.0,
+    "asset_scores": [
+      { "symbol": "WBNB", "base_score": 0.71, "tilt": 1.0, "score": 0.88, "security_penalty": 0.02 },
+      { "symbol": "LINK", "base_score": 0.69, "tilt": 1.0, "score": 0.86, "security_penalty": 0.03 },
+      { "symbol": "ETH", "base_score": 0.67, "tilt": 1.0, "score": 0.85, "security_penalty": 0.01 }
+    ]
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 49.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with score >= min_score_to_enter 0.65, max 5, ordered by score.",
+        "Per-name weight capped at 17%; route by score share of the risk budget."
+      ],
+      "exit": [
+        "Trim/exit when score < min_score_to_hold 0.50 on the next rebalance.",
+        "Force-exit at stop_loss 12% or take_profit 25%; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.88 >= 0.65; per-name cap 17 applied", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.86 >= 0.65", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 17.0, "reason": "score 0.85 >= 0.65", "execution": "twap" }
+    ],
+    "risk_policy": {
+      "max_position_pct": 18.0,
+      "min_stable_reserve_pct": 10.0,
+      "max_total_drawdown_pct": 22.0,
+      "kill_switch_drawdown_pct": 24.0,
+      "throttled": false,
+      "kill_engaged": false
+    },
+    "daily_trade_requirement": { "enabled": true, "satisfied_by": "signal_trades", "trades_today": 3 }
+  }
+}

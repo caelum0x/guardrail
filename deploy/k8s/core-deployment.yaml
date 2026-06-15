@@ -1,0 +1,90 @@
+# The trading agent and its read-only sidecars share one SQLite event log
+# (data/guardrail_alpha.db) + run report, so they co-locate in a single pod
+# with a shared volume. The agent is the sole writer; api/exporter/monitor read.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: guardrail-core
+  namespace: guardrail
+  labels:
+    app.kubernetes.io/name: guardrail-core
+    app.kubernetes.io/part-of: guardrail-alpha
+spec:
+  replicas: 1 # single writer; do not scale the agent horizontally
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: guardrail-core
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: guardrail-core
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      volumes:
+        - name: data
+          emptyDir: {} # swap for a PVC to persist across restarts
+        - name: configs
+          configMap:
+            name: guardrail-configs
+            optional: true
+      containers:
+        - name: agent
+          image: guardrail/agent:latest
+          args: ["--config", "configs/paper.toml"]
+          env:
+            - name: DATABASE_URL
+              value: sqlite://data/guardrail_alpha.db
+            - name: GUARDRAIL_REPORT
+              value: data/run_report.json
+            - name: RUST_LOG
+              value: info
+          volumeMounts:
+            - { name: data, mountPath: /app/data }
+          resources:
+            requests: { cpu: "100m", memory: "128Mi" }
+            limits: { cpu: "1", memory: "512Mi" }
+        - name: api
+          image: guardrail/api:latest
+          env:
+            - { name: DATABASE_URL, value: sqlite://data/guardrail_alpha.db }
+            - { name: RUST_LOG, value: info }
+          ports:
+            - { name: http, containerPort: 8080 }
+          readinessProbe:
+            httpGet: { path: /health, port: 8080 }
+            initialDelaySeconds: 5
+            periodSeconds: 15
+          volumeMounts:
+            - { name: data, mountPath: /app/data }
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+        - name: exporter
+          image: guardrail/exporter:latest
+          env:
+            - { name: DATABASE_URL, value: sqlite://data/guardrail_alpha.db }
+            - { name: GUARDRAIL_REPORT, value: data/run_report.json }
+            - { name: EXPORTER_ADDR, value: "0.0.0.0:9100" }
+          ports:
+            - { name: metrics, containerPort: 9100 }
+          volumeMounts:
+            - { name: data, mountPath: /app/data }
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "250m", memory: "128Mi" }
+        - name: monitor
+          image: guardrail/monitor:latest
+          env:
+            - { name: GUARDRAIL_REPORT, value: data/run_report.json }
+            - { name: GUARDRAIL_MONITOR_CHECKS, value: "0" }
+            - { name: RUST_LOG, value: info }
+          volumeMounts:
+            - { name: data, mountPath: /app/data }
+          resources:
+            requests: { cpu: "25m", memory: "32Mi" }
+            limits: { cpu: "250m", memory: "128Mi" }

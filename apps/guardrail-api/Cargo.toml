@@ -1,0 +1,27 @@
+[package]
+name = "guardrail-api"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+event-store.workspace = true
+observability.workspace = true
+common.workspace = true
+market-data.workspace = true
+cmc-client.workspace = true
+twak-client.workspace = true
+strategy-engine.workspace = true
+risk-engine.workspace = true
+backtester.workspace = true
+indicators = { path = "../../crates/indicators" }
+portfolio-optimizer = { path = "../../crates/portfolio-optimizer" }
+policy-compiler.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+axum.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+tower-http.workspace = true
+chrono.workspace = true
+rust_decimal.workspace = true

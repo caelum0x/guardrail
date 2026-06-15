@@ -1,0 +1,11 @@
+[Unit]
+Description=Guardrail Alpha Agent
+
+[Service]
+WorkingDirectory=/opt/guardrail-alpha
+ExecStart=/usr/local/bin/guardrail-agent --config configs/production.toml
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
+
