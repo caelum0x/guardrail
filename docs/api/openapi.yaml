@@ -1010,6 +1010,76 @@ paths:
               schema:
                 $ref: "#/components/schemas/LooseObject"
 
+  /journal:
+    get:
+      tags: [reports]
+      summary: Decision journal projection of the agent's reasoning
+      description: >-
+        Reconstructs the agent's per-cycle reasoning chain from the append-only
+        event log: market snapshot, classified regime, scored assets, planned
+        orders, risk decisions, confirmed trades, and the reconciled book.
+        Events before the first cycle are folded into a leading "startup" slice
+        so nothing is dropped. Read-only.
+      responses:
+        "200":
+          description: Cycle-by-cycle decision journal plus aggregate counts
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JournalResponse"
+
+  /ensemble:
+    get:
+      tags: [analytics]
+      summary: Regime-routed ensemble meta-allocator (static view)
+      description: >-
+        Returns the static configuration of the four-skill regime ensemble: the
+        member skills, the per-regime blend weights, the reserve symbol, the
+        max risk allocation, and the currently classified regime with its active
+        weights. The live blended book is exposed separately under /ensemble/live
+        (PLAN_V2 Track C). Read-only.
+      responses:
+        "200":
+          description: Ensemble configuration and current regime weights
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnsembleResponse"
+
+  /skills:
+    get:
+      tags: [analytics]
+      summary: Track-2 strategy skill catalog
+      description: >-
+        Typed projection of skills/INDEX.json: the count of registered Track-2
+        strategy skills, their ids, and the full per-skill index entries
+        (summary, regimes, inputs, eligible universe size, examples count, and
+        spec file path). Read-only.
+      responses:
+        "200":
+          description: Skill count, ids, and the full index entries
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SkillsResponse"
+
+  /version:
+    get:
+      tags: [ops]
+      summary: Service version, build target, and uptime
+      description: >-
+        Reports the API service name and semantic version (from the crate
+        manifest), the build target (arch-os), the run mode (GUARDRAIL_MODE,
+        default "paper"), and process uptime in seconds and human-readable form.
+        Read-only.
+      responses:
+        "200":
+          description: Version, build target, mode, and uptime
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VersionResponse"
+
 components:
   schemas:
     LooseObject:
@@ -1019,6 +1089,102 @@ components:
         Loose object schema. The API returns dynamic JSON shapes assembled from
         event payloads and run reports; fields vary and are not exhaustively
         modeled here.
+
+    JournalResponse:
+      type: object
+      additionalProperties: true
+      description: Shape of the /journal decision-journal projection.
+      properties:
+        total_events:
+          type: integer
+        total_cycles:
+          type: integer
+        run_ids:
+          type: array
+          items:
+            type: string
+        confirmed_trades_total:
+          type: integer
+        cycles:
+          type: array
+          items:
+            $ref: "#/components/schemas/LooseObject"
+
+    EnsembleResponse:
+      type: object
+      additionalProperties: true
+      description: Shape of the /ensemble meta-allocator configuration view.
+      properties:
+        name:
+          type: string
+        version:
+          type: string
+        reserve_symbol:
+          type: string
+        max_risk_allocation_pct:
+          type: number
+        current_regime:
+          type: string
+        active_weights:
+          type: object
+          additionalProperties: true
+        skills:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              id:
+                type: string
+              label:
+                type: string
+        regimes:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+            properties:
+              regime:
+                type: string
+              weights:
+                type: object
+                additionalProperties: true
+
+    SkillsResponse:
+      type: object
+      additionalProperties: true
+      description: Shape of the /skills catalog projection.
+      properties:
+        index_path:
+          type: string
+        count:
+          type: integer
+        ids:
+          type: array
+          items:
+            type: string
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/LooseObject"
+
+    VersionResponse:
+      type: object
+      additionalProperties: true
+      description: Shape of the /version response.
+      properties:
+        service:
+          type: string
+        version:
+          type: string
+        build_target:
+          type: string
+        mode:
+          type: string
+        uptime_seconds:
+          type: integer
+        uptime_human:
+          type: string
 
     BacktestResponse:
       type: object

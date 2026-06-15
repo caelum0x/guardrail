@@ -18,8 +18,10 @@ in paper mode with deterministic mocks and needs no API keys or chain access.
 This file is the high-level tour. Deeper references:
 [ARCHITECTURE.md](ARCHITECTURE.md) (crate graph + trust boundaries),
 [PRIZE_MAP.md](PRIZE_MAP.md) (evidence table), [OPERATIONS.md](OPERATIONS.md)
-(operator runbook), [WHATS_NEW.md](WHATS_NEW.md) (changelog), and
-[FEATURE_MATRIX.md](FEATURE_MATRIX.md) (capability matrix).
+(operator runbook), [WHATS_NEW.md](WHATS_NEW.md) (changelog),
+[FEATURE_MATRIX.md](FEATURE_MATRIX.md) (capability matrix), [CLI.md](CLI.md)
+(every CLI subcommand), [API.md](API.md) (every API route), and
+[`../PLAN_V2.md`](../PLAN_V2.md) (the Phase-2 expansion roadmap).
 
 ---
 
@@ -27,12 +29,15 @@ This file is the high-level tour. Deeper references:
 
 | Layer | What it is | Where it lives |
 |-------|-----------|----------------|
-| Live engine | Rust Cargo workspace: 19 crates + 9 binaries | `crates/`, `apps/` |
+| Live engine | Rust Cargo workspace: 20 crates + 9 binaries | `crates/`, `apps/` |
 | Risk gate | Sole authority between intent and execution | `crates/risk-engine` |
 | Executor | TWAK self-custody signer (Mock/REST/MCP/CLI transports) | `crates/twak-client` |
+| Read-only API | 56 `GET` routes (incl. `/journal`, `/ensemble`, `/skills`, `/version`) | `apps/guardrail-api/src/server.rs` |
+| Admin CLI | 40 subcommands in a modular `commands/` tree | `apps/guardrail-cli/src/commands/` |
+| Terminal cockpit | Live regime / positions / risk / alerts panels | `apps/guardrail-tui/src/` |
 | Analytics | Python lab over the event log + run report | `python-lab/` |
-| Dashboards | Next.js read-only cockpit (55 pages) + zero-build web-lite | `dashboard/`, `clients/web-lite/` |
-| Track-2 skills | 4 advisory strategy skills + regime ensemble + authoring kit | `skills/` |
+| Dashboards | Next.js read-only cockpit (56 pages, Vercel) + zero-build web-lite | `dashboard/`, `clients/web-lite/` |
+| Track-2 skills | 6 advisory strategy skill dirs + regime ensemble + authoring kit | `skills/` |
 | Ecosystem clients | TS / Python / Go SDKs, MCP, LangChain, Postman | `clients/` |
 | Identity / proof | BNB agent identity + independent proof verifier | `crates/bnb-agent`, `clients/proof-verifier` |
 | Self-custody | TWAK signing policy + narrated demo | `configs/signing_policy.example.json`, `scripts/self_custody_demo.sh` |
@@ -72,7 +77,7 @@ This file is the high-level tour. Deeper references:
        ┌───────────────┼──────────────┬─────────────┬───────────────┤
        ▼               ▼              ▼             ▼               ▼
   guardrail-api   guardrail-     guardrail-    guardrail-      python-lab
-  (52 routes,     exporter       monitor       tui / replay    (analytics:
+  (56 routes,     exporter       monitor       tui / replay    (analytics:
    read-only)     /metrics:9100  ─► notifier   (terminal)       regime, drawdown,
        │              │              │                          montecarlo, ensemble,
        │              ▼              ▼                          journal, dossier)
@@ -83,7 +88,7 @@ This file is the high-level tour. Deeper references:
    ▼                  ▼               ▼              ▼             ▼
  dashboard       web-lite        clients/ts /     clients/mcp    clients/proof-
  (Next.js,       cockpit         python / go      (CMC Agent     verifier
-  55 pages)      (single file)   SDKs (read-only) Hub server)    (clean-room)
+  56 pages)      (single file)   SDKs (read-only) Hub server)    (clean-room)
 ```
 
 Authority flows in exactly one direction. Strategy never depends on the
@@ -97,7 +102,7 @@ loop.
 
 ### 1. The Rust live engine (`crates/`, `apps/`)
 
-A 19-crate Cargo workspace with a one-way dependency graph (full graph in
+A 20-crate Cargo workspace with a one-way dependency graph (full graph in
 [ARCHITECTURE.md](ARCHITECTURE.md)). The canonical loop is
 `agent-runtime::AgentRuntime::run_cycle`: pull market data → mark portfolio +
 update drawdown → strategy decides intent → **risk gate per order** (twice:
@@ -106,6 +111,21 @@ step to the event store. Nine binaries sit on top (`apps/`): `guardrail-agent`
 (the only one that trades), plus `guardrail-api`, `guardrail-cli`,
 `guardrail-tui`, `guardrail-monitor`, `guardrail-exporter`, `guardrail-replay`,
 `guardrail-sim`, and `guardrail-doctor`.
+
+- **Read-only API (56 routes).** `apps/guardrail-api/src/server.rs::build_app`
+  wires 56 `GET` routes — every operational, portfolio, analytics, agent, and
+  trading view — including the newest `/journal` (decision-journal projection),
+  `/ensemble` (regime meta-allocator), `/skills` (skill catalog), and `/version`
+  (service version + uptime). Full index: [API.md](API.md), spec
+  [api/openapi.yaml](api/openapi.yaml).
+- **Modular admin CLI.** `apps/guardrail-cli` keeps parsing/dispatch in `main.rs`
+  and delegates each `run_*` to a domain module under `src/commands/`
+  (`backtest`, `market`, `portfolio`, `identity`, `reporting`, `experiment`,
+  `agent_surface`, `commerce`). Full reference: [CLI.md](CLI.md).
+- **Live terminal cockpit.** `apps/guardrail-tui` renders four live panels off
+  the event log + run report — regime, positions, risk, and alerts — each a
+  dedicated module (`src/{regime,positions,risk,alerts}.rs`) composed by
+  `render.rs`.
 
 - **Risk engine as the sole gate.** `crates/risk-engine` runs a policy + a check
   suite (allowlist, drawdown, stable reserve, position cap, wallet balance,
@@ -127,22 +147,26 @@ blender and the `skill` validator).
 
 ### 3. The dashboards (`dashboard/`, `clients/web-lite/`)
 
-- **Next.js dashboard** (`dashboard/`) — read-only, 55 page routes under
+- **Next.js dashboard** (`dashboard/`) — read-only, 56 page routes under
   `dashboard/src/app/` (cockpit, portfolio, signals, backtest, walkforward,
-  scenarios, proof, prizes, etc.). It only renders `guardrail-api` responses.
+  scenarios, proof, prizes, etc.). It only renders `guardrail-api` responses and
+  auto-deploys to Vercel on every push (see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)).
 - **web-lite cockpit** (`clients/web-lite/index.html`) — a single-file,
   zero-build cockpit wired to the same API, including Ensemble, Journal, and
   Signing tabs.
 
 ### 4. Track-2 skills + ensemble (`skills/`)
 
-Four advisory-only strategy skills enumerated in `skills/INDEX.json`:
-`regime-routed-bsc-alpha`, `funding-rate-carry-bsc`, `mean-reversion-chop-bsc`,
-and `trend-breakout-momentum-bsc`. A regime ensemble meta-allocator
-(`skills/ensemble.json` + `python-lab/guardrail_lab/ensemble.py`) blends their
-example books by classified regime. A skill authoring kit (`skills/_template/`,
+Six advisory-only strategy skill directories under `skills/` — five registered in
+`skills/INDEX.json` (`regime-routed-bsc-alpha`, `funding-rate-carry-bsc`,
+`mean-reversion-chop-bsc`, `trend-breakout-momentum-bsc`,
+`volatility-targeted-risk-parity-bsc`) plus the standalone
+`social-sentiment-momentum-bsc`. A regime ensemble meta-allocator
+(`skills/ensemble.json` + `python-lab/guardrail_lab/ensemble.py`, also served at
+`GET /ensemble`) blends the core skills by classified regime, and the catalog is
+projected at `GET /skills`. A skill authoring kit (`skills/_template/`,
 `scripts/new_skill.sh`, `scripts/lint_skills.sh`) lets a judge scaffold and lint
-a fifth skill. Every skill is advisory — the risk engine stays the only gate.
+another skill. Every skill is advisory — the risk engine stays the only gate.
 
 ### 5. Ecosystem clients (`clients/`)
 
@@ -184,12 +208,15 @@ TS/Python/Go SDKs and dashboards are all read-only consumers of `guardrail-api`.
 
 | Path | Contents |
 |------|----------|
-| `crates/` | 19 Rust crates — the live engine (risk, strategy, twak, bnb-agent, …) |
+| `crates/` | 20 Rust crates — the live engine (risk, strategy, twak, bnb-agent, …) |
 | `apps/` | 9 binaries — agent, api, cli, tui, monitor, exporter, replay, sim, doctor |
+| `apps/guardrail-api/src/` | 56-route read-only API (`server.rs` + per-route modules incl. `journal.rs`, `ensemble.rs`, `skills.rs`, `version.rs`) |
+| `apps/guardrail-cli/src/commands/` | Modular CLI command groups: backtest, market, portfolio, identity, reporting, experiment, agent_surface, commerce |
+| `apps/guardrail-tui/src/` | Terminal cockpit panels: regime, positions, risk, alerts (`render.rs` composes them) |
 | `agent-runtime` (crate) | Top crate composing every lower crate into the live loop |
-| `dashboard/` | Next.js read-only dashboard (55 pages under `src/app/`) |
+| `dashboard/` | Next.js read-only dashboard (56 pages under `src/app/`, Vercel auto-deploy) |
 | `python-lab/` | Analytics CLI (`analyze.py`) + `guardrail_lab/` library |
-| `skills/` | 4 strategy skills, `INDEX.json`, `ensemble.json`, `_template/` |
+| `skills/` | 6 strategy skill dirs, `INDEX.json`, `ensemble.json`, `_template/` |
 | `clients/` | TS / Python / Go SDKs, MCP server, LangChain, Postman, web-lite, proof-verifier |
 | `integrations/` | `alert-relay/` (watchdog relay) + `bnbagent-sdk/` |
 | `configs/` | Risk policies, eligible assets, signing policy, `scenarios/` |

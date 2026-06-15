@@ -6,7 +6,56 @@ directly. Everything below is **offline-safe** — no API keys or chain access a
 required to run or verify it.
 
 Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) ·
-[PITCH.md](PITCH.md) · [HACKATHON.md](HACKATHON.md).
+[PITCH.md](PITCH.md) · [HACKATHON.md](HACKATHON.md) · [CLI.md](CLI.md) ·
+[API.md](API.md) · [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
+
+---
+
+## Platform & developer experience (latest)
+
+- **CLI modularization.** The `guardrail-cli` binary now keeps argument parsing
+  and dispatch in `main.rs` and delegates every `run_*` implementation to a
+  domain-grouped `commands/` tree: `backtest`, `market`, `portfolio`, `identity`,
+  `reporting`, `experiment`, `agent_surface`, and `commerce`. 40 top-level
+  subcommands (plus nested `policy` and `experiment` subcommands) are wired
+  through `commands/mod.rs`.
+  Files: `apps/guardrail-cli/src/commands/` (8 modules) + `apps/guardrail-cli/src/main.rs`.
+  Full reference: [CLI.md](CLI.md).
+  Verify: `ls apps/guardrail-cli/src/commands/`; `cargo run -p guardrail-cli -- --help`.
+
+- **TUI live panels.** The terminal cockpit renders four live, data-driven panels
+  off the event log and the latest run report: **regime** (classification +
+  exposure), **positions** (book summary), **risk** (latest decisions / gate
+  state), and **alerts** (staleness, drawdown, kill-switch). Each panel is its own
+  module composed by `render.rs`.
+  Files: `apps/guardrail-tui/src/{regime,positions,risk,alerts,render}.rs`.
+  Verify: `cargo run -p guardrail-tui`.
+
+- **Four new read-only API routes.** `apps/guardrail-api` now serves:
+  - `GET /journal` — decision-journal projection of the agent's per-cycle
+    reasoning chain (`apps/guardrail-api/src/journal.rs`).
+  - `GET /ensemble` — the regime-routed ensemble meta-allocator configuration and
+    current regime weights (`apps/guardrail-api/src/ensemble.rs`).
+  - `GET /skills` — typed catalog projection of `skills/INDEX.json`
+    (`apps/guardrail-api/src/skills.rs`).
+  - `GET /version` — service version, build target, run mode, and uptime
+    (`apps/guardrail-api/src/version.rs`).
+  These bring the read-only surface to **56 routes** (`apps/guardrail-api/src/server.rs`).
+  Spec: [api/openapi.yaml](api/openapi.yaml). Index: [API.md](API.md).
+  Verify: `curl -fsS http://127.0.0.1:8080/version`; `curl -fsS http://127.0.0.1:8080/skills`.
+
+- **Phase-2 expansion plan (PLAN_V2).** The next-phase roadmap — real-time engine
+  telemetry (SSE), in-browser WASM backtesting, a native Rust strategy ensemble,
+  a strategy marketplace + dynamic skill loader, a proof explorer + verifier UI,
+  control/growth services, and the data pipeline — all offline-safe and
+  conflict-safe, mapped to the four prize lanes.
+  File: [`../PLAN_V2.md`](../PLAN_V2.md).
+
+- **Vercel deployment.** The Next.js dashboard (`dashboard/`, 56 page routes)
+  auto-deploys to Vercel on every push to `main`; pull requests get preview
+  deployments. Root directory `dashboard`, `NEXT_PUBLIC_API_URL` points at a
+  running `guardrail-api`. The dashboard is read-only and never holds keys.
+  Files: `dashboard/vercel.json`. Guide: [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
 
 ---
 

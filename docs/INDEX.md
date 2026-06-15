@@ -22,6 +22,7 @@ machine-readable contract.
 | [PRODUCT_OVERVIEW.md](PRODUCT_OVERVIEW.md) | What Guardrail Alpha is and the non-negotiable risk-gate invariant. |
 | [FEATURE_MATRIX.md](FEATURE_MATRIX.md) | Capability matrix mapping each feature to its component and entrypoint. |
 | [WHATS_NEW.md](WHATS_NEW.md) | Changelog of the most recently shipped surfaces, grouped by prize lane. |
+| [../PLAN_V2.md](../PLAN_V2.md) | Phase-2 expansion roadmap: net-new folders/files deepening each prize lane (offline-safe). |
 | [DEMO_SCRIPT.md](DEMO_SCRIPT.md) | The exhaustive, literal copy-pasteable demo walkthrough. |
 | [HACKATHON.md](HACKATHON.md) | One-page map from Track 1 + special-prize criteria to code. |
 | [PRIZE_MAP.md](PRIZE_MAP.md) | Evidence table mapping every targeted prize to concrete code. |
@@ -74,6 +75,7 @@ machine-readable contract.
 |---|---|
 | [OPERATIONS.md](OPERATIONS.md) | Operator guide tying the tooling together (offline-safe, paper mode). |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | The four supported deployment paths, from local stack to Kubernetes. |
+| [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) | Deploying the read-only Next.js dashboard to Vercel (auto-deploy on push). |
 | [LIVE_RUNBOOK.md](LIVE_RUNBOOK.md) | Runbook for taking the agent live during competition week. |
 | [OBSERVABILITY.md](OBSERVABILITY.md) | Prometheus exporter, alert rules, Grafana dashboards, and the watchdog. |
 | [SCENARIOS.md](SCENARIOS.md) | The stress scenario library and the guardrail response each one triggers. |
@@ -84,6 +86,8 @@ machine-readable contract.
 
 | Document | Description |
 |---|---|
-| [api/openapi.yaml](api/openapi.yaml) | OpenAPI 3.1 spec covering all 58 read-only API routes. |
+| [API.md](API.md) | Human-readable index of all 56 read-only API routes, with sample responses for the headline ones. |
+| [api/openapi.yaml](api/openapi.yaml) | OpenAPI 3.1 spec covering all 56 read-only API routes. |
 | [api/README.md](api/README.md) | Guide to the OpenAPI spec and the read-only API surface. |
+| [CLI.md](CLI.md) | Reference for every `guardrail-cli` subcommand, grouped by the `commands/` modules, with example invocations. |
 | [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) | Track 1 requirements mapped to implementing files and verification commands. |

@@ -32,12 +32,12 @@ script/CLI/SDK surface · Asset = committed config/spec/manifest consumed by cod
 | Walk-forward analysis | `crates/backtester` + CLI | `cargo run -p guardrail-cli -- walk-forward --windows 6 --steps 30`; `GET /walkforward` | Live |
 | Scenario / sentiment sweep | `apps/guardrail-sim` | `cargo run -p guardrail-sim`; `GET /sweep` | Live |
 | Daily-trade heartbeat | `crates/agent-runtime` (idle-cycle heartbeat) | `GET /heartbeat` | Live |
-| Read-only REST API (52 routes) | `apps/guardrail-api` (`src/server.rs::build_app`) | `cargo run -p guardrail-api`; `GET /health`, `/cockpit`, … | Live |
-| Admin / dev CLI (40 subcommands) | `apps/guardrail-cli` | `cargo run -p guardrail-cli -- <cmd>` | Tooling |
-| Terminal cockpit | `apps/guardrail-tui` | `cargo run -p guardrail-tui` | Live |
+| Read-only REST API (56 routes) | `apps/guardrail-api` (`src/server.rs::build_app`) | `cargo run -p guardrail-api`; `GET /health`, `/cockpit`, `/version`, … | Live |
+| Admin / dev CLI (40 subcommands, modular `commands/`) | `apps/guardrail-cli` (`src/commands/{backtest,market,portfolio,identity,reporting,experiment,agent_surface,commerce}.rs`) | `cargo run -p guardrail-cli -- <cmd>` | Tooling |
+| Terminal cockpit (live regime/positions/risk/alerts panels) | `apps/guardrail-tui` (`src/{regime,positions,risk,alerts,render}.rs`) | `cargo run -p guardrail-tui` | Live |
 | Event-log audit / replay | `apps/guardrail-replay` | `cargo run -p guardrail-replay -- summary` / `journal` / `trades` | Live |
 | Preflight doctor | `apps/guardrail-doctor` | `cargo run -p guardrail-doctor` | Live |
-| Next.js dashboard (55 pages) | `dashboard/src/app/` | `dashboard/` (read-only) | Live |
+| Next.js dashboard (56 pages, auto-deploys to Vercel on push) | `dashboard/src/app/` | `dashboard/` (read-only); see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md) | Live |
 | web-lite single-file cockpit | `clients/web-lite/index.html` | `scripts/serve_cockpit.sh` | Tooling |
 | Offline E2E demo | `scripts/demo.sh` | `./scripts/demo.sh` | Tooling |
 | Judge quickstart (build + agent + API + cockpit) | `scripts/judge_quickstart.sh` | `scripts/judge_quickstart.sh` | Tooling |
@@ -47,11 +47,15 @@ script/CLI/SDK surface · Asset = committed config/spec/manifest consumed by cod
 
 | Capability | Component(s) | Entrypoint / path | Status |
 |---|---|---|---|
-| Skill catalog (4 skills) | `skills/INDEX.json` | `cat skills/INDEX.json`; `GET /skill` | Asset |
+| Skill catalog (5 registered + 1 standalone = 6 on disk) | `skills/INDEX.json` + `skills/*/` | `cat skills/INDEX.json`; `ls skills/`; `GET /skills`, `GET /skill` | Asset |
 | Regime-routed alpha skill | `skills/cmc-regime-routed-alpha/` | `cat skills/cmc-regime-routed-alpha/strategy_spec.yaml` | Asset |
 | Funding-rate carry skill | `skills/funding-rate-carry/` | `cat skills/funding-rate-carry/skill.yaml`; `GET /funding` | Asset |
 | Mean-reversion chop skill | `skills/mean-reversion-chop/` | `cat skills/mean-reversion-chop/strategy_spec.yaml` | Asset |
 | Trend-breakout momentum skill | `skills/trend-breakout-momentum/` | `cat skills/trend-breakout-momentum/strategy_spec.yaml` | Asset |
+| Volatility-targeted risk-parity skill (sizing axis) | `skills/volatility-targeted-risk-parity/` | `cat skills/volatility-targeted-risk-parity/strategy_spec.yaml` | Asset |
+| Social-sentiment momentum skill (attention axis) | `skills/social-sentiment-momentum/` | `cat skills/social-sentiment-momentum/skill.yaml` | Asset |
+| Skill catalog API projection | `apps/guardrail-api/src/skills.rs` | `GET /skills` | Live |
+| Native ensemble meta-allocator API | `apps/guardrail-api/src/ensemble.rs` | `GET /ensemble` | Live |
 | Regime ensemble meta-allocator | `skills/ensemble.json` + `python-lab/guardrail_lab/ensemble.py` | `python3 python-lab/analyze.py ensemble --regime chop` | Tooling |
 | Ensemble vs single-skill compare | `python-lab/analyze.py` (`ensemble-compare`) | `python3 python-lab/analyze.py ensemble-compare --all` | Tooling |
 | Skill authoring scaffold | `skills/_template/` + `scripts/new_skill.sh` | `bash scripts/new_skill.sh demo-skill` | Tooling |
@@ -104,7 +108,9 @@ script/CLI/SDK surface · Asset = committed config/spec/manifest consumed by cod
 | Prometheus + Grafana configs | `infra/prometheus/`, `infra/grafana/` | `infra/prometheus/` | Asset |
 | Stress scenario library | `configs/scenarios/` (`index.json` + per-scenario) | `bash scripts/run_scenarios.sh`; `GET /scenarios` | Asset |
 | Analytics (regime/drawdown/montecarlo/dossier) | `python-lab/analyze.py` + `guardrail_lab/` | `python3 python-lab/analyze.py regime` | Tooling |
-| Decision journal projection | `python-lab/analyze.py` (`journal`) | `python3 python-lab/analyze.py journal --out data/journal.md` | Tooling |
+| Decision journal projection (CLI) | `python-lab/analyze.py` (`journal`) | `python3 python-lab/analyze.py journal --out data/journal.md` | Tooling |
+| Decision journal projection (API) | `apps/guardrail-api/src/journal.rs` | `GET /journal` | Live |
+| Service version / build target / uptime | `apps/guardrail-api/src/version.rs` | `GET /version` | Live |
 | Helm chart | `deploy/helm/guardrail` | `deploy/helm/guardrail/Chart.yaml` | Asset |
 | Kubernetes (Kustomize) manifests | `deploy/k8s` | `deploy/k8s/kustomization.yaml` | Asset |
 | Full container stack | `docker-compose.yml` + `infra/Dockerfile.*` | `docker compose up` | Asset |
@@ -131,12 +137,13 @@ trading path or any route to TWAK.
 
 | Quantity | Count | Source |
 |---|---|---|
-| Rust crates | 19 | `crates/` |
+| Rust crates | 20 | `crates/` |
 | Rust binaries | 9 | `apps/` |
-| API routes (read-only `GET`) | 52 | `apps/guardrail-api/src/server.rs` |
-| CLI subcommands | 40 | `apps/guardrail-cli/src/main.rs` |
-| Next.js dashboard page routes | 55 | `dashboard/src/app/` |
-| Track-2 strategy skills | 4 | `skills/INDEX.json` |
+| API routes (read-only `GET`) | 56 | `apps/guardrail-api/src/server.rs` |
+| CLI subcommands (top-level) | 40 | `apps/guardrail-cli/src/main.rs` |
+| CLI command modules | 8 | `apps/guardrail-cli/src/commands/` |
+| Next.js dashboard page routes | 56 | `dashboard/src/app/` |
+| Track-2 strategy skill directories | 6 | `skills/` (5 in `INDEX.json` + standalone `social-sentiment-momentum`) |
 | `analyze.py` subcommands | 7 | `python-lab/analyze.py` |
 | MCP tools / resources / prompts | 17 / 7 / 5 | `clients/mcp/manifest.json` |
 | `clients/` packages | 9 | `clients/` |
