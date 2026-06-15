@@ -2,6 +2,7 @@
 
 pub mod config;
 pub mod data;
+pub mod live;
 pub mod policy;
 pub mod skills;
 pub mod universe;
@@ -27,8 +28,10 @@ pub const SKILLS_INDEX_FILE: &str = "skills/INDEX.json";
 pub const ENSEMBLE_FILE: &str = "skills/ensemble.json";
 pub const STRATEGY_PRESETS_FILE: &str = "configs/strategy_presets.json";
 
-/// Run every check and collect results in order.
-pub fn run_checks() -> Vec<CheckResult> {
+/// Run every check and collect results in order. When `live` is set, the
+/// live-mode preflight checks (credentials, live config, conservative caps) are
+/// appended.
+pub fn run_checks(live: bool) -> Vec<CheckResult> {
     let mut results = Vec::new();
 
     for path in CONFIG_FILES {
@@ -47,6 +50,10 @@ pub fn run_checks() -> Vec<CheckResult> {
     results.push(data::check_migrations(MIGRATIONS_DIR));
     results.push(data::check_data_dir(DATA_DIR));
     results.push(data::check_run_report(RUN_REPORT_FILE));
+
+    if live {
+        results.extend(live::live_checks());
+    }
 
     results
 }

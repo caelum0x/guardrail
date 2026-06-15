@@ -824,6 +824,7 @@ dependencies = [
  "market-data",
  "policy-compiler",
  "risk-engine",
+ "rust_decimal",
  "serde_json",
 ]
 

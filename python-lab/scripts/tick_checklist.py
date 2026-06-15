@@ -141,9 +141,12 @@ def agent_identity(e: Evidence) -> tuple[bool, str]:
 
 def registration(e: Evidence) -> tuple[bool, str]:
     tx = e.field("registration_tx")
-    if isinstance(tx, str) and tx:
+    live = str(e.field("mode")) == "live"
+    if isinstance(tx, str) and tx and live:
         return (True, f"on-chain registration_tx {tx[:12]}…")
-    # Paper: a deterministic registration target exists, but no real tx yet.
+    if isinstance(tx, str) and tx:
+        # Paper/mock registration ran, but it is not a real on-chain tx.
+        return (False, "pending (live): paper mock registration — run scripts/go_live.sh")
     return (False, "pending (live): no registration_tx — run scripts/go_live.sh")
 
 

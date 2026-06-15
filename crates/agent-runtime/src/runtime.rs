@@ -96,12 +96,14 @@ impl AgentRuntime {
         let mut events = RuntimeEventLog::new(&s.app.database_url);
 
         let run_id = new_run_id();
-        let meta = RunMeta {
+        let mut meta = RunMeta {
             run_id: run_id.clone(),
             mode: s.app.mode.clone(),
             wallet_address: wallet.clone(),
             starting_nav_usd: Decimal::from(PAPER_START_USD),
             policy_hash: policy_hash.clone(),
+            agent_id: agent_id.clone(),
+            registration_tx: None,
         };
         events.append(
             &run_id,
@@ -114,6 +116,13 @@ impl AgentRuntime {
             match executor.register_competition().await {
                 Ok(rcpt) => {
                     tracing::info!(tx = %rcpt.tx_hash, "competition registration submitted");
+                    // Only surface a registration tx as a proof artifact when it
+                    // is a real on-chain (live) registration. In paper the mock
+                    // executor returns a synthetic hash; we log the event for the
+                    // demo but never present it as an anchored on-chain tx.
+                    if s.app.is_live() {
+                        meta.registration_tx = Some(rcpt.tx_hash.clone());
+                    }
                     events.append(
                         &run_id,
                         AgentEvent::TxConfirmed,
@@ -178,7 +187,10 @@ impl AgentRuntime {
             "events": events.len(),
         });
         let report_hash = bnb_agent::sha256_hex_str(&core.to_string());
-        let proof = bnb_agent::AgentProof::new(&agent_id, &wallet, &policy_hash, &report_hash);
+        let mut proof = bnb_agent::AgentProof::new(&agent_id, &wallet, &policy_hash, &report_hash);
+        if let Some(tx) = &meta.registration_tx {
+            proof = proof.with_registration_tx(tx.clone());
+        }
 
         let mut summary = core;
         summary["agent_id"] = json!(agent_id);
@@ -186,6 +198,9 @@ impl AgentRuntime {
         summary["policy_hash"] = json!(policy_hash);
         summary["report_hash"] = json!(report_hash);
         summary["address_url"] = json!(proof.address_url());
+        if let Some(tx) = &meta.registration_tx {
+            summary["registration_tx"] = json!(tx);
+        }
         if let Some(tx_url) = proof.tx_url() {
             summary["registration_tx_url"] = json!(tx_url);
         }
@@ -711,6 +726,9 @@ struct RunMeta {
     wallet_address: String,
     starting_nav_usd: Decimal,
     policy_hash: String,
+    agent_id: String,
+    /// On-chain competition registration tx hash, once registered (live).
+    registration_tx: Option<String>,
 }
 
 /// Compute the live regime-routed ensemble blend for the classified regime,
@@ -788,7 +806,7 @@ fn write_run_report(
         })
         .collect();
 
-    let report = json!({
+    let mut report = json!({
         "run_id": meta.run_id,
         "mode": meta.mode,
         "updated_ms": now_ms(),
@@ -803,7 +821,11 @@ fn write_run_report(
         "trades": [],
         "events": events_count,
         "policy_hash": meta.policy_hash,
+        "agent_id": meta.agent_id,
     });
+    if let Some(tx) = &meta.registration_tx {
+        report["registration_tx"] = json!(tx);
+    }
 
     let path = std::env::var("GUARDRAIL_REPORT").unwrap_or_else(|_| "data/run_report.json".into());
     if let Some(parent) = std::path::Path::new(&path).parent() {
