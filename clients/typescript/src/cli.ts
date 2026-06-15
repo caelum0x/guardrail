@@ -15,10 +15,13 @@
 //   skills     show the Skill catalog, or one skill's detail (skills ID)
 //   verify     show the server-side /proof/verify pass/fail table
 //   snapshots  show the latest run summary and per-asset latest-price sample
+//   watch      poll /compete + /regime on an interval, refreshing a status line
 //
 // Flags (any position):
-//   --base URL   API base URL (default $GUARDRAIL_BASE_URL or http://localhost:8080)
-//   --json       emit machine-readable JSON instead of a table
+//   --base URL       API base URL (default $GUARDRAIL_BASE_URL or http://localhost:8080)
+//   --json           emit machine-readable JSON instead of a table
+//   --interval SECS  watch poll interval in seconds (default 5, min 1)
+//   --once           watch: print a single tick and exit
 
 import { GuardrailClient } from "./index.js";
 import {
@@ -41,8 +44,17 @@ interface ProcessLike {
   exitCode?: number;
   stdout: { write(chunk: string): boolean };
   stderr: { write(chunk: string): boolean };
+  /** Register a one-shot-friendly signal listener (used to stop `watch`). */
+  on(event: "SIGINT" | "SIGTERM", listener: () => void): void;
+  /** Remove a previously registered signal listener. */
+  off(event: "SIGINT" | "SIGTERM", listener: () => void): void;
 }
 declare const process: ProcessLike;
+
+// Node/browser timer globals, typed minimally so the client stays free of
+// `@types/node`. We only use the handle as an opaque token passed to clearX.
+declare function setInterval(handler: () => void, ms: number): unknown;
+declare function clearInterval(handle: unknown): void;
 
 // Only two process exit codes. Operational failures (API down, decode errors)
 // deliberately still exit 0 so the tool is safe to run offline; only a usage
@@ -53,11 +65,21 @@ const EXIT_USAGE = 2;
 const DEFAULT_BASE_URL = "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 5000;
 
+// Default + floor for the `watch` poll interval. The floor guards against a
+// zero or absurdly small interval that would busy-loop the API (mirrors the Go
+// guardrailctl `minInterval`).
+const DEFAULT_INTERVAL_SEC = 5;
+const MIN_INTERVAL_SEC = 1;
+
 /** Parsed argv: subcommand, common flags, and any leftover positionals. */
 interface ParsedArgs {
   command: string;
   base: string;
   json: boolean;
+  /** `watch` poll interval in seconds (already clamped to >= MIN_INTERVAL_SEC). */
+  interval: number;
+  /** `watch`: print a single tick and exit. */
+  once: boolean;
   positionals: string[];
 }
 
@@ -72,6 +94,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     command: "",
     base: envBase && envBase.trim() !== "" ? envBase : DEFAULT_BASE_URL,
     json: false,
+    interval: DEFAULT_INTERVAL_SEC,
+    once: false,
     positionals: [],
   };
   const rest: string[] = [];
@@ -80,6 +104,8 @@ function parseArgs(argv: string[]): ParsedArgs {
     const arg = argv[i];
     if (arg === "--json") {
       result.json = true;
+    } else if (arg === "--once") {
+      result.once = true;
     } else if (arg === "--base") {
       const next = argv[i + 1];
       if (next == null) {
@@ -89,6 +115,15 @@ function parseArgs(argv: string[]): ParsedArgs {
       i++;
     } else if (arg.startsWith("--base=")) {
       result.base = arg.slice("--base=".length);
+    } else if (arg === "--interval") {
+      const next = argv[i + 1];
+      if (next == null) {
+        throw new Error("--interval requires a seconds argument");
+      }
+      result.interval = parseInterval(next);
+      i++;
+    } else if (arg.startsWith("--interval=")) {
+      result.interval = parseInterval(arg.slice("--interval=".length));
     } else {
       rest.push(arg);
     }
@@ -97,6 +132,20 @@ function parseArgs(argv: string[]): ParsedArgs {
   result.command = rest.shift() ?? "";
   result.positionals = rest;
   return result;
+}
+
+/**
+ * Parse a `--interval` value to an integer number of seconds, clamped to
+ * `MIN_INTERVAL_SEC`. A non-numeric value is a usage error (thrown), matching
+ * how `--base` rejects a missing argument.
+ */
+function parseInterval(raw: string): number {
+  const n = Number(raw);
+  if (!Number.isFinite(n)) {
+    throw new Error(`--interval requires a number of seconds, got "${raw}"`);
+  }
+  const secs = Math.floor(n);
+  return secs < MIN_INTERVAL_SEC ? MIN_INTERVAL_SEC : secs;
 }
 
 /** Build an SDK client whose fetch enforces a short per-call timeout so an
@@ -295,6 +344,79 @@ async function cmdSnapshots(args: ParsedArgs): Promise<number> {
   return EXIT_OK;
 }
 
+// --- watch ----------------------------------------------------------------
+
+// Width the in-place status line is padded to so a shorter line fully clears a
+// longer previous one (mirrors the Go guardrailctl `%-110s`).
+const WATCH_LINE_WIDTH = 110;
+
+/** Fetch /regime + /compete once and render/emit a single status tick. */
+async function watchTick(client: GuardrailClient, asJSON: boolean): Promise<void> {
+  const stamp = new Date().toISOString().slice(11, 19);
+  const [regime, compete] = await Promise.all([
+    client.regime().catch(() => null),
+    client.compete().catch(() => null),
+  ]);
+
+  if (asJSON) {
+    // One discrete JSON object per tick so the stream stays line-parseable.
+    process.stdout.write(
+      `${JSON.stringify({
+        time: stamp,
+        regime: regime ?? { status: "offline" },
+        compete: compete ?? { status: "offline" },
+      })}\n`,
+    );
+    return;
+  }
+
+  // \r returns to column 0; padding clears any longer previous line so the
+  // status appears to refresh in place.
+  process.stdout.write(`\r${renderStatusLine(stamp, regime, compete).padEnd(WATCH_LINE_WIDTH)}`);
+}
+
+/**
+ * Poll /compete + /regime on an interval and print a refreshing one-line
+ * status. `--once` prints a single tick and exits; otherwise it loops until
+ * SIGINT/SIGTERM. Always resolves with EXIT_OK so it stays offline-safe.
+ */
+async function cmdWatch(args: ParsedArgs): Promise<number> {
+  const client = newClient(args.base);
+
+  // First tick immediately so the operator sees output without waiting.
+  await watchTick(client, args.json);
+
+  if (args.once) {
+    // Terminate the in-place status line so the shell prompt starts cleanly.
+    if (!args.json) println("");
+    return EXIT_OK;
+  }
+
+  return new Promise<number>((resolve) => {
+    let stopped = false;
+
+    const timer = setInterval(() => {
+      // A tick can only fail catastrophically (not an API error, which
+      // watchTick already folds into "offline"); swallow to stay offline-safe.
+      void watchTick(client, args.json).catch(() => undefined);
+    }, args.interval * 1000);
+
+    const stop = (): void => {
+      if (stopped) return;
+      stopped = true;
+      clearInterval(timer);
+      process.off("SIGINT", stop);
+      process.off("SIGTERM", stop);
+      // Move past the in-place status line before exiting.
+      if (!args.json) println("");
+      resolve(EXIT_OK);
+    };
+
+    process.on("SIGINT", stop);
+    process.on("SIGTERM", stop);
+  });
+}
+
 // --- Help + dispatch ------------------------------------------------------
 
 const USAGE = `guardrail — operator CLI for the Guardrail Alpha API
@@ -310,11 +432,17 @@ Commands:
   skills     show the Skill catalog, or one skill's detail (skills ID)
   verify     show the server-side /proof/verify pass/fail table
   snapshots  show the latest run summary and per-asset latest-price sample
+  watch      poll /compete + /regime on an interval, refreshing a status line
   help       show this help
 
 Common flags:
   --base URL   API base URL (default $GUARDRAIL_BASE_URL or ${DEFAULT_BASE_URL})
   --json       emit JSON instead of a table
+
+watch flags:
+  --interval N  poll interval in seconds (default ${DEFAULT_INTERVAL_SEC}, min ${MIN_INTERVAL_SEC})
+  --once        print a single status tick and exit
+  (--json emits one JSON object per tick; Ctrl-C stops cleanly)
 
 All commands are offline-safe: they print a notice and exit 0 when the API is
 unreachable.`;
@@ -336,6 +464,8 @@ async function dispatch(args: ParsedArgs): Promise<number> {
       return cmdVerify(args);
     case "snapshots":
       return cmdSnapshots(args);
+    case "watch":
+      return cmdWatch(args);
     case "help":
     case "-h":
     case "--help":

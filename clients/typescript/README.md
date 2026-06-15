@@ -199,6 +199,7 @@ npx guardrail status             # via the "bin" entry once installed
 | `skills [ID]` | `/skills`, `/skills/{id}` | Skill catalog, or one skill's detail |
 | `verify` | `/proof/verify` | server-side proof pass/fail table |
 | `snapshots` | `/snapshots` | latest run summary + per-asset prices |
+| `watch` | `/regime` + `/compete` | refreshing one-line status, polled on an interval |
 | `help` | — | usage |
 
 ### Flags
@@ -211,6 +212,29 @@ npx guardrail status             # via the "bin" entry once installed
 node dist/cli.js status --json
 node dist/cli.js skills momentum-v1 --base http://localhost:8080
 GUARDRAIL_BASE_URL=http://host:8080 node dist/cli.js ensemble
+```
+
+### `watch`
+
+`watch` polls `/regime` + `/compete` on an interval and rewrites a single
+status line in place, so the terminal shows a live, refreshing view. It mirrors
+the Go `guardrailctl watch`.
+
+- `--interval N` — poll interval in seconds. Default `5`, clamped to a minimum
+  of `1` to avoid busy-looping the API. Accepts `--interval N` or `--interval=N`.
+- `--once` — print a single status tick and exit (handy for scripts/CI).
+- `--json` — emit one discrete JSON object per tick (line-parseable stream)
+  instead of the in-place status line.
+
+It is offline-safe: unreachable endpoints render as `regime=offline` /
+`compete=offline` (or `{ "status": "offline" }` in JSON) and the command still
+exits `0`. Press `Ctrl-C` (SIGINT) to stop the loop cleanly.
+
+```bash
+node dist/cli.js watch                      # refresh every 5s until Ctrl-C
+node dist/cli.js watch --interval 2         # refresh every 2s
+node dist/cli.js watch --once               # single tick, then exit 0
+node dist/cli.js watch --json --interval 10 # one JSON object every 10s
 ```
 
 The CLI is backed by these new typed SDK methods on `GuardrailClient`:

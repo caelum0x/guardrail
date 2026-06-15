@@ -38,6 +38,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent
 if str(_PACKAGE_ROOT) not in sys.path:
     sys.path.insert(0, str(_PACKAGE_ROOT))
 
+from guardrail_lab import correlation as co  # noqa: E402
 from guardrail_lab import dossier as ds  # noqa: E402
 from guardrail_lab import dossier_html as dsh  # noqa: E402
 from guardrail_lab import drawdown as dd  # noqa: E402
@@ -56,6 +57,7 @@ DEFAULT_DB = "data/guardrail_alpha.db"
 DEFAULT_REPORT = "data/run_report.json"
 DEFAULT_ENSEMBLE_CONFIG = "skills/ensemble.json"
 DEFAULT_SKILLS_ROOT = "skills"
+DEFAULT_SNAPSHOT_DIR = co.DEFAULT_SNAPSHOT_DIR
 DEFAULT_REGIME = "risk_on"
 DEFAULT_BUNDLE_OUT = rb.DEFAULT_OUT_DIR
 NO_DATA_MESSAGE = (
@@ -556,6 +558,95 @@ def run_seed(
     return 0
 
 
+def run_correlation(
+    snapshot_dir: str,
+    report_path: str,
+    db_path: str,
+    top_n: int,
+) -> int:
+    """Print the asset correlation matrix and exposure/concentration summary.
+
+    Loads the price/return history (snapshots preferred, event log fallback) and
+    the latest target book (run report), then prints the most-correlated asset
+    pairs, a compact correlation matrix, and the concentration diagnostics.
+    Always exits ``0``: missing/insufficient data is reported via a clear
+    message rather than raised.
+    """
+    report = co.analyze_correlation(
+        snapshot_dir=snapshot_dir,
+        report_path=report_path,
+        db_path=db_path,
+    )
+
+    _print_header("Guardrail Alpha — Correlation & Exposure")
+    print(f"Snapshots: {snapshot_dir}   Run report: {report_path}")
+    print(f"Price source: {report.source}")
+    print()
+
+    if not report.ok:
+        print(report.reason)
+        print()
+        return 0
+
+    print(f"({report.reason})")
+    print()
+
+    matrix = report.correlation
+    show_n = top_n if top_n > 0 else 10
+
+    print(f"Top {show_n} Correlated Pairs")
+    print("-" * 24)
+    defined_pairs = [pair for pair in matrix.pairs if pair.defined]
+    if defined_pairs:
+        for pair in defined_pairs[:show_n]:
+            print(
+                f"  {pair.a:<6} ~ {pair.b:<6} "
+                f"corr={pair.correlation:+.4f}  "
+                f"(n={pair.observations})"
+            )
+    else:
+        print("  (no asset pair had enough overlapping returns)")
+    print()
+
+    print("Correlation Matrix")
+    print("-" * 18)
+    if matrix.symbols:
+        header = "        " + "".join(f"{sym:>8}" for sym in matrix.symbols)
+        print(header)
+        for row_sym in matrix.symbols:
+            cells = "".join(
+                f"{matrix.matrix[row_sym][col_sym]:>8.2f}"
+                for col_sym in matrix.symbols
+            )
+            print(f"  {row_sym:<6}{cells}")
+        print(f"  assets={len(matrix.symbols)}  return steps={matrix.n_observations}")
+    else:
+        print("  (no correlation matrix — insufficient price history)")
+    print()
+
+    exposure = report.exposure
+    print("Exposure & Concentration (latest target book)")
+    print("-" * 45)
+    if exposure.position_count:
+        for position in exposure.positions:
+            print(
+                f"  {position.symbol:<6} "
+                f"weight={position.weight_pct:6.2f}%"
+            )
+        print()
+        print(f"  positions:            {exposure.position_count}")
+        print(f"  gross weight:         {exposure.gross_weight * 100:.2f}%")
+        print(f"  Herfindahl index:     {exposure.herfindahl:.4f}")
+        print(
+            f"  effective positions:  {exposure.effective_positions:.2f}"
+        )
+    else:
+        print("  (no target book positions found)")
+    print()
+
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     """Construct the argparse CLI parser."""
     parser = argparse.ArgumentParser(
@@ -771,6 +862,44 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
 
+    correlation = subparsers.add_parser(
+        "correlation",
+        help=(
+            "Per-asset return correlation matrix (Pearson) plus "
+            "concentration / exposure summary (HHI, effective positions)."
+        ),
+    )
+    correlation.add_argument(
+        "--snapshots",
+        default=DEFAULT_SNAPSHOT_DIR,
+        help=(
+            "Directory of market snapshot .jsonl files "
+            f"(default: {DEFAULT_SNAPSHOT_DIR})."
+        ),
+    )
+    correlation.add_argument(
+        "--report",
+        default=DEFAULT_REPORT,
+        help=(
+            "Path to the run report JSON (latest target book) "
+            f"(default: {DEFAULT_REPORT})."
+        ),
+    )
+    correlation.add_argument(
+        "--db",
+        default=DEFAULT_DB,
+        help=(
+            "Path to the event-log database (fallback price source) "
+            f"(default: {DEFAULT_DB})."
+        ),
+    )
+    correlation.add_argument(
+        "--top-n",
+        type=int,
+        default=10,
+        help="Number of top correlated pairs to show (default: 10).",
+    )
+
     bundle = subparsers.add_parser(
         "bundle",
         help=(
@@ -883,6 +1012,10 @@ def main(argv: list[str] | None = None) -> int:
         )
     if args.command == "journal":
         return run_journal(args.db, args.limit, args.out, args.html)
+    if args.command == "correlation":
+        return run_correlation(
+            args.snapshots, args.report, args.db, args.top_n
+        )
     if args.command == "bundle":
         return run_bundle(
             args.out, args.db, args.report, args.config, args.skills_root

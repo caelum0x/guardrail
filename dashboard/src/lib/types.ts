@@ -367,6 +367,100 @@ export type PrizesResponse = {
   error?: string;
 };
 
+/** Mixed numeric value returned as string or number by the API. */
+export type Numeric = string | number | null | undefined;
+
+/** One NAV equity-curve point (`GET /history`). */
+export type HistoryPoint = {
+  timestamp: string;
+  nav_usd: string;
+};
+
+/** NAV equity series (`GET /history`). */
+export type HistoryResponse = {
+  points: HistoryPoint[];
+  count: number;
+  error?: string;
+};
+
+/** Market regime classification + exposure multiplier (`GET /regime`). */
+export type RegimeResponse = {
+  regime: string;
+  exposure_multiplier: string;
+  inputs?: {
+    fear_greed: number;
+    breadth_pct: string;
+    btc_dominance_pct: string;
+    median_24h_return: string;
+  };
+  error?: string;
+};
+
+/** One held position in the exposure breakdown (`GET /exposure`). */
+export type ExposurePosition = {
+  symbol: string;
+  category: string;
+  value_usd: Numeric;
+  weight_pct: Numeric;
+};
+
+/** Per-category exposure aggregate (`GET /exposure`). */
+export type ExposureCategory = {
+  category: string;
+  value_usd: Numeric;
+  weight_pct: Numeric;
+  positions: number;
+};
+
+/** Portfolio exposure breakdown (`GET /exposure`). */
+export type ExposureResponse = {
+  status: "balanced" | "low_reserve" | "concentrated" | string;
+  nav_usd: Numeric;
+  report_path: string;
+  positions: ExposurePosition[];
+  categories: ExposureCategory[];
+  summary: {
+    position_count: number;
+    categorized_positions: number;
+    largest_position: ExposurePosition;
+    top3_weight_pct: Numeric;
+    stable_weight_pct: Numeric;
+    risk_weight_pct: Numeric;
+  };
+  error?: string;
+};
+
+/** One previewed swap route's cost accounting (`GET /costs`). */
+export type CostRoute = {
+  route: string;
+  side: string;
+  amount_usd: Numeric;
+  gas_units: Numeric;
+  gas_usd: Numeric;
+  slippage_usd: Numeric;
+  all_in_cost_usd: Numeric;
+  all_in_cost_bps: Numeric;
+  price_impact_pct: Numeric;
+  slippage_pct: Numeric;
+};
+
+/** Execution cost accounting for preview routes (`GET /costs`). */
+export type CostsResponse = {
+  preview_only: boolean;
+  chain: string;
+  native_symbol: string;
+  summary: {
+    routes: number;
+    amount_usd: Numeric;
+    total_gas_usd: Numeric;
+    total_slippage_usd: Numeric;
+    total_all_in_cost_usd: Numeric;
+    average_cost_bps: Numeric;
+  };
+  routes: CostRoute[];
+  error?: string;
+};
+
 /** Track-1 competition readiness (`GET /compete`). */
 export type CompeteResponse = {
   competition_contract: string;
