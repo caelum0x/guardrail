@@ -6,6 +6,7 @@ mod backtest;
 mod bnb_sdk;
 mod briefing;
 mod budget;
+mod cmc_capabilities;
 mod commerce;
 mod compete;
 mod compile;

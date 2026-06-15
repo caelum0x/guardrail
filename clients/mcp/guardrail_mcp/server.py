@@ -59,6 +59,7 @@ _REPO_ROOT = os.environ.get(
 ENSEMBLE_FILE = os.path.join(_REPO_ROOT, "skills", "ensemble.json")
 SCENARIOS_FILE = os.path.join(_REPO_ROOT, "configs", "scenarios", "index.json")
 SKILLS_INDEX_FILE = os.path.join(_REPO_ROOT, "skills", "INDEX.json")
+CMC_CAPABILITIES_FILE = os.path.join(_REPO_ROOT, "configs", "cmc", "capabilities.json")
 
 # JSON-RPC 2.0 standard error codes.
 PARSE_ERROR = -32700
@@ -586,6 +587,15 @@ def build_resources() -> Dict[str, Dict[str, Any]]:
             "(skills/INDEX.json, read-only).",
             "mimeType": "application/json",
             "reader": lambda _c: _load_json_file(SKILLS_INDEX_FILE),
+        },
+        "guardrail://cmc/capabilities": {
+            "name": "CMC Agent Hub capabilities",
+            "description": "CMC dataset -> capability lineage: which CoinMarketCap "
+            "datasets power which read-only analysis capability, with source files "
+            "and API/MCP exposure (configs/cmc/capabilities.json, read-only). The "
+            "agent never exposes trade execution to the hub.",
+            "mimeType": "application/json",
+            "reader": lambda _c: _load_json_file(CMC_CAPABILITIES_FILE),
         },
     }
 

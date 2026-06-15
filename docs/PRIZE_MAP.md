@@ -88,6 +88,7 @@ authoring kit: [SKILL_AUTHORING.md](SKILL_AUTHORING.md).
 | **CMC integration** — all data methods | `crates/cmc-client` — `CmcDataSource` trait (quotes, OHLCV, Fear & Greed, DEX liquidity, token security, trending, global) via REST/MCP/x402/Mock (`rest.rs`, `mcp.rs`, `x402.rs`, `mock.rs`, `endpoints.rs`) | [CMC_INTEGRATION.md](CMC_INTEGRATION.md); `GET /quotes`, `/trending`, `/liquidity`, `/indicators` |
 | **x402 pay-and-retry** for paid CMC requests | `crates/cmc-client/src/x402.rs` + `retry.rs` | inspect `x402.rs`; `compete.sh` env checklist (`CMC_X402_*`) |
 | **Packaged CMC Skill** | `skills/cmc-regime-routed-alpha` consumes the CMC inputs | `GET /skill`; [TRACK2.md](TRACK2.md) |
+| **CMC data → capability lineage** — verifiable, discoverable | `configs/cmc/capabilities.json` declares each CMC dataset (quotes/OHLCV/Fear&Greed/DEX-liquidity/security/trending/global) → the read-only capability it powers, with the exact `cmc-client` source and the API route / MCP tool that exposes it. Served at `GET /cmc/capabilities`, mirrored as MCP resource `guardrail://cmc/capabilities`, advertised in the ERC-8004 agent card. **No execution is exposed to the hub.** | `curl -fsS http://127.0.0.1:8080/cmc/capabilities`; [CMC_AGENT_HUB.md](CMC_AGENT_HUB.md) |
 
 ## BNB Special — Best Use of BNB AI Agent SDK ($2k)
 

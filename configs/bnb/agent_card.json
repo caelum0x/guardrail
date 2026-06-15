@@ -26,6 +26,18 @@
       "capabilities": ["cmc-regime-routed-alpha"]
     },
     {
+      "name": "CMC Agent Hub",
+      "endpoint": "http://localhost:8080/cmc/capabilities",
+      "version": "1.0.0",
+      "capabilities": [
+        "market-regime",
+        "asset-scoring",
+        "skill-backtest",
+        "liquidity-intel",
+        "mandate-compilation"
+      ]
+    },
+    {
       "name": "web",
       "endpoint": "http://localhost:3000",
       "version": "0.1.0",

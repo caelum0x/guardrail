@@ -1,0 +1,94 @@
+{
+  "agent": "Guardrail Alpha",
+  "summary": "A CMC-powered autonomous trading agent. Every market decision is derived from CoinMarketCap data: a regime classifier routes exposure, a multi-factor alpha blend ranks BSC-eligible assets, and liquidity/security gates protect execution. This descriptor declares the exact CMC dataset -> capability lineage so a CMC Agent Hub consumer can verify, discover, and call the agent's read-only analysis surface.",
+  "execution_policy": "read-only — the agent NEVER exposes trade execution, signing, or fund movement to the hub. Only CMC-derived analysis is published. The Rust risk engine remains the sole execution gate, reachable only by the internal trading binary.",
+  "cmc_client": "crates/cmc-client (CmcDataSource trait; rest.rs, mcp.rs, x402.rs)",
+  "datasets": [
+    {
+      "dataset": "latest_quotes",
+      "cmc": "cryptocurrency/quotes/latest",
+      "source": "crates/cmc-client/src/rest.rs::latest_quotes",
+      "powers": ["alpha_scoring", "nav_marking", "momentum"]
+    },
+    {
+      "dataset": "ohlcv",
+      "cmc": "cryptocurrency/ohlcv/historical",
+      "source": "crates/cmc-client/src/rest.rs::ohlcv",
+      "powers": ["momentum", "volatility", "indicators"]
+    },
+    {
+      "dataset": "fear_and_greed",
+      "cmc": "fear-and-greed/latest",
+      "source": "crates/cmc-client/src/rest.rs::fear_greed",
+      "powers": ["market_regime", "sentiment"]
+    },
+    {
+      "dataset": "dex_liquidity",
+      "cmc": "dex/networks pairs/liquidity",
+      "source": "crates/cmc-client/src/rest.rs::dex_liquidity",
+      "powers": ["liquidity_gate", "execution_quality"]
+    },
+    {
+      "dataset": "token_security",
+      "cmc": "token security / risk flags",
+      "source": "crates/cmc-client/src/rest.rs::token_security",
+      "powers": ["security_gate", "risk_penalty"]
+    },
+    {
+      "dataset": "trending",
+      "cmc": "cryptocurrency/trending",
+      "source": "crates/cmc-client/src/rest.rs::trending",
+      "powers": ["watchlist", "discovery"]
+    },
+    {
+      "dataset": "global_metrics",
+      "cmc": "global-metrics/quotes/latest",
+      "source": "crates/cmc-client/src/rest.rs::global_market",
+      "powers": ["market_regime", "btc_dominance"]
+    }
+  ],
+  "capabilities": [
+    {
+      "capability": "market_regime",
+      "description": "Classifies the market into risk-on / risk-off / chop / breakout from CMC Fear & Greed, global metrics, and quote momentum.",
+      "cmc_inputs": ["fear_and_greed", "global_metrics", "latest_quotes"],
+      "api": "GET /regime",
+      "mcp_tool": "guardrail_regime",
+      "mcp_resource": "guardrail://regime"
+    },
+    {
+      "capability": "asset_scoring",
+      "description": "Ranks BSC-eligible assets with a multi-factor blend (momentum + RSI + MACD + volume + volatility + liquidity + sentiment + execution-quality, minus a security penalty).",
+      "cmc_inputs": ["latest_quotes", "ohlcv", "dex_liquidity", "token_security"],
+      "api": "GET /signals",
+      "mcp_tool": "guardrail_skill",
+      "mcp_resource": "guardrail://skill"
+    },
+    {
+      "capability": "skill_backtest",
+      "description": "Runs the real Rust strategy + risk + backtester over a CMC-derived universe for any published Track-2 skill.",
+      "cmc_inputs": ["latest_quotes", "ohlcv", "fear_and_greed"],
+      "api": "GET /skills/{id}/backtest",
+      "mcp_tool": "guardrail_backtest"
+    },
+    {
+      "capability": "liquidity_intel",
+      "description": "Per-asset DEX liquidity and headroom used to gate order sizing.",
+      "cmc_inputs": ["dex_liquidity"],
+      "api": "GET /liquidity",
+      "mcp_tool": "guardrail_liquidity"
+    },
+    {
+      "capability": "mandate_compilation",
+      "description": "Compiles a natural-language mandate into a validated, hashed risk policy (CMC-eligible assets only).",
+      "cmc_inputs": ["latest_quotes"],
+      "api": "GET /policy/compile",
+      "mcp_tool": "guardrail_compile_policy"
+    }
+  ],
+  "discovery": {
+    "agent_card": "GET /.well-known/agent-card.json",
+    "capabilities_endpoint": "GET /cmc/capabilities",
+    "mcp_resource": "guardrail://cmc/capabilities"
+  }
+}

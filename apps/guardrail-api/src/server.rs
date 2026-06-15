@@ -101,6 +101,10 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         )
         .route("/proof/verify", get(crate::proof_verify::proof_verify))
         .route("/snapshots", get(crate::snapshots::snapshots))
+        .route(
+            "/cmc/capabilities",
+            get(crate::cmc_capabilities::cmc_capabilities),
+        )
         .route("/version", get(crate::version::version))
         .with_state(state)
 }
