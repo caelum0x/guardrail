@@ -62,6 +62,7 @@ const links = [
   "/ops",
   "/proof",
   "/compete",
+  "/submission",
   "/reports",
 ];
 

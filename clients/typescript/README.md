@@ -165,6 +165,58 @@ cd clients/typescript && pnpm install && pnpm run example
 | `wellKnownAgentCard()` | `/.well-known/agent-card.json` | well-known agent card |
 | `compilePolicy(m)` | `/policy/compile` | compiled policy + hash |
 
+## CLI (`guardrail`)
+
+A dependency-free operator CLI ships in `src/cli.ts`, mirroring the Go
+`guardrailctl`. It uses only Node built-ins plus the SDK client, and is
+**offline-safe**: every subcommand prints a notice and exits `0` when the API is
+unreachable, so it is harmless in CI or against a stopped backend.
+
+Build it to `dist/` and run the compiled entrypoint:
+
+```bash
+cd clients/typescript
+npm run build          # tsc -p tsconfig.build.json -> dist/
+node dist/cli.js status
+```
+
+Or use the package scripts / bin:
+
+```bash
+npm run cli -- status            # build + run
+node dist/cli.js help            # full usage
+npx guardrail status             # via the "bin" entry once installed
+```
+
+### Subcommands
+
+| Command | Routes | Description |
+|---|---|---|
+| `status` | `/regime` + `/compete` + `/readiness` | one-line status + readiness table |
+| `regime` | `/regime` | current market regime + inputs |
+| `journal` | `/journal` | compact per-cycle decision journal |
+| `ensemble` | `/ensemble` | current regime + per-skill weight matrix |
+| `skills [ID]` | `/skills`, `/skills/{id}` | Skill catalog, or one skill's detail |
+| `verify` | `/proof/verify` | server-side proof pass/fail table |
+| `snapshots` | `/snapshots` | latest run summary + per-asset prices |
+| `help` | — | usage |
+
+### Flags
+
+- `--base URL` — API base URL. Defaults to `$GUARDRAIL_BASE_URL`, else
+  `http://localhost:8080`. Accepts `--base URL` or `--base=URL`.
+- `--json` — emit machine-readable JSON instead of the human-readable table.
+
+```bash
+node dist/cli.js status --json
+node dist/cli.js skills momentum-v1 --base http://localhost:8080
+GUARDRAIL_BASE_URL=http://host:8080 node dist/cli.js ensemble
+```
+
+The CLI is backed by these new typed SDK methods on `GuardrailClient`:
+`ensemble()`, `journal()`, `snapshots(params?)`, `skills()`, `skillById(id)`,
+and `proofVerify()` (return types in `src/cli-types.ts`).
+
 ## Type-check
 
 ```bash

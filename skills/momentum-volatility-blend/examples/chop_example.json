@@ -1,0 +1,61 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Directionless, range-bound tape — the worst environment for momentum (whipsaw). Exposure cut hard (multiplier 0.4); trade only the single highest-quality healthy-vol momentum name small, hold a large USDT reserve. WBNB is in the healthy band but barely trending; only CAKE clears the bar.",
+  "inputs": {
+    "fear_greed": { "value": 49, "value_classification": "neutral" },
+    "global": { "total_market_cap_usd": 2300000000000, "btc_dominance_pct": 52.0 },
+    "market_breadth": { "breadth_pct": 50.0, "median_24h_return": 0.1 },
+    "quotes": [
+      { "symbol": "CAKE", "price_usd": 2.74, "percent_change_1h": 0.5, "percent_change_24h": 2.2, "percent_change_7d": 8.4, "market_cap_usd": 890000000, "volume_24h_usd": 205000000, "liquidity_usd": 9300000, "volatility_1h": 3.6, "safety_score": 90, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 600.0, "percent_change_1h": 0.2, "percent_change_24h": 0.4, "percent_change_7d": 0.9, "market_cap_usd": 86000000000, "volume_24h_usd": 1500000000, "liquidity_usd": 42000000, "volatility_1h": 2.5, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3400.0, "percent_change_1h": -0.1, "percent_change_24h": 0.2, "percent_change_7d": -0.5, "market_cap_usd": 408000000000, "volume_24h_usd": 12000000000, "liquidity_usd": 54000000, "volatility_1h": 2.1, "safety_score": 98, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 14.6, "percent_change_1h": -0.2, "percent_change_24h": -0.3, "percent_change_7d": 0.4, "market_cap_usd": 9100000000, "volume_24h_usd": 360000000, "liquidity_usd": 11000000, "volatility_1h": 2.9, "safety_score": 95, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "CAKE", "ema12": 2.66, "ema26": 2.58, "ema50": 2.50, "macd_hist": 0.05, "atr14": 0.11, "realised_vol_annual_pct": 71.0 },
+      { "symbol": "WBNB", "ema12": 600.5, "ema26": 600.2, "ema50": 599.0, "macd_hist": 0.1, "atr14": 13.0, "realised_vol_annual_pct": 58.0 },
+      { "symbol": "ETH", "ema12": 3402.0, "ema26": 3405.0, "ema50": 3404.0, "macd_hist": -1.0, "atr14": 60.0, "realised_vol_annual_pct": 52.0 },
+      { "symbol": "LINK", "ema12": 14.62, "ema26": 14.66, "ema50": 14.64, "macd_hist": -0.03, "atr14": 0.6, "realised_vol_annual_pct": 60.0 }
+    ]
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breadth_pct 50 in [41,54] AND |median_24h_return| 0.1 < 1 AND fear_greed 49 neutral -> chop (directionless range)",
+    "exposure_multiplier": 0.4,
+    "risk_budget_pct": 35.2,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 0.4 = 35.2; only the single highest-quality healthy-vol momentum name is taken small, the rest is USDT reserve to avoid whipsaw.",
+    "blend_scores": [
+      { "symbol": "CAKE", "momentum_leg": 0.72, "vol_quality": 1.00, "blend_tilt": 0.72, "base_score": 0.62, "security_penalty": 0.03, "blend_score": 0.68, "realised_vol_annual_pct": 71.0, "components": "the one name with an aligned rising stack, positive MACD hist AND realised vol 71 in the healthy band in an otherwise flat tape" },
+      { "symbol": "WBNB", "momentum_leg": 0.42, "vol_quality": 1.00, "blend_tilt": 0.42, "base_score": 0.55, "security_penalty": 0.02, "blend_score": 0.47, "realised_vol_annual_pct": 58.0, "components": "healthy vol 58 but EMA stack flat / barely trending -> low momentum_leg -> below entry bar" },
+      { "symbol": "LINK", "momentum_leg": 0.00, "vol_quality": 1.00, "blend_tilt": 0.00, "base_score": 0.50, "security_penalty": 0.03, "blend_score": 0.00, "realised_vol_annual_pct": 60.0, "components": "negative MACD hist + tangled stack -> momentum_leg 0; healthy vol cannot rescue it" },
+      { "symbol": "ETH", "momentum_leg": 0.00, "vol_quality": 1.00, "blend_tilt": 0.00, "base_score": 0.49, "security_penalty": 0.01, "blend_score": 0.00, "realised_vol_annual_pct": 52.0, "components": "tangled EMA stack, macd_hist<0 -> momentum_leg 0" }
+    ],
+    "blend_reason": "In chop almost everything fails the momentum leg. Only CAKE pairs an aligned rising trend with healthy realised vol (71%), clearing 0.65; it is taken at reduced size, and the rest of the book sits in the USDT reserve to avoid whipsaw."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "CAKE", "weight_pct": 14.0 },
+      { "symbol": "WBNB", "weight_pct": 8.0 },
+      { "symbol": "USDT", "weight_pct": 78.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter only assets with blend_score >= 0.65 AND realised vol inside the healthy band; in chop cap entries to the 1-2 highest-quality names and size down.",
+        "Reject flat/tangled-trend names (low momentum_leg) and dead/blow-off-vol names (vol_quality 0).",
+        "Per-name weight capped at 17%; keep the bulk of the book in the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when blend_score < 0.50 on the next rebalance (the trend failed back into the range).",
+        "Tighten the ATR stop in chop; exit immediately on a close back below EMA26 or when realised vol leaves the healthy band.",
+        "Force-exit at stop_loss 12% or take_profit 40%; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 14.0, "reason": "blend_score 0.68; the only aligned momentum + healthy-vol blend in a flat tape, taken small", "execution": "twap" },
+      { "type": "rebalance", "symbol": "WBNB", "side": "buy", "target_weight_pct": 8.0, "reason": "small starter only; healthy vol but barely trending so kept well under the cap", "execution": "twap" },
+      { "type": "no_entry", "symbol": "LINK", "reason": "blend_score 0.00; negative MACD histogram -> momentum_leg 0" },
+      { "type": "no_entry", "symbol": "ETH", "reason": "blend_score 0.00; tangled EMA stack, macd_hist<0 -> momentum_leg 0" }
+    ]
+  }
+}

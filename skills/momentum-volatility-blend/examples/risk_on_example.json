@@ -1,0 +1,71 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Constructive up-tape but breakout breadth not yet confirmed. Full deployment (multiplier 1.0); take the cleanest healthy-vol momentum names, four positions, with a larger USDT reserve than the breakout regime. DOT trends mildly but at DEAD vol (28%) so its vol_quality is 0; ADA is in a downtrend so its momentum_leg is 0.",
+  "inputs": {
+    "fear_greed": { "value": 58, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2410000000000, "btc_dominance_pct": 51.0 },
+    "market_breadth": { "breadth_pct": 57.0, "median_24h_return": 1.4 },
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 614.0, "percent_change_1h": 0.6, "percent_change_24h": 2.4, "percent_change_7d": 6.1, "market_cap_usd": 88000000000, "volume_24h_usd": 2000000000, "liquidity_usd": 43000000, "volatility_1h": 2.8, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3460.0, "percent_change_1h": 0.4, "percent_change_24h": 1.9, "percent_change_7d": 4.8, "market_cap_usd": 415000000000, "volume_24h_usd": 15000000000, "liquidity_usd": 55000000, "volatility_1h": 2.4, "safety_score": 98, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 15.4, "percent_change_1h": 0.7, "percent_change_24h": 3.1, "percent_change_7d": 7.7, "market_cap_usd": 9600000000, "volume_24h_usd": 470000000, "liquidity_usd": 11500000, "volatility_1h": 3.2, "safety_score": 95, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 38.4, "percent_change_1h": 0.5, "percent_change_24h": 2.8, "percent_change_7d": 6.8, "market_cap_usd": 15300000000, "volume_24h_usd": 560000000, "liquidity_usd": 13500000, "volatility_1h": 3.5, "safety_score": 93, "security_flags": [] },
+      { "symbol": "DOT", "price_usd": 7.2, "percent_change_1h": 0.1, "percent_change_24h": 1.0, "percent_change_7d": 2.6, "market_cap_usd": 10200000000, "volume_24h_usd": 280000000, "liquidity_usd": 9000000, "volatility_1h": 1.1, "safety_score": 94, "security_flags": [] },
+      { "symbol": "ADA", "price_usd": 0.58, "percent_change_1h": -0.4, "percent_change_24h": -1.2, "percent_change_7d": -3.4, "market_cap_usd": 20500000000, "volume_24h_usd": 480000000, "liquidity_usd": 10000000, "volatility_1h": 2.7, "safety_score": 92, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "WBNB", "ema12": 608.0, "ema26": 600.0, "ema50": 590.0, "macd_hist": 1.2, "atr14": 16.0, "realised_vol_annual_pct": 62.0 },
+      { "symbol": "ETH", "ema12": 3438.0, "ema26": 3402.0, "ema50": 3360.0, "macd_hist": 9.0, "atr14": 78.0, "realised_vol_annual_pct": 55.0 },
+      { "symbol": "LINK", "ema12": 15.0, "ema26": 14.6, "ema50": 14.1, "macd_hist": 0.18, "atr14": 0.7, "realised_vol_annual_pct": 70.0 },
+      { "symbol": "AVAX", "ema12": 37.6, "ema26": 36.4, "ema50": 35.0, "macd_hist": 0.42, "atr14": 1.7, "realised_vol_annual_pct": 74.0 },
+      { "symbol": "DOT", "ema12": 7.16, "ema26": 7.10, "ema50": 7.02, "macd_hist": 0.02, "atr14": 0.10, "realised_vol_annual_pct": 28.0 },
+      { "symbol": "ADA", "ema12": 0.59, "ema26": 0.61, "ema50": 0.63, "macd_hist": -0.004, "atr14": 0.02, "realised_vol_annual_pct": 66.0 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 57 >= 55 AND fear_greed 58 >= 50 but median_24h_return 1.4 <= 2 -> risk_on (breakout breadth not yet met)",
+    "exposure_multiplier": 1.0,
+    "risk_budget_pct": 88.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.0 = 88; four healthy-vol momentum names share it under the 17% cap, remainder is the USDT reserve.",
+    "blend_scores": [
+      { "symbol": "AVAX", "momentum_leg": 0.84, "vol_quality": 1.00, "blend_tilt": 0.84, "base_score": 0.72, "security_penalty": 0.04, "blend_score": 0.81, "realised_vol_annual_pct": 74.0, "components": "aligned rising EMA stack, positive MACD hist; realised vol 74 in healthy band -> vol_quality 1.0" },
+      { "symbol": "LINK", "momentum_leg": 0.82, "vol_quality": 1.00, "blend_tilt": 0.82, "base_score": 0.71, "security_penalty": 0.03, "blend_score": 0.80, "realised_vol_annual_pct": 70.0, "components": "aligned trend, realised vol 70 in healthy band -> vol_quality 1.0" },
+      { "symbol": "WBNB", "momentum_leg": 0.80, "vol_quality": 1.00, "blend_tilt": 0.80, "base_score": 0.70, "security_penalty": 0.02, "blend_score": 0.79, "realised_vol_annual_pct": 62.0, "components": "aligned trend, realised vol 62 in healthy band -> vol_quality 1.0" },
+      { "symbol": "ETH", "momentum_leg": 0.78, "vol_quality": 1.00, "blend_tilt": 0.78, "base_score": 0.69, "security_penalty": 0.01, "blend_score": 0.77, "realised_vol_annual_pct": 55.0, "components": "large-cap trend leg, realised vol 55 in healthy band -> vol_quality 1.0" },
+      { "symbol": "DOT", "momentum_leg": 0.55, "vol_quality": 0.00, "blend_tilt": 0.00, "base_score": 0.58, "security_penalty": 0.02, "blend_score": 0.00, "realised_vol_annual_pct": 28.0, "components": "mild uptrend but realised vol 28 < floor 40 -> DEAD zone, vol_quality 0 -> blend_score 0 (no trend energy)" },
+      { "symbol": "ADA", "momentum_leg": 0.00, "vol_quality": 1.00, "blend_tilt": 0.00, "base_score": 0.45, "security_penalty": 0.02, "blend_score": 0.00, "realised_vol_annual_pct": 66.0, "components": "downtrend (price<EMA26, EMA12<EMA50) + negative MACD hist -> momentum_leg 0; healthy vol cannot rescue it" }
+    ],
+    "blend_reason": "Four names combine aligned momentum with realised vol inside the healthy 50-80 band (vol_quality 1.0), clearing 0.65. DOT trends mildly but its realised vol 28% is in the dead zone, so the gate zeroes it; ADA's healthy vol is irrelevant because it is in a downtrend (momentum_leg 0). The multiplicative gate requires BOTH legs."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 16.0 },
+      { "symbol": "ETH", "weight_pct": 16.0 },
+      { "symbol": "USDT", "weight_pct": 34.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with blend_score >= 0.65, max 5, ordered by blend_score.",
+        "Require strong momentum AND realised vol inside the healthy band; demote dead-vol (< 40%) and reject downtrends (momentum_leg 0).",
+        "Per-name weight capped at 17%; route by blend_score share of the risk budget; surplus to USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when blend_score < 0.50 on the next rebalance.",
+        "Trim/exit when realised vol leaves the healthy band (blow-off exhaustion or dead-zone stall).",
+        "Trail with ATR(14); exit on a close back below EMA26 or the stop; force-exit at stop_loss 12% or take_profit 40%."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.81; aligned momentum, realised vol 74 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.80; aligned momentum, realised vol 70 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 16.0, "reason": "blend_score 0.79; aligned momentum, realised vol 62 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 16.0, "reason": "blend_score 0.77; large-cap trend leg, realised vol 55 healthy", "execution": "twap" },
+      { "type": "no_entry", "symbol": "DOT", "reason": "blend_score 0.00; realised vol 28% < floor 40 (dead zone) -> vol_quality 0" },
+      { "type": "no_entry", "symbol": "ADA", "reason": "blend_score 0.00; downtrend + negative MACD histogram -> momentum_leg 0" }
+    ]
+  }
+}

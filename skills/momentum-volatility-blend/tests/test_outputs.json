@@ -1,0 +1,26 @@
+{
+  "description": "Smoke fixtures: minimal expected decision shape per regime. Full worked payloads live in ../examples/.",
+  "cases": [
+    {
+      "regime": "breakout",
+      "exposure_multiplier": 1.1,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "max_positions": 5, "healthy_vol_only": true, "blowoff_vol_rejected": true }
+    },
+    {
+      "regime": "risk_on",
+      "exposure_multiplier": 1.0,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "full_deployment": true, "dead_vol_rejected": true, "downtrend_skipped": true }
+    },
+    {
+      "regime": "chop",
+      "exposure_multiplier": 0.4,
+      "expect": { "has_risk_positions": true, "reserve_symbol": "USDT", "reduced_risk_budget": true, "highest_quality_blend_only": true }
+    },
+    {
+      "regime": "risk_off",
+      "exposure_multiplier": 0.15,
+      "expect": { "has_risk_positions": false, "reserve_symbol": "USDT", "full_reserve_possible": true, "trends_overridden_by_regime": true, "heartbeat_when_flat": true }
+    }
+  ],
+  "required_outputs": ["market_regime", "blend_scores", "target_portfolio", "actions", "risk_policy"]
+}

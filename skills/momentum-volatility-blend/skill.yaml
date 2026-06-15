@@ -1,0 +1,52 @@
+name: momentum-volatility-blend-bsc
+version: 1.0.0
+track: "Track 2 — Strategy Skills"
+description: >
+  A CMC Skill that BLENDS price momentum with a VOLATILITY-QUALITY filter over 20
+  eligible BSC tokens. It favours names that combine STRONG, persistent momentum
+  (positive risk-adjusted 7d/24h trend, price above a rising EMA stack, positive
+  MACD histogram) with a HEALTHY realised-volatility band — neither DEAD (vol too
+  low: no trend energy, the move will stall) nor BLOW-OFF (vol too high: a
+  parabolic, exhaustion-prone spike that mean-reverts violently). The volatility
+  filter is a bell-shaped quality gate centred on a target realised-vol band; it
+  multiplies the momentum tilt so a strong trend at healthy vol scores highest and
+  a strong trend at dead or blow-off vol is haircut. It shares the same four-regime
+  classifier, allocator shape and risk envelope as its sibling Skills, scaling
+  exposure UP in breakout/risk_on and CUTTING in chop/risk_off. It is a strategy
+  specification, not an executor — the Rust risk engine is the final authority over
+  every trade.
+spec: strategy_spec.yaml
+inputs:
+  - cmc_quotes            # price, % change 1h/24h/7d, market cap, 24h volume
+  - cmc_ohlcv             # hourly candles -> EMA/MACD/ATR + realised vol (crates/indicators)
+  - ema_stack             # EMA(12/26/50) -> trend direction + alignment (crates/indicators)
+  - macd_12_26_9          # MACD line/signal/histogram -> momentum confirmation
+  - atr_14                # 14-period Wilder ATR -> ATR% volatility + protective stop
+  - realised_vol          # trailing realised volatility (annualised %) -> the quality band axis
+  - cmc_fear_greed        # market-wide sentiment (0..100)
+  - cmc_dex_liquidity     # on-chain depth -> liquidity + execution quality
+  - cmc_token_security    # safety score + flags -> security penalty
+  - cmc_global            # total market cap, BTC dominance
+  - eligible_asset_list   # the 20 BSC tokens (configs/eligible_assets.bsc.json)
+outputs:
+  - market_regime         # risk_on | risk_off | chop | breakout
+  - blend_scores          # per-asset 0..1 momentum*vol-quality score + components
+  - target_portfolio      # weights summing to <=100, USDT reserve remainder
+  - actions               # entry | exit | rebalance | trim | heartbeat
+  - entry_rules
+  - exit_rules
+  - risk_policy
+regimes:
+  - risk_on
+  - risk_off
+  - chop
+  - breakout
+examples:
+  - examples/risk_on_example.json
+  - examples/risk_off_example.json
+  - examples/chop_example.json
+  - examples/breakout_example.json
+prompts:
+  - prompts/system.md
+  - prompts/strategy_generation.md
+  - prompts/backtest_spec.md

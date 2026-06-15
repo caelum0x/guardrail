@@ -1,0 +1,400 @@
+# =============================================================================
+# Momentum + Volatility-Quality Blend — Backtestable Strategy Spec
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven strategy over a
+# fixed universe of 20 eligible BSC tokens. It is a sibling of
+# skills/cmc-regime-routed-alpha, skills/funding-rate-carry,
+# skills/mean-reversion-chop, skills/trend-breakout-momentum,
+# skills/volatility-targeted-risk-parity and skills/social-sentiment-momentum:
+# same universe, same four-regime classifier, same allocator shape and risk
+# envelope. The DIFFERENCE is the alpha thesis: this Skill BLENDS price MOMENTUM
+# with a VOLATILITY-QUALITY filter. It is not enough for a name to trend; the
+# trend must be carried at a HEALTHY realised volatility — high enough that there
+# is genuine trend energy, low enough that the move is not a parabolic,
+# exhaustion-prone blow-off that mean-reverts violently. Concretely it favours
+# names that are simultaneously (a) strongly trending (positive risk-adjusted
+# momentum, aligned rising EMA stack, positive MACD histogram) and (b) sitting in
+# a target realised-volatility band, and it haircuts both DEAD-vol names (no trend
+# energy) and BLOW-OFF-vol names (exhaustion / whipsaw risk).
+#
+#   indicator semantics      -> crates/indicators/src/moving_average.rs (EMA, alpha=2/(n+1))
+#                               crates/indicators/src/macd.rs   (MACD 12/26/9)
+#                               crates/indicators/src/atr.rs    (Wilder ATR)
+#   regime model             -> crates/strategy-engine/src/regime.rs
+#   base alpha score         -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: momentum-volatility-blend-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  A momentum + volatility-quality blend over 20 eligible BSC tokens. A momentum
+  leg measures persistent, risk-adjusted trend strength (positive 7d/24h return
+  normalised by ATR, an aligned rising EMA12/26/50 stack with price above, and a
+  positive MACD histogram). A volatility-quality leg is a bell-shaped gate over
+  trailing realised volatility centred on a target band: it peaks (1.0) when
+  realised vol sits in the healthy band (roughly 40-90% annualised), decays toward
+  0 as vol falls into the DEAD zone (no trend energy — the move stalls) or rises
+  into the BLOW-OFF zone (parabolic, exhaustion-prone — it mean-reverts). The two
+  legs MULTIPLY: blend_tilt = momentum_score * vol_quality, so a strong trend at
+  healthy vol scores highest, a strong trend at dead/blow-off vol is haircut, and a
+  weak trend cannot be rescued by good vol. The tilt re-weights the base alpha
+  score, the security penalty is re-applied as a haircut, ATR(14) sets the
+  protective stop, and a score-proportional allocator with a per-name cap and a
+  USDT reserve builds the target book. The regime exposure multiplier scales the
+  book UP in breakout/risk_on and DOWN in chop/risk_off.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and never momentum/blend candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle. The vol-quality band is
+      especially meaningful on liquid names; a thin name's realised vol is noisy.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_ohlcv:
+    description: >
+      Hourly OHLCV candles per asset, the raw series the indicators are computed
+      over. EMA/MACD are computed from the close, ATR from high/low/close, and the
+      trailing realised volatility from log-returns of the close, using the
+      crates/indicators implementations.
+    fields: [open, high, low, close, volume, timestamp]
+    endpoint: /v2/cryptocurrency/ohlcv/historical
+  ema_stack:
+    description: >
+      EMA(12), EMA(26), EMA(50) on hourly closes (alpha = 2/(period+1), seeded
+      with the SMA of the first `period` samples). A rising, aligned stack
+      (EMA12 > EMA26 > EMA50 with price above EMA12) defines an established uptrend.
+      Matches crates/indicators/src/moving_average.rs::ema.
+    source: crates/indicators/src/moving_average.rs
+    fields: [symbol, ema12, ema26, ema50, price_above_ema12, stack_aligned]
+    periods: [12, 26, 50]
+  macd_12_26_9:
+    description: >
+      MACD (12/26/9) on hourly closes: macd = ema(12) - ema(26); signal =
+      ema(macd, 9); histogram = macd - signal. A positive histogram with the MACD
+      line above its signal line confirms accelerating upside momentum.
+      Matches crates/indicators/src/macd.rs.
+    source: crates/indicators/src/macd.rs
+    fields: [symbol, macd, signal, histogram]
+    fast: 12
+    slow: 26
+    signal: 9
+  atr_14:
+    description: >
+      14-period Wilder ATR on hourly high/low/close. Used to risk-adjust the
+      momentum leg (return per unit ATR) and to scale the protective stop. ATR% =
+      atr / price expresses volatility in comparable units across names.
+      Matches crates/indicators/src/atr.rs.
+    source: crates/indicators/src/atr.rs
+    fields: [symbol, atr, atr_pct]
+    period: 14
+  realised_vol:
+    description: >
+      Trailing realised volatility (annualised %), the standard deviation of
+      hourly log-returns over the lookback window, scaled to annual. This is the
+      AXIS of the volatility-quality gate: the strategy favours names whose
+      realised vol sits in a healthy band and penalises dead-vol and blow-off-vol
+      names. Mirrors crates/portfolio-optimizer realised-vol estimation.
+    fields: [symbol, realised_vol_annual_pct, vol_window_hours]
+    window_hours: 168
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_fear_greed:
+    description: Market-wide 0..100 Fear & Greed index. One value applies to all assets this cycle.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+#
+# Momentum pays when trends persist (breakout, risk_on) and bleeds via whipsaw in
+# ranges (chop) and failed trends in fear (risk_off), so this Skill deploys the
+# most capital in breakout/risk_on and the least in chop/risk_off.
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance — trends run; healthy-vol momentum pays most.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy directional risk appetite — trends persist, momentum pays.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — trends fail; cut to a USDT reserve.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless, range-bound market — momentum whipsaws; trade small.
+  exposure_multipliers:
+    breakout: 1.1      # over-deployment — strongest trend persistence
+    risk_on: 1.0       # full deployment — momentum pays in an up-tape
+    chop: 0.4          # whipsaw risk — small, only the highest-quality blends
+    risk_off: 0.15     # failed-trend risk — minimal exposure, mostly reserve
+
+# -----------------------------------------------------------------------------
+# 4. BLEND SIGNAL — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# Two legs multiply into a single buy-side blend tilt in 0..1.
+#
+#   MOMENTUM leg (0..1): persistent, risk-adjusted trend strength
+#     - trend_score:   aligned rising EMA stack (EMA12>EMA26>EMA50, price>EMA12)
+#     - momentum_score: ATR-normalised positive return + positive MACD histogram
+#     momentum_leg = 0.5*trend_score + 0.5*momentum_score
+#     momentum_leg is FORCED to 0 in a downtrend (price<EMA26 OR EMA12<EMA50) or
+#     when the MACD histogram is negative — a falling name is never a buy.
+#
+#   VOLATILITY-QUALITY leg (0..1): a bell-shaped gate over realised vol
+#     centred on a target band. Peaks at 1.0 inside the band, decays toward 0 as
+#     realised vol falls into the DEAD zone or rises into the BLOW-OFF zone.
+#       dead zone   : realised_vol < vol_floor   -> no trend energy, move stalls
+#       healthy band: vol_floor .. vol_ceiling   -> tradable trend energy -> 1.0
+#       blow-off    : realised_vol > vol_ceiling -> parabolic/exhaustion -> haircut
+#
+#   blend_tilt = momentum_leg * vol_quality          (multiplicative gate)
+#
+# Multiplying (rather than adding) is the whole point: a strong trend at dead or
+# blow-off vol is DEMOTED, and a healthy-vol but trendless name scores ~0. Only
+# the intersection — strong momentum AND healthy vol — scores high.
+blend_signal:
+  momentum_leg:
+    ema_stack:
+      periods: [12, 26, 50]
+      aligned_up: "EMA12 > EMA26 > EMA50 AND price > EMA12"   # established uptrend
+      downtrend: "price < EMA26 OR EMA12 < EMA50"             # leg fails -> momentum_leg 0
+    macd:
+      fast: 12
+      slow: 26
+      signal: 9
+      bullish: "histogram > 0 AND macd > signal"              # accelerating up momentum
+      bearish: "histogram <= 0"                               # momentum rolling over -> leg 0
+    trend_score:
+      aligned_peak: "trend_score = 1.0 when ema stack aligned_up"
+      partial:      "trend_score = 0.5 when price > EMA26 but stack not fully aligned"
+      downtrend_zero: "trend_score = 0.0 when downtrend"
+    momentum_score:
+      formula: "momentum_score = clamp01( 0.6 * clamp01(percent_change_7d / 20) + 0.4 * clamp01(macd_histogram / atr) )"
+      bearish_zero: "momentum_score = 0.0 when histogram <= 0 (no positive momentum)"
+    blend: "momentum_leg = 0.5 * trend_score + 0.5 * momentum_score"   # in [0, 1]
+  vol_quality:
+    axis: realised_vol_annual_pct
+    band:
+      vol_floor: 40.0      # below this -> DEAD zone (no trend energy)
+      vol_lo: 50.0         # lower edge of the full-credit healthy band
+      vol_hi: 80.0         # upper edge of the full-credit healthy band
+      vol_ceiling: 110.0   # above this -> BLOW-OFF zone (exhaustion / whipsaw)
+    shape:
+      healthy_peak: "vol_quality = 1.0 when vol_lo <= realised_vol <= vol_hi"
+      ramp_up:      "vol_quality = (realised_vol - vol_floor) / (vol_lo - vol_floor) when vol_floor <= realised_vol < vol_lo"
+      ramp_down:    "vol_quality = (vol_ceiling - realised_vol) / (vol_ceiling - vol_hi) when vol_hi < realised_vol <= vol_ceiling"
+      dead_zero:    "vol_quality = 0.0 when realised_vol < vol_floor"
+      blowoff_zero: "vol_quality = 0.0 when realised_vol > vol_ceiling"
+    note: >
+      A symmetric, clamped trapezoidal bell: full credit in the healthy band, a
+      linear ramp on each side, zero in the dead and blow-off zones. This is the
+      quality filter that the momentum leg is multiplied by.
+  combine:
+    tilt: "blend_tilt = momentum_leg * vol_quality"      # in [0, 1], multiplicative
+    note: >
+      Multiplicative so neither leg alone is sufficient: a trendless name (low
+      momentum_leg) and an exhaustion-vol name (low vol_quality) are both demoted.
+  apply:
+    # The tilt re-weights the base alpha score; factor stays within [0.7, 1.3] so
+    # the blend can re-rank and re-size candidates but never invents conviction
+    # beyond the base score.
+    factor: "0.7 + 0.6 * blend_tilt"          # in [0.7, 1.3]
+    formula: "blend_score = clamp01( base_score * (0.7 + 0.6 * blend_tilt) * (1 - security_penalty) )"
+    note: >
+      Security penalty is re-applied multiplicatively after the tilt so a strong
+      blend reading can never resurrect a security-flagged asset the base score
+      already haircut. blend_score is in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor."
+    - "Asset has EMA(12/26/50), MACD(12/26/9), ATR(14) and realised-vol readings this cycle (enough OHLCV history)."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65          # strategy_config.rs (applied to blend_score)
+    max_positions: 5                  # top-N by blend score
+    ordering: "descending blend_score; ties broken by higher vol_quality, then higher momentum_leg, then liquidity, then symbol"
+  blend_preference:
+    - "Strongly prefer names that are BOTH strongly trending AND in the healthy realised-vol band (vol_quality near 1.0)."
+    - "Do not initiate in a DOWNTREND (price below EMA26 or EMA12 < EMA50) or on a negative MACD histogram: momentum_leg is 0."
+    - "Demote DEAD-vol names (realised_vol < vol_floor): no trend energy, the move stalls — vol_quality 0."
+    - "Demote BLOW-OFF-vol names (realised_vol > vol_ceiling): parabolic / exhaustion-prone — vol_quality 0, even with strong momentum."
+    - "Only chase blends with conviction in breakout/risk_on; in chop the exposure multiplier shrinks the book sharply (whipsaw)."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  trend_intact_hold:
+    - "HOLD a winning name while trend and vol quality persist: price above the ATR stop, EMA stack still aligned up, MACD histogram still positive, realised vol still inside the healthy band."
+    - "TRIM into parabolic extension if realised vol pushes into the BLOW-OFF zone (vol_quality decaying) — the trend is becoming exhaustion-prone."
+  trend_break:
+    - "EXIT when the ATR stop is hit: stop at (highest_close_since_entry - atr_stop_multiple * ATR)."
+    - "EXIT when momentum rolls over: MACD histogram turns negative (macd crosses below signal) while held."
+    - "EXIT when the trend structure breaks: price closes back below EMA26 (the trend that justified the entry is gone)."
+  vol_quality_decay:
+    - "TRIM/EXIT when realised vol leaves the healthy band — into the blow-off zone (exhaustion) or collapses into the dead zone (trend stalling)."
+  score_decay:
+    min_score_to_hold: 0.50           # below this blend_score, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+  protective:
+    # ATR-scaled stop is the primary exit; a hard floor backstops it.
+    stop_loss_pct: 12.0               # hard floor force-exit at -12% vs avg cost
+    atr_stop_multiple: 3.0            # stop at 3.0x ATR below the highest close since entry
+    take_profit_pct: 40.0             # let healthy-vol winners run; force-exit only at +40% vs avg cost
+  regime_exit:
+    - "On transition to chop, cut to the 0.4x multiplier (whipsaw): keep only the highest-quality blends and trail the rest tight."
+    - "On transition to risk_off, cut to the 0.15x multiplier and rotate to the USDT reserve — trends fail in fear."
+    - "On a continuing breakout/risk_on, hold/add: ride the trend with the ATR stop, scaling exposure up to the 1.1x/1.0x budget."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional          # proportional to blend_score
+  steps:
+    - "Select entries with blend_score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold full reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - min_stable_reserve]."
+    - "Per name: weight = risk_budget * (blend_score / Σ selected_blend_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder — small in breakout/risk_on, large in chop/risk_off)."
+  parameters:
+    target_stable_reserve_pct: 12.0   # strategy_config.rs analogue (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+  regime_exposure_multiplier:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.4
+    risk_off: 0.15
+  note: >
+    In breakout the 1.1x multiplier lets the risk budget exceed (100 - reserve),
+    but the per-name 17% cap and the >= 10% min_stable_reserve floor still bound
+    the book; surplus over caps falls back to the USDT reserve. The allocator and
+    the Rust risk engine clamp any over-allocation.
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no signal-driven trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. This Skill is flat for
+    long stretches (chop with no healthy-vol trend, or risk_off). When flat a
+    minimal heartbeat trade keeps the agent compliant while the kill switch /
+    throttle still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The blend tilt can re-rank and re-size candidates but cannot override
+    risk — proposals that violate caps are clamped or rejected, including the 1.1x
+    breakout over-deployment which is clamped back under the per-name cap and the
+    min_stable_reserve floor.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  blend_scores: "list of { symbol, momentum_leg, vol_quality, blend_tilt, base_score, security_penalty, blend_score, realised_vol_annual_pct }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/trim/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

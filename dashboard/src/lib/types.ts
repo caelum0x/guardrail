@@ -305,3 +305,76 @@ export type SnapshotsResponse = {
   /** Summary of the selected run (most recent by default), if one exists. */
   latest?: SnapshotRunSummary | null;
 };
+
+/** Independent proof-verification result (`GET /proof/verify`). */
+export type ProofVerifyCheck = {
+  name: string;
+  status: string;
+  detail: string;
+};
+
+export type ProofVerifyResponse = {
+  passed?: boolean;
+  reason?: string;
+  checks?: ProofVerifyCheck[];
+};
+
+/** One judge-scorecard section (`GET /scorecard`). */
+export type ScorecardSection = {
+  id: string;
+  label: string;
+  weight: number;
+  status: string;
+  passed_facts: number;
+  total_facts: number;
+  score_pct: number;
+  evidence_routes: string[];
+  required_facts: string[];
+};
+
+export type ScorecardResponse = {
+  name: string;
+  status: string;
+  summary: {
+    score_pct: number;
+    threshold_ready_pct: number;
+    earned_weight: number;
+    total_weight: number;
+    sections: number;
+  };
+  sections: ScorecardSection[];
+  error?: string;
+};
+
+/** One prize-lane claim mapping (`GET /prizes`). */
+export type Prize = {
+  id: string;
+  label: string;
+  claim: string;
+  evidence_paths: string[];
+  passed_facts: number;
+  total_facts: number;
+  status: "ready" | "partial" | string;
+};
+
+export type PrizesResponse = {
+  summary: {
+    categories: number;
+    ready: number;
+    partial: number;
+  };
+  prizes: Prize[];
+  error?: string;
+};
+
+/** Track-1 competition readiness (`GET /compete`). */
+export type CompeteResponse = {
+  competition_contract: string;
+  competition_contract_bsctrace: string;
+  eligible_assets: number;
+  registered: boolean;
+  competition_tx: string | null;
+  daily_trade_satisfied: boolean;
+  confirmed_trades: number;
+  kill_switch: boolean;
+};

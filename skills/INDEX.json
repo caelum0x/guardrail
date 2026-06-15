@@ -127,5 +127,28 @@
     "eligible_universe_size": 20,
     "examples_count": 4,
     "spec_file": "skills/social-sentiment-momentum/strategy_spec.yaml"
+  },
+  {
+    "id": "momentum-volatility-blend",
+    "name": "momentum-volatility-blend-bsc",
+    "path": "skills/momentum-volatility-blend",
+    "summary": "Blends price momentum with a volatility-quality filter over 20 eligible BSC tokens: it favours names that are simultaneously strongly trending (positive risk-adjusted momentum, an aligned rising EMA12/26/50 stack, a positive MACD histogram) AND sitting in a healthy realised-volatility band, and demotes both DEAD-vol names (no trend energy, the move stalls) and BLOW-OFF-vol names (parabolic, exhaustion-prone). A momentum leg (momentum_leg = 0.5*trend_score + 0.5*momentum_score, forced to 0 in a downtrend or on a negative MACD histogram) is MULTIPLIED by a bell-shaped vol_quality gate over trailing realised volatility (1.0 in the healthy band ~50-80% annualised, ramping to 0 below the 40% floor and above the 110% ceiling): blend_tilt = momentum_leg * vol_quality. The tilt multiplies the base alpha score, the security penalty is re-applied as a haircut, ATR(14) sets the protective stop, and a score-proportional allocator with a per-name cap and a USDT reserve builds the target book. The regime exposure multiplier peaks in breakout (1.1), is full in risk_on (1.0), cut in chop (0.4), minimal in risk_off (0.15).",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_ohlcv",
+      "ema_stack",
+      "macd_12_26_9",
+      "atr_14",
+      "realised_vol",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/momentum-volatility-blend/strategy_spec.yaml"
   }
 ]

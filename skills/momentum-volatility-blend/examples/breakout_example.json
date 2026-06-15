@@ -1,0 +1,73 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Home regime: a broad, well-bid advance. Exposure multiplier peaks (1.1); deploy the most capital into the strongest momentum names whose realised vol sits in the healthy band. CAKE trends hard but at blow-off vol (132%) so its vol_quality collapses to 0 and it is rejected despite top momentum.",
+  "inputs": {
+    "fear_greed": { "value": 72, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2620000000000, "btc_dominance_pct": 49.5 },
+    "market_breadth": { "breadth_pct": 71.0, "median_24h_return": 3.4 },
+    "quotes": [
+      { "symbol": "WBNB", "price_usd": 642.0, "percent_change_1h": 1.1, "percent_change_24h": 6.2, "percent_change_7d": 14.8, "market_cap_usd": 92000000000, "volume_24h_usd": 3100000000, "liquidity_usd": 44000000, "volatility_1h": 3.4, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3720.0, "percent_change_1h": 0.9, "percent_change_24h": 5.1, "percent_change_7d": 12.0, "market_cap_usd": 446000000000, "volume_24h_usd": 19000000000, "liquidity_usd": 56000000, "volatility_1h": 3.0, "safety_score": 98, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 31.2, "percent_change_1h": 1.4, "percent_change_24h": 8.8, "percent_change_7d": 19.6, "market_cap_usd": 3050000000, "volume_24h_usd": 410000000, "liquidity_usd": 8800000, "volatility_1h": 4.6, "safety_score": 88, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 41.5, "percent_change_1h": 1.0, "percent_change_24h": 6.9, "percent_change_7d": 15.2, "market_cap_usd": 16500000000, "volume_24h_usd": 720000000, "liquidity_usd": 14000000, "volatility_1h": 3.8, "safety_score": 93, "security_flags": [] },
+      { "symbol": "LINK", "price_usd": 16.1, "percent_change_1h": 0.8, "percent_change_24h": 5.6, "percent_change_7d": 11.4, "market_cap_usd": 10000000000, "volume_24h_usd": 520000000, "liquidity_usd": 11800000, "volatility_1h": 3.1, "safety_score": 95, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.05, "percent_change_1h": 1.6, "percent_change_24h": 9.4, "percent_change_7d": 22.0, "market_cap_usd": 980000000, "volume_24h_usd": 240000000, "liquidity_usd": 9500000, "volatility_1h": 6.8, "safety_score": 90, "security_flags": [] }
+    ],
+    "indicators": [
+      { "symbol": "WBNB", "ema12": 631.0, "ema26": 618.0, "ema50": 602.0, "macd_hist": 2.6, "atr14": 21.0, "realised_vol_annual_pct": 68.0 },
+      { "symbol": "ETH", "ema12": 3672.0, "ema26": 3610.0, "ema50": 3540.0, "macd_hist": 18.0, "atr14": 96.0, "realised_vol_annual_pct": 61.0 },
+      { "symbol": "INJ", "ema12": 30.0, "ema26": 28.9, "ema50": 27.4, "macd_hist": 0.74, "atr14": 1.5, "realised_vol_annual_pct": 78.0 },
+      { "symbol": "AVAX", "ema12": 40.2, "ema26": 38.9, "ema50": 37.1, "macd_hist": 0.55, "atr14": 1.9, "realised_vol_annual_pct": 72.0 },
+      { "symbol": "LINK", "ema12": 15.8, "ema26": 15.3, "ema50": 14.8, "macd_hist": 0.16, "atr14": 0.62, "realised_vol_annual_pct": 64.0 },
+      { "symbol": "CAKE", "ema12": 2.92, "ema26": 2.80, "ema50": 2.66, "macd_hist": 0.06, "atr14": 0.13, "realised_vol_annual_pct": 132.0 }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 71 >= 65 AND median_24h_return 3.4 > 2 AND fear_greed 72 >= 60 -> breakout (broad, well-bid advance)",
+    "exposure_multiplier": 1.1,
+    "risk_budget_pct": 90.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.1 = 96.8, clamped to 100 - min_stable_reserve 10 = 90; five healthy-vol momentum names share it under the 17% cap, remainder is the USDT reserve.",
+    "blend_scores": [
+      { "symbol": "INJ", "momentum_leg": 0.92, "vol_quality": 1.00, "blend_tilt": 0.92, "base_score": 0.78, "security_penalty": 0.06, "blend_score": 0.88, "realised_vol_annual_pct": 78.0, "components": "aligned rising EMA stack + positive MACD hist; realised vol 78 inside healthy band 50-80 -> vol_quality 1.0" },
+      { "symbol": "WBNB", "momentum_leg": 0.90, "vol_quality": 1.00, "blend_tilt": 0.90, "base_score": 0.76, "security_penalty": 0.02, "blend_score": 0.87, "realised_vol_annual_pct": 68.0, "components": "strong trend, realised vol 68 in healthy band -> vol_quality 1.0" },
+      { "symbol": "AVAX", "momentum_leg": 0.88, "vol_quality": 1.00, "blend_tilt": 0.88, "base_score": 0.74, "security_penalty": 0.04, "blend_score": 0.84, "realised_vol_annual_pct": 72.0, "components": "aligned trend, realised vol 72 in healthy band -> vol_quality 1.0" },
+      { "symbol": "ETH", "momentum_leg": 0.86, "vol_quality": 1.00, "blend_tilt": 0.86, "base_score": 0.72, "security_penalty": 0.01, "blend_score": 0.82, "realised_vol_annual_pct": 61.0, "components": "large-cap trend leg, realised vol 61 in healthy band -> vol_quality 1.0" },
+      { "symbol": "LINK", "momentum_leg": 0.82, "vol_quality": 1.00, "blend_tilt": 0.82, "base_score": 0.70, "security_penalty": 0.03, "blend_score": 0.78, "realised_vol_annual_pct": 64.0, "components": "aligned trend, realised vol 64 in healthy band -> vol_quality 1.0" },
+      { "symbol": "CAKE", "momentum_leg": 0.93, "vol_quality": 0.00, "blend_tilt": 0.00, "base_score": 0.78, "security_penalty": 0.03, "blend_score": 0.00, "realised_vol_annual_pct": 132.0, "components": "TOP momentum but realised vol 132 > ceiling 110 -> BLOW-OFF zone, vol_quality 0 -> blend_score 0 (exhaustion-prone, rejected)" }
+    ],
+    "blend_reason": "Five names combine strong, aligned momentum with realised vol inside the healthy 50-80 band, so vol_quality = 1.0 and blend_score clears 0.65. CAKE has the strongest raw momentum but its realised vol 132% sits in the blow-off zone; the multiplicative gate collapses its blend_score to 0 — a parabolic spike, not a tradable trend."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "INJ", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "ETH", "weight_pct": 17.0 },
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 15.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with blend_score >= 0.65, max 5, ordered by blend_score.",
+        "Require strong momentum (aligned rising EMA stack + positive MACD histogram) AND realised vol inside the healthy band (vol_quality > 0).",
+        "Reject blow-off-vol names (realised_vol > 110%) and dead-vol names (realised_vol < 40%) even with top momentum: the multiplicative gate zeroes vol_quality.",
+        "Per-name weight capped at 17%; route by blend_score share of the risk budget; surplus falls to the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when blend_score < min_score_to_hold 0.50 on the next rebalance.",
+        "Trim when realised vol pushes into the blow-off zone (vol_quality decaying) — the trend is turning exhaustion-prone.",
+        "Ride winners with an ATR(14) stop; exit on a close back below EMA26 or the stop; force-exit at stop_loss 12% or take_profit 40%; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "INJ", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.88; strong momentum, realised vol 78 in healthy band", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.87; aligned trend, realised vol 68 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.84; aligned trend, realised vol 72 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "ETH", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.82; large-cap trend leg, realised vol 61 healthy", "execution": "twap" },
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "blend_score 0.78; aligned trend, realised vol 64 healthy", "execution": "twap" },
+      { "type": "reject", "symbol": "CAKE", "reason": "blend_score 0.00; momentum_leg 0.93 but realised vol 132% > ceiling 110 (blow-off) -> vol_quality 0" }
+    ]
+  }
+}

@@ -23,8 +23,17 @@ import type {
   SweepResponse,
   WalkForwardResponse,
 } from "./types.js";
+import type {
+  EnsembleResponse,
+  JournalResponse,
+  ProofVerifyResponse,
+  SkillDetail,
+  SkillsResponse,
+  SnapshotsResponse,
+} from "./cli-types.js";
 
 export * from "./types.js";
+export * from "./cli-types.js";
 export * from "./proof.js";
 
 export interface GuardrailClientOptions {
@@ -66,6 +75,13 @@ export interface OptimizeParams {
   scores?: number[];
   /** Volatilities aligned to `symbols`. */
   vols?: number[];
+}
+
+export interface SnapshotsParams {
+  /** Explicit run id to summarize (default: most recent). */
+  run?: string;
+  /** Cap on per-asset price samples (default: server default). */
+  limit?: number;
 }
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
@@ -312,6 +328,36 @@ export class GuardrailClient {
   /** ERC-8004 style well-known agent card (``/.well-known/agent-card.json``). */
   wellKnownAgentCard(): Promise<Record<string, unknown>> {
     return this.getJson("/.well-known/agent-card.json");
+  }
+
+  // --- Operator CLI surface -------------------------------------------------
+  /** Regime-routed skill ensemble with the static per-regime weight table. */
+  ensemble(): Promise<EnsembleResponse> {
+    return this.getJson<EnsembleResponse>("/ensemble");
+  }
+  /** Per-cycle decision journal reconstructed from the event log. */
+  journal(): Promise<JournalResponse> {
+    return this.getJson<JournalResponse>("/journal");
+  }
+  /** Persisted market-snapshot history + a compact summary of one run. */
+  snapshots(params: SnapshotsParams = {}): Promise<SnapshotsResponse> {
+    const q = new URLSearchParams();
+    if (params.run) q.set("run", params.run);
+    if (params.limit != null) q.set("limit", String(params.limit));
+    const qs = q.toString();
+    return this.getJson<SnapshotsResponse>(qs ? `/snapshots?${qs}` : "/snapshots");
+  }
+  /** Track-2 Skill catalog (ids, names, regimes). */
+  skills(): Promise<SkillsResponse> {
+    return this.getJson<SkillsResponse>("/skills");
+  }
+  /** Per-skill detail for a catalog id (``/skills/{id}``). */
+  skillById(id: string): Promise<SkillDetail> {
+    return this.getJson<SkillDetail>(`/skills/${encodeURIComponent(id)}`);
+  }
+  /** Server-side proof verification: per-check pass/fail table (``/proof/verify``). */
+  proofVerify(): Promise<ProofVerifyResponse> {
+    return this.getJson<ProofVerifyResponse>("/proof/verify");
   }
 
   // --- Policy ---------------------------------------------------------------
