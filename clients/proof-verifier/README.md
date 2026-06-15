@@ -29,6 +29,23 @@ example, a bare `run_report.json` omits `report_hash` and `agent_id`) are
 reported as **SKIP** rather than failing. Use `--strict` to treat skips as
 failures.
 
+### Optional on-chain checks (`--rpc`)
+
+By default the tool is fully offline. Passing `--rpc <BSC_RPC_URL>` (or setting
+the `BSC_RPC_URL` environment variable) adds **read-only** BSC JSON-RPC checks,
+using only `urllib` from the standard library. These mirror the `chain-verifier`
+crate exactly:
+
+| Check | RPC method | What it proves |
+|-------|------------|----------------|
+| `onchain_chain_id` | `eth_chainId` | The endpoint is BSC mainnet (chain id `56`). |
+| `onchain_contract_code` | `eth_getCode` | The competition contract has deployed bytecode on-chain. |
+| `onchain_registration_receipt` | `eth_getTransactionReceipt` | The registration tx (when present) was mined with `status=success` and `to` = the competition contract. |
+
+When no RPC is supplied these checks are **SKIP**, so the default run stays
+offline and dependency-free. The checks are ABI-free — every claim is one you can
+reproduce with `cast`/`curl` against the same RPC.
+
 ## Usage
 
 ```bash
@@ -47,6 +64,10 @@ python3 verify.py sample_proof.json --strict
 
 # Machine-readable output for CI.
 python3 verify.py sample_proof.json --json
+
+# Add read-only on-chain verification against the live chain.
+python3 verify.py --rpc https://bsc-dataseed.bnbchain.org
+# → onchain_contract_code PASS: competition contract 0x212c61… has deployed bytecode (2510 bytes)
 ```
 
 Or via the repo wrapper, which auto-selects the run report or the fixture:

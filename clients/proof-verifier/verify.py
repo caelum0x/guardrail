@@ -7,8 +7,13 @@ and *independently re-derives* the cryptographic commitments the agent claims,
 comparing them to the claimed values. It also validates the competition contract
 address and BscScan / explorer URL formats. Nothing here trusts the agent: every
 check recomputes the value from first principles using only the Python standard
-library, so it runs fully offline with no third-party dependencies and no network
-or chain access.
+library, so it runs fully offline with no third-party dependencies.
+
+By default no network or chain access occurs. Passing ``--rpc URL`` (or setting
+``BSC_RPC_URL``) additionally performs *read-only* BSC JSON-RPC checks — chain
+id, deployed contract bytecode, and the registration transaction receipt — using
+only ``urllib`` from the standard library. These on-chain checks are SKIPPED when
+no RPC is supplied, so the default behaviour stays fully offline.
 
 How the agent computes its commitments (mirrored exactly here):
 
@@ -55,6 +60,9 @@ COMPETITION_CONTRACT_BSCTRACE = (
 
 # crates/agent-runtime/src/runtime.rs :: report_hash core field order.
 REPORT_CORE_FIELDS = ("run_id", "cycles", "final_nav_usd", "total_drawdown_pct", "events")
+
+# crates/chain-verifier/src/verifier.rs :: BSC_MAINNET_CHAIN_ID
+BSC_MAINNET_CHAIN_ID = 56
 
 # Candidate policy files whose sha256 may match a claimed policy_hash.
 # apps/guardrail-api/src/routes/mod.rs :: PRODUCTION_POLICY_PATH / PAPER_POLICY_PATH
@@ -367,6 +375,179 @@ def verify_registration_tx(claims: dict[str, Any]) -> dict[str, Any]:
     return make_check("registration_tx", True, f"valid tx hash format: {tx}")
 
 
+# ---------------------------------------------------------------------------
+# Optional read-only on-chain verification (stdlib urllib; opt-in via --rpc).
+# Mirrors crates/chain-verifier/src/verifier.rs — ABI-free checks only.
+# ---------------------------------------------------------------------------
+
+
+def _norm_addr(addr: str) -> str:
+    """Lowercase an EVM address with any 0x prefix stripped."""
+    body = addr[2:] if addr.lower().startswith("0x") else addr
+    return body.lower()
+
+
+def _eq_addr(a: str, b: str) -> bool:
+    return _norm_addr(a) == _norm_addr(b)
+
+
+def _parse_hex_int(value: Any) -> Optional[int]:
+    if not isinstance(value, str):
+        return None
+    body = value[2:] if value.startswith("0x") else value
+    if not body:
+        return None
+    try:
+        return int(body, 16)
+    except ValueError:
+        return None
+
+
+def _rpc_call(url: str, method: str, params: list[Any], timeout: float = 8.0) -> Any:
+    """Single JSON-RPC POST using only the standard library.
+
+    Raises RuntimeError on a JSON-RPC `error` object or a missing `result`.
+    """
+    import urllib.request  # local import keeps the offline path dependency-free
+
+    body = json.dumps(
+        {"jsonrpc": "2.0", "id": 1, "method": method, "params": params}
+    ).encode("utf-8")
+    request = urllib.request.Request(  # noqa: S310 - user-supplied trusted RPC URL
+        url, data=body, headers={"Content-Type": "application/json"}
+    )
+    with urllib.request.urlopen(request, timeout=timeout) as resp:  # noqa: S310
+        payload = json.loads(resp.read().decode("utf-8"))
+    if payload.get("error"):
+        raise RuntimeError(str(payload["error"]))
+    if "result" not in payload:
+        raise RuntimeError("rpc response missing 'result'")
+    return payload["result"]
+
+
+def verify_onchain(claims: dict[str, Any], rpc_url: Optional[str]) -> list[dict[str, Any]]:
+    """Read-only on-chain checks. SKIPPED entirely when no RPC is configured."""
+    if not rpc_url:
+        return [
+            make_check(
+                "onchain",
+                None,
+                "no RPC configured (pass --rpc URL or set BSC_RPC_URL) — "
+                "on-chain checks skipped; format/hash checks above are offline",
+            )
+        ]
+
+    checks: list[dict[str, Any]] = []
+
+    try:
+        chain_id = _parse_hex_int(_rpc_call(rpc_url, "eth_chainId", []))
+        if chain_id == BSC_MAINNET_CHAIN_ID:
+            checks.append(
+                make_check(
+                    "onchain_chain_id",
+                    True,
+                    f"RPC reports chainId {chain_id} (BSC mainnet)",
+                )
+            )
+        else:
+            checks.append(
+                make_check(
+                    "onchain_chain_id",
+                    False,
+                    f"RPC chainId {chain_id} != expected {BSC_MAINNET_CHAIN_ID} "
+                    "(not BSC mainnet)",
+                )
+            )
+    except Exception as err:  # noqa: BLE001 - degrade any RPC failure to a check
+        checks.append(make_check("onchain_chain_id", False, f"eth_chainId failed: {err}"))
+
+    try:
+        code = _rpc_call(rpc_url, "eth_getCode", [COMPETITION_CONTRACT, "latest"])
+        body = code[2:] if isinstance(code, str) and code.startswith("0x") else (code or "")
+        if body and any(ch != "0" for ch in body):
+            checks.append(
+                make_check(
+                    "onchain_contract_code",
+                    True,
+                    f"competition contract {COMPETITION_CONTRACT} has deployed "
+                    f"bytecode ({len(body) // 2} bytes)",
+                )
+            )
+        else:
+            checks.append(
+                make_check(
+                    "onchain_contract_code",
+                    False,
+                    f"no bytecode at {COMPETITION_CONTRACT} — not deployed on this chain",
+                )
+            )
+    except Exception as err:  # noqa: BLE001
+        checks.append(
+            make_check("onchain_contract_code", False, f"eth_getCode failed: {err}")
+        )
+
+    tx = claims.get("registration_tx")
+    if tx and TX_HASH_RE.match(str(tx)):
+        try:
+            receipt = _rpc_call(rpc_url, "eth_getTransactionReceipt", [tx])
+            if receipt is None:
+                checks.append(
+                    make_check(
+                        "onchain_registration_receipt",
+                        False,
+                        f"no receipt for {tx} — registration tx not mined on this chain",
+                    )
+                )
+            else:
+                status_ok = _parse_hex_int(receipt.get("status")) == 1
+                to_field = receipt.get("to")
+                to_ok = bool(to_field) and _eq_addr(str(to_field), COMPETITION_CONTRACT)
+                if status_ok and to_ok:
+                    checks.append(
+                        make_check(
+                            "onchain_registration_receipt",
+                            True,
+                            "registration tx mined "
+                            f"(status=success, to={COMPETITION_CONTRACT})",
+                        )
+                    )
+                else:
+                    reasons: list[str] = []
+                    if not status_ok:
+                        reasons.append(
+                            f"status={receipt.get('status')!r} (expected 1=success)"
+                        )
+                    if not to_ok:
+                        reasons.append(
+                            f"to={to_field!r} != competition contract {COMPETITION_CONTRACT}"
+                        )
+                    checks.append(
+                        make_check(
+                            "onchain_registration_receipt",
+                            False,
+                            "registration receipt mismatch: " + "; ".join(reasons),
+                        )
+                    )
+        except Exception as err:  # noqa: BLE001
+            checks.append(
+                make_check(
+                    "onchain_registration_receipt",
+                    False,
+                    f"eth_getTransactionReceipt failed: {err}",
+                )
+            )
+    else:
+        checks.append(
+            make_check(
+                "onchain_registration_receipt",
+                None,
+                "no registration_tx anchored yet (optional in paper) — skipped",
+            )
+        )
+
+    return checks
+
+
 def verify_competition_contract() -> list[dict[str, Any]]:
     """Validate the competition contract address and explorer URL formats.
 
@@ -401,7 +582,10 @@ def verify_competition_contract() -> list[dict[str, Any]]:
 
 
 def run_all_checks(
-    proof: dict[str, Any], policy_file: Optional[str], root: str
+    proof: dict[str, Any],
+    policy_file: Optional[str],
+    root: str,
+    rpc_url: Optional[str] = None,
 ) -> list[dict[str, Any]]:
     claims = extract_claims(proof)
     checks: list[dict[str, Any]] = [
@@ -413,6 +597,7 @@ def run_all_checks(
         verify_registration_tx(claims),
     ]
     checks.extend(verify_competition_contract())
+    checks.extend(verify_onchain(claims, rpc_url))
     return checks
 
 
@@ -487,9 +672,18 @@ def main(argv: Optional[list[str]] = None) -> int:
         action="store_true",
         help="Emit machine-readable JSON instead of the text report.",
     )
+    parser.add_argument(
+        "--rpc",
+        help="BSC JSON-RPC URL for read-only on-chain verification "
+        "(chain id, contract bytecode, registration receipt). "
+        "Defaults to the BSC_RPC_URL environment variable. Omit to stay offline.",
+    )
     args = parser.parse_args(argv)
 
     root = repo_root_from_here()
+    rpc_url = args.rpc or os.environ.get("BSC_RPC_URL") or None
+    if rpc_url:
+        rpc_url = rpc_url.strip() or None
 
     try:
         if args.proof:
@@ -517,7 +711,7 @@ def main(argv: Optional[list[str]] = None) -> int:
             if os.path.isfile(candidate):
                 policy_file = candidate
 
-    checks = run_all_checks(proof, policy_file, root)
+    checks = run_all_checks(proof, policy_file, root, rpc_url)
 
     failed = sum(1 for c in checks if c["ok"] is False)
     skipped = sum(1 for c in checks if c["ok"] is None)
