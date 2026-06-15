@@ -8,6 +8,7 @@
 //!   register  — print the competition registration target
 //!   kill-switch — emit a kill-switch trigger line
 
+mod commands;
 mod util;
 
 use clap::{Parser, Subcommand};
@@ -20,8 +21,7 @@ use std::str::FromStr;
 use strategy_engine::{CurrentAllocation, StrategyConfig, StrategyEngine};
 use util::{
     cost_bps, count_ext_cli, count_files_cli, decimal_from_str, decimal_value, gas_cost_usd,
-    json_decimal_field, json_decimal_or, json_f64, json_num_fmt, json_str, metric_f64, metric_fmt,
-    now_unix_ms, scenario_shock_map,
+    json_decimal_field, json_decimal_or, json_f64, json_num_fmt, json_str, scenario_shock_map,
 };
 
 const DEFAULT_UNIVERSE: &str = "configs/eligible_assets.bsc.json";
@@ -447,13 +447,13 @@ fn main() -> anyhow::Result<()> {
                     fear_greed,
                     preset,
                 },
-        } => run_experiment_run(&tag, &config, steps, fear_greed, &preset)?,
+        } => commands::experiment::run_experiment_run(&tag, &config, steps, fear_greed, &preset)?,
         Commands::Experiment {
             command: ExperimentCommand::List,
-        } => run_experiment_list()?,
+        } => commands::experiment::run_experiment_list()?,
         Commands::Experiment {
             command: ExperimentCommand::Compare,
-        } => run_experiment_compare()?,
+        } => commands::experiment::run_experiment_compare()?,
         Commands::Submission { report } => run_submission(&report)?,
         Commands::Regime { config } => run_regime(&config)?,
         Commands::Funding { steps } => run_funding(steps)?,
@@ -3005,161 +3005,6 @@ fn run_indicators(symbol: &str, steps: u32) -> anyhow::Result<()> {
     Ok(())
 }
 
-/// Directory where named backtest experiments are persisted.
-const EXPERIMENTS_DIR: &str = "data/experiments";
-
-/// Milliseconds since the Unix epoch, or `0` if the clock is before the epoch.
-/// Run a backtest with the given parameters and persist it as a named experiment
-/// under `data/experiments/<tag>.json`.
-fn run_experiment_run(
-    tag: &str,
-    config: &str,
-    steps: u32,
-    fear_greed: u32,
-    preset: &str,
-) -> anyhow::Result<()> {
-    if tag.trim().is_empty() {
-        anyhow::bail!("--tag must not be empty");
-    }
-
-    let settings = Settings::load(config)?;
-    let universe = market_data::Universe::load(DEFAULT_UNIVERSE)?;
-    let policy_raw = std::fs::read_to_string(&settings.risk.policy_path)?;
-    let policy = risk_engine::RiskPolicy::from_json_str(&policy_raw)?;
-    let cap = (to_f64(policy.max_position_pct) - 1.0).max(1.0);
-    let strat_cfg = apply_preset(strategy_config(&settings, cap), preset);
-
-    let cfg = backtester::BacktestConfig {
-        steps,
-        starting_usd: Decimal::from(10_000),
-        fear_greed,
-    };
-    let run = backtester::run_backtest(&universe, policy, strat_cfg, cfg);
-    let m = &run.metrics;
-
-    let record = serde_json::json!({
-        "tag": tag,
-        "created_ms": now_unix_ms().to_string(),
-        "steps": steps,
-        "fear_greed": fear_greed,
-        "preset": preset,
-        "metrics": {
-            "total_return_pct": to_f64(m.total_return_pct),
-            "max_drawdown_pct": to_f64(m.max_drawdown_pct),
-            "trade_count": m.trade_count,
-            "win_rate_pct": to_f64(m.win_rate_pct),
-            "profit_factor": to_f64(m.profit_factor),
-            "volatility_pct": to_f64(m.volatility_pct),
-            "calmar_ratio": to_f64(m.calmar_ratio),
-        },
-        "benchmark_return_pct": to_f64(run.benchmark_return_pct),
-        "excess_return_pct": to_f64(run.excess_return_pct),
-        "final_nav_usd": to_f64(run.final_nav_usd),
-    });
-
-    std::fs::create_dir_all(EXPERIMENTS_DIR)?;
-    let path = format!("{EXPERIMENTS_DIR}/{tag}.json");
-    let serialized = serde_json::to_string_pretty(&record)?;
-    std::fs::write(&path, serialized)?;
-
-    println!("saved experiment '{tag}' to {path}");
-    Ok(())
-}
-
-/// Collect all saved experiment records, sorted by tag for stable output.
-///
-/// Each entry is `(tag, parsed JSON)`. Files that fail to read or parse are
-/// skipped with a note so a single bad file does not break the listing.
-fn load_experiments() -> anyhow::Result<Vec<(String, serde_json::Value)>> {
-    let entries = match std::fs::read_dir(EXPERIMENTS_DIR) {
-        Ok(entries) => entries,
-        Err(_) => return Ok(Vec::new()),
-    };
-
-    let mut records: Vec<(String, serde_json::Value)> = Vec::new();
-    for entry in entries {
-        let entry = match entry {
-            Ok(entry) => entry,
-            Err(_) => continue,
-        };
-        let path = entry.path();
-        if path.extension().and_then(|e| e.to_str()) != Some("json") {
-            continue;
-        }
-        let tag = path
-            .file_stem()
-            .and_then(|s| s.to_str())
-            .unwrap_or("unknown")
-            .to_string();
-        let raw = match std::fs::read_to_string(&path) {
-            Ok(raw) => raw,
-            Err(e) => {
-                println!("note: skipping '{}' ({e})", path.display());
-                continue;
-            }
-        };
-        match serde_json::from_str::<serde_json::Value>(&raw) {
-            Ok(value) => records.push((tag, value)),
-            Err(e) => println!("note: skipping '{}' (parse error: {e})", path.display()),
-        }
-    }
-
-    records.sort_by(|a, b| a.0.cmp(&b.0));
-    Ok(records)
-}
-
-/// Read a nested numeric field `metrics.<key>` from an experiment record.
-/// List all saved experiments with their key metrics (one line each).
-fn run_experiment_list() -> anyhow::Result<()> {
-    let records = load_experiments()?;
-    if records.is_empty() {
-        println!("no experiments found in {EXPERIMENTS_DIR}/ (run `experiment run --tag <name>`)");
-        return Ok(());
-    }
-
-    for (tag, value) in &records {
-        let preset = json_str(value, "preset");
-        let return_pct = metric_fmt(value, "total_return_pct");
-        let excess = json_num_fmt(value, "excess_return_pct");
-        let max_dd = metric_fmt(value, "max_drawdown_pct");
-        let calmar = metric_fmt(value, "calmar_ratio");
-        let trades = metric_f64(value, "trade_count")
-            .map(|n| format!("{n:.0}"))
-            .unwrap_or_else(|| "n/a".to_string());
-        println!(
-            "{tag:<20} preset={preset:<12} return={return_pct}% excess={excess}% max_dd={max_dd}% calmar={calmar} trades={trades}"
-        );
-    }
-    Ok(())
-}
-
-/// Print a Markdown table comparing all saved experiments.
-fn run_experiment_compare() -> anyhow::Result<()> {
-    let records = load_experiments()?;
-    if records.is_empty() {
-        println!("no experiments found in {EXPERIMENTS_DIR}/ (run `experiment run --tag <name>`)");
-        return Ok(());
-    }
-
-    println!("# Experiment Comparison");
-    println!();
-    println!("| Tag | Return % | Excess % | Max DD % | Calmar | Trades |");
-    println!("|:----|---------:|---------:|---------:|-------:|-------:|");
-    for (tag, value) in &records {
-        let return_pct = metric_fmt(value, "total_return_pct");
-        let excess = json_num_fmt(value, "excess_return_pct");
-        let max_dd = metric_fmt(value, "max_drawdown_pct");
-        let calmar = metric_fmt(value, "calmar_ratio");
-        let trades = metric_f64(value, "trade_count")
-            .map(|n| format!("{n:.0}"))
-            .unwrap_or_else(|| "n/a".to_string());
-        println!("| {tag} | {return_pct} | {excess} | {max_dd} | {calmar} | {trades} |");
-    }
-    Ok(())
-}
-
-/// Read a string field from a JSON object, falling back to `"n/a"` when missing
-/// or not a string.
 /// Render an offline Markdown run report from the agent's persisted JSON state.
 ///
 /// If the file is missing, prints a friendly note and returns `Ok(())` so the
