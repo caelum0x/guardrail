@@ -235,6 +235,7 @@ impl AgentRuntime {
             AgentEvent::MarketSnapshotReceived,
             json!({ "assets": snapshot.assets.len(), "ts": snapshot.timestamp_ms }),
         );
+        persist_snapshot(run_id, &snapshot);
 
         // 2. Mark the book to current prices and refresh drawdown.
         let prices = price_map(&snapshot);
@@ -706,6 +707,37 @@ struct RunMeta {
     wallet_address: String,
     starting_nav_usd: Decimal,
     policy_hash: String,
+}
+
+/// Persist the validated market snapshot to a per-run JSONL history file so the
+/// analytics layer (python-lab notebooks, charts) has real market history to
+/// work with. One JSON line per cycle at `data/snapshots/<run_id>.jsonl`
+/// (override the base dir with `GUARDRAIL_SNAPSHOT_DIR`). Best-effort: any
+/// filesystem/serialization error is logged and never interrupts the loop.
+fn persist_snapshot(run_id: &str, snapshot: &MarketSnapshot) {
+    let dir = std::env::var("GUARDRAIL_SNAPSHOT_DIR")
+        .unwrap_or_else(|_| "data/snapshots".to_string());
+    if let Err(e) = std::fs::create_dir_all(&dir) {
+        tracing::warn!(error = %e, dir = %dir, "could not create snapshot dir");
+        return;
+    }
+    let line = match serde_json::to_string(snapshot) {
+        Ok(json) => json,
+        Err(e) => {
+            tracing::warn!(error = %e, "could not serialize snapshot");
+            return;
+        }
+    };
+    let path = format!("{dir}/{run_id}.jsonl");
+    match std::fs::OpenOptions::new().create(true).append(true).open(&path) {
+        Ok(mut file) => {
+            use std::io::Write;
+            if let Err(e) = writeln!(file, "{line}") {
+                tracing::warn!(error = %e, path = %path, "could not append snapshot");
+            }
+        }
+        Err(e) => tracing::warn!(error = %e, path = %path, "could not open snapshot file"),
+    }
 }
 
 /// Write the live run report to disk for the monitor sidecar and dashboard.
