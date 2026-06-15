@@ -90,7 +90,7 @@ pub fn compare_presets(
         .collect();
 
     // Best mean excess first.
-    summaries.sort_by(|a, b| b.mean_excess_pct.cmp(&a.mean_excess_pct));
+    summaries.sort_by_key(|s| std::cmp::Reverse(s.mean_excess_pct));
     summaries
 }
 
