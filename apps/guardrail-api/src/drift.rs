@@ -109,7 +109,7 @@ async fn build() -> anyhow::Result<Value> {
             "abs_delta_pct": abs_delta.round_dp(2).to_string()
         }));
     }
-    rows.sort_by(|a, b| decimal_field(b, "abs_delta_pct").cmp(&decimal_field(a, "abs_delta_pct")));
+    rows.sort_by_key(|row| std::cmp::Reverse(decimal_field(row, "abs_delta_pct")));
     let status = if max_abs_delta >= critical_delta || turnover > max_turnover {
         "critical"
     } else if max_abs_delta >= warning_delta {

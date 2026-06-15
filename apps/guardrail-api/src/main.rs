@@ -11,6 +11,7 @@ mod compete;
 mod compile;
 mod costs;
 mod drift;
+mod ensemble;
 mod exit_triggers;
 mod experiments;
 mod exposure;
@@ -19,6 +20,7 @@ mod heartbeat;
 mod history;
 mod indicators;
 mod job_simulator;
+mod journal;
 mod liquidity;
 mod mandates;
 mod optimize;
@@ -35,8 +37,10 @@ mod sdk_catalog;
 mod server;
 mod signing_policy;
 mod skill;
+mod skills;
 mod sweep;
 mod trending;
+mod version;
 mod walkforward;
 mod wallet_controls;
 mod watchlist;
@@ -44,5 +48,6 @@ mod watchlist;
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     observability::tracing_setup::init();
+    version::init_uptime();
     server::serve("0.0.0.0:8080").await
 }

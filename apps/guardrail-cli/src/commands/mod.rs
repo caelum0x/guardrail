@@ -6,5 +6,10 @@
 //! shared [`crate::util`] helpers.
 
 pub mod agent_surface;
+pub mod backtest;
 pub mod commerce;
 pub mod experiment;
+pub mod identity;
+pub mod market;
+pub mod portfolio;
+pub mod reporting;

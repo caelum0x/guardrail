@@ -94,7 +94,7 @@ fn trades(events: &[StoredEvent]) {
         println!("(no confirmed transactions)");
         return;
     }
-    println!("{:<26}  {:<18}  {}", "timestamp", "tx_hash", "detail");
+    println!("{:<26}  {:<18}  detail", "timestamp", "tx_hash");
     for e in &confirmed {
         let tx = e
             .payload_json

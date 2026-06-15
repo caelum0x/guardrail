@@ -24,6 +24,15 @@ impl EventTotals {
         }
     }
 
+    /// Aggregates optionally-loaded events, treating `None` (an unreachable
+    /// store) as unavailable and `Some` as the available event window.
+    pub fn from_recent(events: &Option<Vec<StoredEvent>>) -> Self {
+        match events {
+            Some(events) => Self::from_events(events),
+            None => Self::unavailable(),
+        }
+    }
+
     /// Aggregates the supplied events into per-type counts.
     pub fn from_events(events: &[StoredEvent]) -> Self {
         let mut by_type: BTreeMap<String, usize> = BTreeMap::new();

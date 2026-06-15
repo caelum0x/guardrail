@@ -14,11 +14,15 @@
 
 use std::time::Duration;
 
-use event_store::SqliteEventRepository;
+use event_store::{SqliteEventRepository, StoredEvent};
 use serde_json::Value;
 
+mod alerts;
+mod positions;
+mod regime;
 mod render;
 mod report;
+mod risk;
 mod totals;
 
 use render::Screen;
@@ -27,6 +31,7 @@ use totals::EventTotals;
 
 const DEFAULT_REPORT_PATH: &str = "data/run_report.json";
 const DEFAULT_DB_URL: &str = "sqlite://data/guardrail_alpha.db";
+const DEFAULT_POLICY_PATH: &str = "configs/risk_policy.paper.json";
 const DEFAULT_REFRESHES: u32 = 3;
 const RECENT_EVENT_LIMIT: usize = 500;
 const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
@@ -34,13 +39,22 @@ const REFRESH_INTERVAL: Duration = Duration::from_secs(1);
 fn main() {
     let report_path = env_or("GUARDRAIL_REPORT", DEFAULT_REPORT_PATH);
     let db_path = resolve_db_path();
+    let policy_path = env_or("GUARDRAIL_RISK_POLICY", DEFAULT_POLICY_PATH);
     let refreshes = resolve_refreshes();
 
     for cycle in 0..refreshes {
         let report = RunReport::load(&report_path);
-        let totals = load_totals(&db_path);
+        let events = load_recent_events(&db_path);
+        let totals = EventTotals::from_recent(&events);
 
-        let screen = Screen::new(&report, &totals, cycle + 1, refreshes);
+        let screen = Screen::new(
+            &report,
+            &totals,
+            &events,
+            &policy_path,
+            cycle + 1,
+            refreshes,
+        );
         // Writing to stdout is best-effort; a broken pipe must not crash the cockpit.
         print!("{}", screen.render());
         let _ = std::io::Write::flush(&mut std::io::stdout());
@@ -79,19 +93,15 @@ fn resolve_refreshes() -> u32 {
     parsed.max(1)
 }
 
-/// Loads event totals from the SQLite event store, returning empty totals if the
-/// database is missing or unreadable.
-fn load_totals(db_path: &str) -> EventTotals {
+/// Loads the most recent events from the SQLite event store (newest-first),
+/// returning `None` if the database is missing or unreadable so downstream
+/// panels can render placeholders.
+fn load_recent_events(db_path: &str) -> Option<Vec<StoredEvent>> {
     if !std::path::Path::new(db_path).exists() {
-        return EventTotals::unavailable();
+        return None;
     }
-    match SqliteEventRepository::open(db_path) {
-        Ok(repo) => match repo.recent(RECENT_EVENT_LIMIT) {
-            Ok(events) => EventTotals::from_events(&events),
-            Err(_) => EventTotals::unavailable(),
-        },
-        Err(_) => EventTotals::unavailable(),
-    }
+    let repo = SqliteEventRepository::open(db_path).ok()?;
+    repo.recent(RECENT_EVENT_LIMIT).ok()
 }
 
 /// Extracts a string field from a JSON object, returning a placeholder when

@@ -86,5 +86,9 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/funding", get(crate::funding::funding))
         .route("/rebalance", get(crate::rebalance::rebalance))
         .route("/scenarios", get(crate::scenarios::scenarios))
+        .route("/journal", get(crate::journal::journal))
+        .route("/ensemble", get(crate::ensemble::ensemble))
+        .route("/skills", get(crate::skills::skills))
+        .route("/version", get(crate::version::version))
         .with_state(state)
 }

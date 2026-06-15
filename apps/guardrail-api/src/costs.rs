@@ -142,7 +142,7 @@ fn decimal_config(config: &Value, key: &str, default: Decimal) -> Decimal {
             config
                 .get(key)
                 .and_then(Value::as_u64)
-                .and_then(|value| Decimal::from_u64(value))
+                .and_then(Decimal::from_u64)
         })
         .or_else(|| {
             config

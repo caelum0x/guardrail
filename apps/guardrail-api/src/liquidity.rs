@@ -71,7 +71,7 @@ async fn build() -> anyhow::Result<Value> {
             "safety_score": asset.safety_score
         }));
     }
-    rows.sort_by(|a, b| decimal_field(a, "headroom_usd").cmp(&decimal_field(b, "headroom_usd")));
+    rows.sort_by_key(|row| decimal_field(row, "headroom_usd"));
 
     Ok(json!({
         "policy_path": POLICY,
