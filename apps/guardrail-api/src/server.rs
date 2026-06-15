@@ -90,6 +90,12 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/journal", get(crate::journal::journal))
         .route("/ensemble", get(crate::ensemble::ensemble))
         .route("/skills", get(crate::skills::skills))
+        .route("/skills/{id}", get(crate::skill_detail::skill_detail))
+        .route(
+            "/skills/{id}/backtest",
+            get(crate::skill_detail::skill_backtest),
+        )
+        .route("/proof/verify", get(crate::proof_verify::proof_verify))
         .route("/version", get(crate::version::version))
         .with_state(state)
 }

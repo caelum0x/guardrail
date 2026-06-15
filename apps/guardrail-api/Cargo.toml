@@ -14,8 +14,10 @@ twak-client.workspace = true
 strategy-engine.workspace = true
 risk-engine.workspace = true
 backtester.workspace = true
+bnb-agent.workspace = true
 indicators = { path = "../../crates/indicators" }
 portfolio-optimizer = { path = "../../crates/portfolio-optimizer" }
+skill-loader = { path = "../../crates/skill-loader" }
 policy-compiler.workspace = true
 serde.workspace = true
 serde_json.workspace = true
