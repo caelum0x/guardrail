@@ -15,3 +15,4 @@ risk-engine.workspace = true
 policy-compiler.workspace = true
 anyhow.workspace = true
 serde_json.workspace = true
+rust_decimal.workspace = true

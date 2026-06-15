@@ -12,7 +12,8 @@ mod report;
 
 fn main() {
     let json = std::env::args().any(|a| a == "--json");
-    let results = checks::run_checks();
+    let live = std::env::args().any(|a| a == "--live");
+    let results = checks::run_checks(live);
     let ready = if json {
         report::report_json(&results)
     } else {
