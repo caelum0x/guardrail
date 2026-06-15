@@ -328,10 +328,14 @@ impl AgentRuntime {
             weights_pct: portfolio.risk_weights_pct(),
         };
         let decision = strategy.decide(&snapshot, &current, nav);
+        let ensemble = ensemble_routing(decision.regime.as_str());
+        if let Some(ref routing) = ensemble {
+            tracing::info!(regime = decision.regime.as_str(), routing = %routing, "ensemble routing");
+        }
         events.append(
             run_id,
             AgentEvent::RegimeClassified,
-            json!({ "regime": decision.regime.as_str() }),
+            json!({ "regime": decision.regime.as_str(), "ensemble": ensemble }),
         );
 
         // Advisory commentary: ask the LLM to narrate the already-made decision
@@ -707,6 +711,24 @@ struct RunMeta {
     wallet_address: String,
     starting_nav_usd: Decimal,
     policy_hash: String,
+}
+
+/// Compute the live regime-routed ensemble blend for the classified regime,
+/// using the native `strategy-ensemble` crate over the embedded
+/// `skills/ensemble.json`. Returns the per-skill blend weights for the current
+/// regime (or `None` if the embedded config can't be parsed) so the live engine
+/// surfaces exactly which Track-2 skills the ensemble would weight right now.
+fn ensemble_routing(regime: &str) -> Option<serde_json::Value> {
+    use strategy_ensemble::MarketRegime;
+    let cfg = strategy_ensemble::EnsembleConfig::embedded().ok()?;
+    let market_regime = match regime {
+        "risk_on" => MarketRegime::RiskOn,
+        "risk_off" => MarketRegime::RiskOff,
+        "breakout" => MarketRegime::Breakout,
+        _ => MarketRegime::Chop,
+    };
+    let weights = cfg.regime(market_regime)?.normalized();
+    Some(json!({ "regime": regime, "skill_weights": weights }))
 }
 
 /// Persist the validated market snapshot to a per-run JSONL history file so the

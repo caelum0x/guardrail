@@ -10,6 +10,7 @@ cmc-client.workspace = true
 market-data.workspace = true
 feature-engine.workspace = true
 strategy-engine.workspace = true
+strategy-ensemble = { path = "../strategy-ensemble" }
 portfolio-optimizer = { path = "../portfolio-optimizer" }
 risk-engine.workspace = true
 portfolio.workspace = true
