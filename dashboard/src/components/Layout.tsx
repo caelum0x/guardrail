@@ -4,6 +4,7 @@ import { AutoRefresh } from "./AutoRefresh";
 const links = [
   "/",
   "/live",
+  "/skills",
   "/portfolio",
   "/assets",
   "/watchlist",
