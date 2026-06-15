@@ -89,6 +89,10 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/scenarios", get(crate::scenarios::scenarios))
         .route("/journal", get(crate::journal::journal))
         .route("/ensemble", get(crate::ensemble::ensemble))
+        .route(
+            "/ensemble/live",
+            get(crate::ensemble_live::ensemble_live),
+        )
         .route("/skills", get(crate::skills::skills))
         .route("/skills/{id}", get(crate::skill_detail::skill_detail))
         .route(

@@ -25,6 +25,9 @@ pub fn run_pre_trade_checks(
     reasons.extend(daily_loss::check(policy, ctx));
     reasons.extend(total_drawdown::check(policy, ctx));
     reasons.extend(stable_reserve::check(policy, ctx));
+    reasons.extend(wallet_balance::check(policy, intent, ctx));
+    reasons.extend(trade_frequency::check(policy, intent, ctx));
+    reasons.extend(correlation::check(ctx));
     reasons.extend(security_flags::check(ctx));
     reasons
 }

@@ -8,10 +8,13 @@
 //
 // Subcommands:
 //
-//	watch     poll /compete + /regime on an interval and print a refreshing
-//	          one-line status; --once for a single tick, Ctrl-C to stop.
-//	ensemble  print the current regime and the per-skill weight table.
-//	journal   print a compact per-cycle decision journal.
+//	watch      poll /compete + /regime on an interval and print a refreshing
+//	           one-line status; --once for a single tick, Ctrl-C to stop.
+//	ensemble   print the current regime and the per-skill weight table.
+//	journal    print a compact per-cycle decision journal.
+//	snapshots  print the latest run summary + per-asset latest-price sample.
+//	skills     print the Skill catalog, or the detail for a given skill id.
+//	verify     print the server-side proof per-check pass/fail table.
 package main
 
 import (
@@ -58,6 +61,12 @@ func run(argv []string) int {
 		return cmdEnsemble(rest)
 	case "journal":
 		return cmdJournal(rest)
+	case "snapshots":
+		return cmdSnapshots(rest)
+	case "skills":
+		return cmdSkills(rest)
+	case "verify":
+		return cmdVerify(rest)
 	case "help", "-h", "--help":
 		usage(os.Stdout)
 		return exitOK
@@ -116,6 +125,9 @@ Commands:
   watch      poll /compete + /regime and print a refreshing status line
   ensemble   show the current regime and per-skill ensemble weights
   journal    show a compact per-cycle decision journal
+  snapshots  show the latest run summary and per-asset latest-price sample
+  skills     show the Skill catalog, or one skill's detail (skills ID)
+  verify     show the server-side proof per-check pass/fail table
   help       show this help
 
 Common flags:

@@ -256,3 +256,80 @@ type JournalResponse struct {
 	Cycles               []JournalCycle `json:"cycles"`
 	Error                string         `json:"error,omitempty"`
 }
+
+// SnapshotRunFile is one discovered run file in the snapshot directory.
+// ModifiedMs is the file's last-modified time in milliseconds since the Unix
+// epoch and is nullable when the platform did not report it.
+type SnapshotRunFile struct {
+	RunID      string `json:"run_id"`
+	ModifiedMs *int64 `json:"modified_ms"`
+}
+
+// SnapshotPriceSample is one per-asset latest-price sample drawn from the last
+// snapshot line. PriceUSD is serialized as a string by the backend (rust_decimal).
+type SnapshotPriceSample struct {
+	Symbol   string `json:"symbol"`
+	PriceUSD string `json:"price_usd"`
+}
+
+// SnapshotRunSummary is a compact summary of a single run's snapshot history.
+// FirstTimestampMs and LastTimestampMs are nullable when no parsed line carried
+// a timestamp.
+type SnapshotRunSummary struct {
+	RunID            string                `json:"run_id"`
+	CycleCount       int                   `json:"cycle_count"`
+	SkippedLines     int                   `json:"skipped_lines"`
+	FirstTimestampMs *int64                `json:"first_timestamp_ms"`
+	LastTimestampMs  *int64                `json:"last_timestamp_ms"`
+	LatestPrices     []SnapshotPriceSample `json:"latest_prices"`
+}
+
+// SnapshotsResponse is the market-snapshot history view from /snapshots. Latest
+// is the summary of the selected run (most recent by default) and is nil when no
+// run files exist.
+type SnapshotsResponse struct {
+	Directory string              `json:"directory"`
+	Runs      []SnapshotRunFile   `json:"runs"`
+	Latest    *SnapshotRunSummary `json:"latest"`
+}
+
+// SkillCatalogEntry is one published Track-2 Skill in the /skills catalog. The
+// backend reads skills/INDEX.json; fields absent from a given entry decode to
+// their zero value.
+type SkillCatalogEntry struct {
+	ID                   string   `json:"id"`
+	Name                 string   `json:"name"`
+	Path                 string   `json:"path,omitempty"`
+	Summary              string   `json:"summary,omitempty"`
+	Regimes              []string `json:"regimes"`
+	Inputs               []string `json:"inputs,omitempty"`
+	EligibleUniverseSize int      `json:"eligible_universe_size,omitempty"`
+	ExamplesCount        int      `json:"examples_count,omitempty"`
+	SpecFile             string   `json:"spec_file,omitempty"`
+}
+
+// SkillsResponse is the Track-2 Skill catalog from /skills.
+type SkillsResponse struct {
+	IndexPath string              `json:"index_path"`
+	Count     int                 `json:"count"`
+	IDs       []string            `json:"ids"`
+	Skills    []SkillCatalogEntry `json:"skills"`
+}
+
+// SkillDetail is the per-skill detail from /skills/{id}: the catalog entry plus
+// the loaded spec summary. Error is set (with the offending id) when the
+// requested skill is not found or the catalog could not be loaded.
+type SkillDetail struct {
+	ID                   string   `json:"id,omitempty"`
+	Name                 string   `json:"name,omitempty"`
+	Summary              string   `json:"summary,omitempty"`
+	Description          string   `json:"description,omitempty"`
+	Regimes              []string `json:"regimes,omitempty"`
+	Inputs               []string `json:"inputs,omitempty"`
+	EligibleUniverseSize int      `json:"eligible_universe_size,omitempty"`
+	ExamplesCount        int      `json:"examples_count,omitempty"`
+	ExamplesOnDisk       int      `json:"examples_on_disk,omitempty"`
+	SpecFile             string   `json:"spec_file,omitempty"`
+	SpecSections         []string `json:"spec_sections,omitempty"`
+	Error                string   `json:"error,omitempty"`
+}

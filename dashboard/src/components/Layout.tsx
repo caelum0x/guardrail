@@ -27,6 +27,7 @@ const links = [
   "/regime",
   "/ensemble",
   "/journal",
+  "/snapshots",
   "/funding",
   "/backtest",
   "/lab",

@@ -106,12 +106,22 @@ Headline routes return first-class structs:
 | `Events` | `/events` | `*EventsResponse` |
 | `Ensemble` | `/ensemble` | `*EnsembleResponse` |
 | `Journal` | `/journal` | `*JournalResponse` |
+| `Snapshots` | `/snapshots` | `*SnapshotsResponse` |
+| `Skills` | `/skills` | `*SkillsResponse` |
+| `SkillByID` | `/skills/{id}` | `*SkillDetail` |
+| `ProofVerify` | `/proof/verify` | `*ProofVerifyResponse` |
 | `CompilePolicy` | `/policy/compile` | `*CompiledPolicyResponse` |
 
 Dynamic endpoints (for example `Cockpit`, `Assets`, `Trending`, `Indicators`,
 `Optimize`, `Funding`, `Skill`, `Report`) return `map[string]any` to stay
 forward-compatible with backend changes. Text endpoints (`Metrics`,
 `ReportMarkdown`, `ExportSubmissionMarkdown`) return `string`.
+
+Note the distinction between `Skill` and `Skills`: `Skill` (`/skill`) returns the
+agent's own single Skill descriptor as a `map[string]any`, while `Skills`
+(`/skills`) returns the typed Track-2 Skill *catalog* (`*SkillsResponse`) and
+`SkillByID` (`/skills/{id}`) returns a single catalog entry's detail
+(`*SkillDetail`).
 
 ## Example
 
@@ -174,6 +184,52 @@ confirmed trades, and ending NAV.
 ```bash
 guardrailctl journal
 guardrailctl journal --json
+```
+
+### `snapshots`
+
+`GET /snapshots` — prints the persisted market-snapshot history: the discovered
+run files (newest first), then a summary of the latest run (cycle count, skipped
+lines, first/last timestamps) and a per-asset latest-price sample drawn from its
+final line.
+
+```bash
+guardrailctl snapshots
+guardrailctl snapshots --run <run_id>   # summarize a specific run
+guardrailctl snapshots --limit 4        # cap the per-asset price sample
+guardrailctl snapshots --json
+```
+
+Flags: `--run ID` (default: most recent run), `--limit N` (price samples).
+
+### `skills`
+
+`GET /skills` — prints the Track-2 Skill catalog as an id / name / regimes
+table. With an optional positional `ID` argument it fetches `GET /skills/{id}`
+and prints that skill's detail (summary, description, regimes, inputs, eligible
+universe size, example counts, and spec sections).
+
+```bash
+guardrailctl skills                          # the full catalog
+guardrailctl skills cmc-regime-routed-alpha  # one skill's detail
+guardrailctl skills --json
+guardrailctl skills --json cmc-regime-routed-alpha
+```
+
+(Place flags before the positional `ID`, as with standard Go flag parsing.)
+
+### `verify`
+
+`GET /proof/verify` — prints the agent's **server-side** proof verification: a
+per-check pass/fail table recomputed against the on-disk risk policy and run
+report (`policy_hash`, `report_hash`, `wallet_address`, competition contract,
+BscScan URL, registration tx), plus the recomputed policy hashes. For a fully
+*independent* re-derivation that shares no code with the agent, use the
+[`example/verify`](./example/verify) command described below.
+
+```bash
+guardrailctl verify
+guardrailctl verify --json
 ```
 
 ## Proof verification

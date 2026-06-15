@@ -498,7 +498,53 @@ func verifyCompetitionContract() []Check {
 	return []Check{addrCheck, explorerCheck}
 }
 
-// --- Client method ----------------------------------------------------------
+// --- Server-side verification (/proof/verify) -------------------------------
+
+// ServerCheck is one server-side verification check from /proof/verify. Unlike
+// the offline verifier's Check (PASS/FAIL/SKIP), the server reports a lowercase
+// "pass"/"fail" status.
+type ServerCheck struct {
+	Name   string `json:"name"`
+	Status string `json:"status"`
+	Detail string `json:"detail"`
+}
+
+// Passed reports whether this check has a "pass" status.
+func (c ServerCheck) Passed() bool {
+	return c.Status == "pass"
+}
+
+// RecomputedPolicyHash records a candidate policy file and the sha256 the server
+// recomputed for it while validating the claimed policy_hash.
+type RecomputedPolicyHash struct {
+	File   string `json:"file"`
+	SHA256 string `json:"sha256"`
+}
+
+// ProofVerifyResponse is the server-side proof verification result from
+// /proof/verify. Reason is set (with an empty Checks list) when no run report
+// exists yet.
+type ProofVerifyResponse struct {
+	Passed                 bool                   `json:"passed"`
+	Reason                 string                 `json:"reason,omitempty"`
+	ReportPath             string                 `json:"report_path,omitempty"`
+	RecomputedPolicyHashes []RecomputedPolicyHash `json:"recomputed_policy_hashes,omitempty"`
+	Checks                 []ServerCheck          `json:"checks"`
+}
+
+// Counts returns the number of passed and failed checks in the response.
+func (r ProofVerifyResponse) Counts() (passed, failed int) {
+	for _, c := range r.Checks {
+		if c.Passed() {
+			passed++
+		} else {
+			failed++
+		}
+	}
+	return passed, failed
+}
+
+// --- Client methods ----------------------------------------------------------
 
 // Proof fetches the agent identity + report proof envelope (/proof) and decodes
 // it into a typed *Proof. The returned proof can be verified offline with
@@ -509,4 +555,16 @@ func (c *Client) Proof(ctx context.Context) (*Proof, error) {
 		return nil, err
 	}
 	return ParseProof(raw)
+}
+
+// ProofVerify fetches the server-side proof verification result (/proof/verify):
+// the agent recomputes its own commitments against the on-disk policy + run
+// report and returns a per-check pass/fail table. This is the server's view; the
+// fully independent re-derivation lives in (*Proof).Verify.
+func (c *Client) ProofVerify(ctx context.Context) (*ProofVerifyResponse, error) {
+	out := &ProofVerifyResponse{}
+	if err := c.do(ctx, "", "/proof/verify", nil, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

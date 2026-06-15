@@ -1,4 +1,5 @@
 import { getJsonOrNull } from "../../lib/api";
+import { EquityCurve } from "../../components/EquityCurve";
 import { LabControls } from "../../components/LabControls";
 import { PresetSelect } from "../../components/PresetSelect";
 
@@ -21,33 +22,6 @@ type BacktestResponse = {
   equity_curve: string[];
   error?: string;
 };
-
-/** Render an equity curve as a self-contained SVG sparkline. */
-function Sparkline({ values }: { values: number[] }) {
-  if (values.length < 2) {
-    return <p>Not enough data to plot.</p>;
-  }
-  const width = 720;
-  const height = 180;
-  const pad = 8;
-  const min = Math.min(...values);
-  const max = Math.max(...values);
-  const span = max - min || 1;
-  const points = values
-    .map((v, i) => {
-      const x = pad + (i / (values.length - 1)) * (width - 2 * pad);
-      const y = height - pad - ((v - min) / span) * (height - 2 * pad);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
-  const up = values[values.length - 1] >= values[0];
-  const stroke = up ? "#22c55e" : "#ef4444";
-  return (
-    <svg viewBox={`0 0 ${width} ${height}`} width="100%" height={height} role="img" aria-label="Equity curve">
-      <polyline points={points} fill="none" stroke={stroke} strokeWidth="2" />
-    </svg>
-  );
-}
 
 export default async function LabPage({
   searchParams,
@@ -129,7 +103,7 @@ export default async function LabPage({
       </section>
       <section className="panel wide">
         <h2>Equity Curve</h2>
-        <Sparkline values={curve} />
+        <EquityCurve points={curve} label="Backtest equity curve" />
       </section>
     </main>
   );

@@ -311,6 +311,52 @@ func (c *Client) Journal(ctx context.Context) (*JournalResponse, error) {
 	return out, nil
 }
 
+// SnapshotsParams configures a /snapshots request. Zero-valued fields are
+// omitted, so the server applies its own defaults.
+type SnapshotsParams struct {
+	Run   string // explicit run id to summarize (omitted when empty; default: most recent)
+	Limit int    // cap on per-asset price samples (omitted when 0)
+}
+
+// Snapshots returns the persisted market-snapshot history (/snapshots): the
+// discovered run files plus a compact summary of the selected run (most recent
+// by default) with a per-asset latest-price sample.
+func (c *Client) Snapshots(ctx context.Context, params SnapshotsParams) (*SnapshotsResponse, error) {
+	q := url.Values{}
+	if params.Run != "" {
+		q.Set("run", params.Run)
+	}
+	if params.Limit != 0 {
+		q.Set("limit", strconv.Itoa(params.Limit))
+	}
+	out := &SnapshotsResponse{}
+	if err := c.do(ctx, "", "/snapshots", q, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Skills returns the Track-2 Skill catalog (/skills): the published skills with
+// their ids, names, and regimes.
+func (c *Client) Skills(ctx context.Context) (*SkillsResponse, error) {
+	out := &SkillsResponse{}
+	if err := c.do(ctx, "", "/skills", nil, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// SkillByID returns the per-skill detail (/skills/{id}): the catalog entry plus
+// the loaded spec summary. An unknown id yields a response with Error set rather
+// than an HTTP error. The id is path-escaped before use.
+func (c *Client) SkillByID(ctx context.Context, id string) (*SkillDetail, error) {
+	out := &SkillDetail{}
+	if err := c.do(ctx, "", "/skills/"+url.PathEscape(id), nil, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Mandates returns the mandate catalog (/mandates).
 func (c *Client) Mandates(ctx context.Context) (map[string]any, error) {
 	return c.getMap(ctx, "/mandates")

@@ -12,6 +12,7 @@ mod compile;
 mod costs;
 mod drift;
 mod ensemble;
+mod ensemble_live;
 mod exit_triggers;
 mod experiments;
 mod exposure;

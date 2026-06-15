@@ -272,3 +272,36 @@ export type JournalResponse = {
   cycles?: JournalCycle[];
   error?: string;
 };
+
+/** One discovered market-snapshot run file (`GET /snapshots`). */
+export type SnapshotRunFile = {
+  run_id: string;
+  /** Last-modified time in ms since the Unix epoch, when available. */
+  modified_ms?: number | null;
+};
+
+/** Per-asset latest-price sample drawn from the last snapshot line. */
+export type SnapshotPriceSample = {
+  symbol: string;
+  price_usd: string;
+};
+
+/** Compact summary of a single run's snapshot history. */
+export type SnapshotRunSummary = {
+  run_id: string;
+  cycle_count: number;
+  skipped_lines: number;
+  first_timestamp_ms?: number | null;
+  last_timestamp_ms?: number | null;
+  latest_prices: SnapshotPriceSample[];
+};
+
+/** Top-level response for `GET /snapshots`. */
+export type SnapshotsResponse = {
+  /** Resolved snapshot directory that was inspected. */
+  directory: string;
+  /** All discovered run files, newest first. */
+  runs: SnapshotRunFile[];
+  /** Summary of the selected run (most recent by default), if one exists. */
+  latest?: SnapshotRunSummary | null;
+};
