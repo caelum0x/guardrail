@@ -178,3 +178,81 @@ type CompiledPolicyResponse struct {
 	Policy map[string]any `json:"policy,omitempty"`
 	Error  string         `json:"error,omitempty"`
 }
+
+// EnsembleSkill identifies one Track-2 strategy Skill in the ensemble.
+type EnsembleSkill struct {
+	ID    string `json:"id"`
+	Label string `json:"label"`
+}
+
+// EnsembleRegime is a single per-regime row of the static weight table. Weights
+// maps each Skill id to its blend weight for that regime.
+type EnsembleRegime struct {
+	Regime  string             `json:"regime"`
+	Weights map[string]float64 `json:"weights"`
+}
+
+// EnsembleResponse is the regime-routed skill ensemble view from /ensemble. It
+// pairs the static per-regime weight table with the currently classified
+// regime and the weights active for it (both nil when the live snapshot could
+// not be built).
+type EnsembleResponse struct {
+	Name                 string             `json:"name"`
+	Version              string             `json:"version"`
+	ReserveSymbol        string             `json:"reserve_symbol"`
+	MaxRiskAllocationPct float64            `json:"max_risk_allocation_pct"`
+	CurrentRegime        *string            `json:"current_regime"`
+	ActiveWeights        map[string]float64 `json:"active_weights"`
+	Skills               []EnsembleSkill    `json:"skills"`
+	Regimes              []EnsembleRegime   `json:"regimes"`
+	Error                string             `json:"error,omitempty"`
+}
+
+// JournalAsset is one scored asset within a journal cycle.
+type JournalAsset struct {
+	Symbol string  `json:"symbol"`
+	Score  float64 `json:"score"`
+}
+
+// JournalOrder is one proposed rebalance order within a journal cycle. AmountUSD
+// is nullable in the source payload, so it is a pointer.
+type JournalOrder struct {
+	From      string   `json:"from"`
+	To        string   `json:"to"`
+	AmountUSD *float64 `json:"amount_usd"`
+}
+
+// JournalRisk summarizes risk-engine outcomes for a journal cycle.
+type JournalRisk struct {
+	Approved         int      `json:"approved"`
+	Clipped          int      `json:"clipped"`
+	Rejected         int      `json:"rejected"`
+	RejectionReasons []string `json:"rejection_reasons"`
+}
+
+// JournalCycle is one decision cycle of the verifiable-autonomy narrative.
+// EndingNav and Positions are nullable in the source payload.
+type JournalCycle struct {
+	Index           int            `json:"index"`
+	RunID           string         `json:"run_id"`
+	Regime          string         `json:"regime"`
+	StartedAt       string         `json:"started_at"`
+	EndedAt         string         `json:"ended_at"`
+	Headline        string         `json:"headline"`
+	TopAssets       []JournalAsset `json:"top_assets"`
+	Orders          []JournalOrder `json:"orders"`
+	Risk            JournalRisk    `json:"risk"`
+	ConfirmedTrades int            `json:"confirmed_trades"`
+	EndingNav       *string        `json:"ending_nav"`
+	Positions       *int           `json:"positions"`
+}
+
+// JournalResponse is the per-cycle decision journal from /journal.
+type JournalResponse struct {
+	TotalEvents          int            `json:"total_events"`
+	TotalCycles          int            `json:"total_cycles"`
+	RunIDs               []string       `json:"run_ids"`
+	ConfirmedTradesTotal int            `json:"confirmed_trades_total"`
+	Cycles               []JournalCycle `json:"cycles"`
+	Error                string         `json:"error,omitempty"`
+}

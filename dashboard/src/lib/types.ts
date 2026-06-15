@@ -205,3 +205,70 @@ export type OpsResponse = {
   docker: Record<string, string>;
   safety: string[];
 };
+
+export type EnsembleSkill = {
+  id: string;
+  label: string;
+};
+
+/** Per-skill weight object keyed by skill id (e.g. `{ "trend-breakout-momentum": 0.5 }`). */
+export type EnsembleWeights = Record<string, number>;
+
+export type EnsembleRegimeRow = {
+  regime: string;
+  weights: EnsembleWeights;
+};
+
+export type EnsembleResponse = {
+  name?: string;
+  version?: string;
+  reserve_symbol?: string;
+  max_risk_allocation_pct?: number;
+  current_regime?: string | null;
+  active_weights?: EnsembleWeights | null;
+  skills?: EnsembleSkill[];
+  regimes?: EnsembleRegimeRow[];
+  error?: string;
+};
+
+export type JournalScoredAsset = {
+  symbol: string;
+  score: number;
+};
+
+export type JournalOrder = {
+  from: string;
+  to: string;
+  amount_usd?: number | null;
+};
+
+export type JournalRisk = {
+  approved: number;
+  clipped: number;
+  rejected: number;
+  rejection_reasons: string[];
+};
+
+export type JournalCycle = {
+  index: number;
+  run_id?: string;
+  regime: string;
+  started_at?: string;
+  ended_at?: string;
+  headline?: string;
+  top_assets?: JournalScoredAsset[];
+  orders?: JournalOrder[];
+  risk?: JournalRisk;
+  confirmed_trades?: number;
+  ending_nav?: string | null;
+  positions?: number | null;
+};
+
+export type JournalResponse = {
+  total_events?: number;
+  total_cycles?: number;
+  run_ids?: string[];
+  confirmed_trades_total?: number;
+  cycles?: JournalCycle[];
+  error?: string;
+};

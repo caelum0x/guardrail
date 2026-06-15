@@ -26,6 +26,8 @@ tags:
     description: Agent identity, services, and SDK surface
   - name: trading
     description: Assets, indicators, quotes, costs, and execution analytics
+  - name: data
+    description: Persisted market-snapshot history and ingestion summaries
 
 paths:
   /health:
@@ -1153,6 +1155,47 @@ paths:
             application/json:
               schema:
                 type: object
+  /snapshots:
+    get:
+      tags: [data]
+      summary: Persisted market-snapshot history summary
+      description: >-
+        Read-only summary of the periodic market snapshots persisted by the
+        agent (Track G). The agent writes one row per ingestion cycle to the
+        append-only snapshot store under data/snapshots/; this route projects
+        that history into a compact, chartable summary: how many snapshots are
+        retained, the time span they cover, the most recent snapshot's regime
+        and per-asset prices, and a lightweight series suitable for plotting NAV
+        or price history without replaying the full event log. The route never
+        ingests, mutates, or backfills data — it only reads what the agent has
+        already persisted, so it is safe to call repeatedly and remains
+        deterministic in paper/offline mode.
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          description: >-
+            Maximum number of most-recent snapshots to include in the series
+            (the summary counters still reflect the full retained history).
+          schema:
+            type: integer
+            minimum: 1
+            default: 100
+      responses:
+        "200":
+          description: Snapshot history summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SnapshotsResponse"
+        "503":
+          description: >-
+            The snapshot store is not yet initialized (no snapshots have been
+            persisted in this environment).
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LooseObject"
 
 components:
   schemas:
@@ -1163,6 +1206,43 @@ components:
         Loose object schema. The API returns dynamic JSON shapes assembled from
         event payloads and run reports; fields vary and are not exhaustively
         modeled here.
+
+    SnapshotsResponse:
+      type: object
+      additionalProperties: true
+      description: >-
+        Shape of the /snapshots persisted market-snapshot history summary
+        (Track G). Counters describe the full retained history; the series
+        carries up to `limit` most-recent entries for charting.
+      properties:
+        count:
+          type: integer
+          description: Total number of snapshots currently retained in the store.
+        first_at:
+          type: string
+          description: Timestamp (RFC3339) of the oldest retained snapshot, if any.
+        last_at:
+          type: string
+          description: Timestamp (RFC3339) of the most recent snapshot, if any.
+        span_seconds:
+          type: integer
+          description: Seconds between the first and last retained snapshot.
+        store_path:
+          type: string
+          description: Filesystem path of the append-only snapshot store.
+        latest:
+          allOf:
+            - $ref: "#/components/schemas/LooseObject"
+          description: >-
+            The most recent snapshot: classified regime, fear/greed level, and
+            per-asset prices at ingestion time.
+        series:
+          type: array
+          description: >-
+            Up to `limit` most-recent snapshot summaries (timestamp, regime,
+            and a representative NAV/price point) suitable for plotting.
+          items:
+            $ref: "#/components/schemas/LooseObject"
 
     JournalResponse:
       type: object

@@ -25,6 +25,8 @@ const links = [
   "/exit-triggers",
   "/scenarios",
   "/regime",
+  "/ensemble",
+  "/journal",
   "/funding",
   "/backtest",
   "/lab",

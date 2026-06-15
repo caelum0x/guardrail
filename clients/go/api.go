@@ -290,6 +290,27 @@ func (c *Client) Funding(ctx context.Context) (map[string]any, error) {
 	return c.getMap(ctx, "/funding")
 }
 
+// Ensemble returns the regime-routed skill-ensemble view (/ensemble): the
+// current classified regime, the weights active for it, and the full static
+// per-regime weight table.
+func (c *Client) Ensemble(ctx context.Context) (*EnsembleResponse, error) {
+	out := &EnsembleResponse{}
+	if err := c.do(ctx, "", "/ensemble", nil, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+// Journal returns the per-cycle decision journal (/journal), reconstructing the
+// verifiable-autonomy narrative from the append-only event log.
+func (c *Client) Journal(ctx context.Context) (*JournalResponse, error) {
+	out := &JournalResponse{}
+	if err := c.do(ctx, "", "/journal", nil, nil, out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // Mandates returns the mandate catalog (/mandates).
 func (c *Client) Mandates(ctx context.Context) (map[string]any, error) {
 	return c.getMap(ctx, "/mandates")

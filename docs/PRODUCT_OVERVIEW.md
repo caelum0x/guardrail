@@ -32,7 +32,7 @@ This file is the high-level tour. Deeper references:
 | Live engine | Rust Cargo workspace: 20 crates + 9 binaries | `crates/`, `apps/` |
 | Risk gate | Sole authority between intent and execution | `crates/risk-engine` |
 | Executor | TWAK self-custody signer (Mock/REST/MCP/CLI transports) | `crates/twak-client` |
-| Read-only API | 56 `GET` routes (incl. `/journal`, `/ensemble`, `/skills`, `/version`) | `apps/guardrail-api/src/server.rs` |
+| Read-only API | 57 `GET` routes (incl. `/journal`, `/ensemble`, `/skills`, `/version`, `/snapshots`) | `apps/guardrail-api/src/server.rs` |
 | Admin CLI | 40 subcommands in a modular `commands/` tree | `apps/guardrail-cli/src/commands/` |
 | Terminal cockpit | Live regime / positions / risk / alerts panels | `apps/guardrail-tui/src/` |
 | Analytics | Python lab over the event log + run report | `python-lab/` |
@@ -77,7 +77,7 @@ This file is the high-level tour. Deeper references:
        ┌───────────────┼──────────────┬─────────────┬───────────────┤
        ▼               ▼              ▼             ▼               ▼
   guardrail-api   guardrail-     guardrail-    guardrail-      python-lab
-  (56 routes,     exporter       monitor       tui / replay    (analytics:
+  (57 routes,     exporter       monitor       tui / replay    (analytics:
    read-only)     /metrics:9100  ─► notifier   (terminal)       regime, drawdown,
        │              │              │                          montecarlo, ensemble,
        │              ▼              ▼                          journal, dossier)
@@ -112,11 +112,12 @@ step to the event store. Nine binaries sit on top (`apps/`): `guardrail-agent`
 `guardrail-tui`, `guardrail-monitor`, `guardrail-exporter`, `guardrail-replay`,
 `guardrail-sim`, and `guardrail-doctor`.
 
-- **Read-only API (56 routes).** `apps/guardrail-api/src/server.rs::build_app`
-  wires 56 `GET` routes — every operational, portfolio, analytics, agent, and
+- **Read-only API (57 routes).** `apps/guardrail-api/src/server.rs::build_app`
+  wires 57 `GET` routes — every operational, portfolio, analytics, agent, and
   trading view — including the newest `/journal` (decision-journal projection),
-  `/ensemble` (regime meta-allocator), `/skills` (skill catalog), and `/version`
-  (service version + uptime). Full index: [API.md](API.md), spec
+  `/ensemble` (regime meta-allocator), `/skills` (skill catalog), `/version`
+  (service version + uptime), and `/snapshots` (persisted market-snapshot
+  history). Full index: [API.md](API.md), spec
   [api/openapi.yaml](api/openapi.yaml).
 - **Modular admin CLI.** `apps/guardrail-cli` keeps parsing/dispatch in `main.rs`
   and delegates each `run_*` to a domain module under `src/commands/`
@@ -147,10 +148,14 @@ blender and the `skill` validator).
 
 ### 3. The dashboards (`dashboard/`, `clients/web-lite/`)
 
-- **Next.js dashboard** (`dashboard/`) — read-only, 56 page routes under
+- **Next.js dashboard** (`dashboard/`) — read-only page routes under
   `dashboard/src/app/` (cockpit, portfolio, signals, backtest, walkforward,
-  scenarios, proof, prizes, etc.). It only renders `guardrail-api` responses and
-  auto-deploys to Vercel on every push (see [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md)).
+  scenarios, prizes, etc.). Headline pages: `/live` (real-time SSE telemetry),
+  `/lab` (server-backed Strategy Lab over `GET /backtest`), `/ensemble`
+  (regime-routed meta-allocator), `/journal` (per-cycle decision narrative),
+  `/skills` (strategy marketplace), and `/proof` (proof explorer + verifier). It
+  only renders `guardrail-api` responses and auto-deploys to Vercel on every push.
+  Full reference: [DASHBOARD.md](DASHBOARD.md); deploy: [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
 - **web-lite cockpit** (`clients/web-lite/index.html`) — a single-file,
   zero-build cockpit wired to the same API, including Ensemble, Journal, and
   Signing tabs.
@@ -164,7 +169,9 @@ Six advisory-only strategy skill directories under `skills/` — five registered
 `social-sentiment-momentum-bsc`. A regime ensemble meta-allocator
 (`skills/ensemble.json` + `python-lab/guardrail_lab/ensemble.py`, also served at
 `GET /ensemble`) blends the core skills by classified regime, and the catalog is
-projected at `GET /skills`. A skill authoring kit (`skills/_template/`,
+projected at `GET /skills`. Ensemble routing is also promoted into the **live Rust
+engine** (`crates/agent-runtime`, behind `strategy.mode = "ensemble"`): it blends
+target books by regime confidence and defers to the risk engine as the sole gate. A skill authoring kit (`skills/_template/`,
 `scripts/new_skill.sh`, `scripts/lint_skills.sh`) lets a judge scaffold and lint
 another skill. Every skill is advisory — the risk engine stays the only gate.
 
@@ -199,6 +206,11 @@ TS/Python/Go SDKs and dashboards are all read-only consumers of `guardrail-api`.
   `GET /scenarios`.
 - **Observability** — `guardrail-exporter` on `:9100`, with
   `infra/prometheus/` + `infra/grafana/` configs.
+- **Snapshot history** — `apps/guardrail-agent` persists periodic market
+  snapshots to `data/snapshots/`, summarized read-only at `GET /snapshots`
+  (Track G) so analytics have real history to chart.
+- **Go operator CLI** — `clients/go` ships `guardrailctl` with a `watch`
+  subcommand that tails the read-only API for a live terminal status stream.
 - **Deploy** — `deploy/helm/guardrail` (Helm chart) and `deploy/k8s`
   (Kustomize), plus `docker-compose.yml` and per-binary Dockerfiles in `infra/`.
 
@@ -210,7 +222,7 @@ TS/Python/Go SDKs and dashboards are all read-only consumers of `guardrail-api`.
 |------|----------|
 | `crates/` | 20 Rust crates — the live engine (risk, strategy, twak, bnb-agent, …) |
 | `apps/` | 9 binaries — agent, api, cli, tui, monitor, exporter, replay, sim, doctor |
-| `apps/guardrail-api/src/` | 56-route read-only API (`server.rs` + per-route modules incl. `journal.rs`, `ensemble.rs`, `skills.rs`, `version.rs`) |
+| `apps/guardrail-api/src/` | 57-route read-only API (`server.rs` + per-route modules incl. `journal.rs`, `ensemble.rs`, `skills.rs`, `version.rs`, `snapshots.rs`) |
 | `apps/guardrail-cli/src/commands/` | Modular CLI command groups: backtest, market, portfolio, identity, reporting, experiment, agent_surface, commerce |
 | `apps/guardrail-tui/src/` | Terminal cockpit panels: regime, positions, risk, alerts (`render.rs` composes them) |
 | `agent-runtime` (crate) | Top crate composing every lower crate into the live loop |

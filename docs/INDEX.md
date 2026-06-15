@@ -23,6 +23,7 @@ machine-readable contract.
 | [FEATURE_MATRIX.md](FEATURE_MATRIX.md) | Capability matrix mapping each feature to its component and entrypoint. |
 | [WHATS_NEW.md](WHATS_NEW.md) | Changelog of the most recently shipped surfaces, grouped by prize lane. |
 | [../PLAN_V2.md](../PLAN_V2.md) | Phase-2 expansion roadmap: net-new folders/files deepening each prize lane (offline-safe). |
+| [WASM_NOTE.md](WASM_NOTE.md) | Honest record of why in-browser-WASM real-engine backtesting (PLAN_V2 Track B) is deferred and how `/lab` covers it server-side. |
 | [DEMO_SCRIPT.md](DEMO_SCRIPT.md) | The exhaustive, literal copy-pasteable demo walkthrough. |
 | [HACKATHON.md](HACKATHON.md) | One-page map from Track 1 + special-prize criteria to code. |
 | [PRIZE_MAP.md](PRIZE_MAP.md) | Evidence table mapping every targeted prize to concrete code. |
@@ -61,6 +62,7 @@ machine-readable contract.
 | [API_CLIENTS.md](API_CLIENTS.md) | Index of every client option for the read-only Guardrail API, with a chooser table. |
 | [ALERTING.md](ALERTING.md) | How operator alerts are surfaced and relayed to human channels. |
 | [REALTIME.md](REALTIME.md) | The SSE `/stream` route and the dashboard `/live` page for real-time telemetry. |
+| [DASHBOARD.md](DASHBOARD.md) | The read-only Next.js cockpit pages, including `/lab`, `/ensemble`, `/journal`, `/live`, `/skills`, and `/proof`. |
 | [SERVICES.md](SERVICES.md) | The read-only `services/` companion tree (control-bot, gateway, report-publisher). |
 
 ## Track 2
@@ -89,8 +91,8 @@ machine-readable contract.
 
 | Document | Description |
 |---|---|
-| [API.md](API.md) | Human-readable index of all 56 read-only API routes, with sample responses for the headline ones. |
-| [api/openapi.yaml](api/openapi.yaml) | OpenAPI 3.1 spec covering all 56 read-only API routes. |
+| [API.md](API.md) | Human-readable index of the read-only API routes, with sample responses for the headline ones. |
+| [api/openapi.yaml](api/openapi.yaml) | OpenAPI 3.1 spec covering the read-only API routes, including `/snapshots`. |
 | [api/README.md](api/README.md) | Guide to the OpenAPI spec and the read-only API surface. |
 | [CLI.md](CLI.md) | Reference for every `guardrail-cli` subcommand, grouped by the `commands/` modules, with example invocations. |
 | [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md) | Track 1 requirements mapped to implementing files and verification commands. |

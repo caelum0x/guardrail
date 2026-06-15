@@ -11,6 +11,53 @@ Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) �
 
 ---
 
+## Phase 2 — engine, data, dashboard & tooling (newest)
+
+- **Snapshot persistence (Track G).** The agent now persists periodic market
+  snapshots to an append-only store under `data/snapshots/` so the analytics have
+  real history to chart without replaying the full event log. A new read-only
+  `GET /snapshots` route projects that history into a compact, chartable summary:
+  retained count, time span, the latest snapshot's regime and per-asset prices, and
+  a lightweight series (with an optional `?limit=` cap). The route only reads what
+  the agent has already persisted — it never ingests, mutates, or backfills.
+  Spec: [api/openapi.yaml](api/openapi.yaml) (path `/snapshots`,
+  `SnapshotsResponse` schema). Plan: [`../PLAN_V2.md`](../PLAN_V2.md) Track G.
+  Verify: `curl -fsS http://127.0.0.1:8080/snapshots`.
+
+- **Live ensemble routing in the engine (Track C).** The regime-routed ensemble is
+  promoted from the Python/cockpit advisory view into the **live Rust engine**:
+  it blends the per-skill target books by classified regime confidence and defers
+  to the `risk-engine` as the sole execution gate. Wired into the agent runtime
+  behind a config flag; the existing `GET /ensemble` route surfaces the live
+  blended book and per-skill attribution. Detail: [ENSEMBLE.md](ENSEMBLE.md).
+  Plan: [`../PLAN_V2.md`](../PLAN_V2.md) Track C.
+
+- **Dashboard lab / ensemble / journal pages.** The Next.js cockpit
+  (`dashboard/`) gains three headline pages: **`/lab`** — a server-backed Strategy
+  Lab that tunes inputs and re-runs the real backtest pipeline via `GET /backtest`
+  (interactive metrics + equity-curve sparkline); **`/ensemble`** — the
+  regime-routed meta-allocator weights, blended book, and per-skill attribution;
+  and **`/journal`** — the per-cycle decision narrative (regime → scores → target
+  → risk → execute) off the append-only event log. Full reference:
+  [DASHBOARD.md](DASHBOARD.md).
+  Files: `dashboard/src/app/{lab,ensemble,journal}/page.tsx`.
+
+- **In-browser WASM backtesting deferred (honest note).** The PLAN_V2 Track B goal
+  of running the real engine client-side via WASM is deferred: the compute stack
+  (`backtester` → `market-data` → `cmc-client` → `reqwest`/`tokio`) is not
+  `wasm32`-compatible. The `/lab` page provides the same capability **server-side**
+  instead — same engine that gates live trades, no WASM build. Rationale and the
+  path to revisit: [WASM_NOTE.md](WASM_NOTE.md).
+
+- **Go `guardrailctl watch`.** A new Go operator CLI, `guardrailctl`, adds a
+  `watch` subcommand that tails the read-only API (e.g. the SSE `/stream` and
+  status routes) and prints a live, terminal-friendly status stream. It is a
+  read-only consumer — it never signs or mutates — and is offline-safe against the
+  paper-mode API.
+  Verify: `guardrailctl watch` (against a running `guardrail-api`).
+
+---
+
 ## Platform & developer experience (latest)
 
 - **CLI modularization.** The `guardrail-cli` binary now keeps argument parsing

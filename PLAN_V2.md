@@ -44,6 +44,13 @@ New:
 
 Prize fit: differentiation; the same risk engine that gates live trades runs in the judge's browser.
 
+> **Status — deferred (honest note).** The in-browser-WASM-real-engine track is
+> deferred: the compute stack (`backtester` → `market-data` → `cmc-client` →
+> `reqwest`/`tokio`) is not `wasm32`-compatible. The `/lab` page provides the same
+> capability **server-side** instead, calling `GET /backtest` so the cockpit runs
+> the exact same engine that gates live trades. Full rationale and the path to
+> revisit it: [`docs/WASM_NOTE.md`](docs/WASM_NOTE.md).
+
 ## Track C — Native Rust strategy ensemble (live)
 
 Promote the Python/cockpit ensemble into the **live engine** (the deferred Phase-1 native piece).

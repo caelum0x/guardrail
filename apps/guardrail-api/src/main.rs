@@ -37,6 +37,7 @@ mod sdk_catalog;
 mod proof_verify;
 mod server;
 mod signing_policy;
+mod snapshots;
 mod skill;
 mod skill_detail;
 mod stream;

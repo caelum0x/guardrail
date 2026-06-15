@@ -96,6 +96,7 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
             get(crate::skill_detail::skill_backtest),
         )
         .route("/proof/verify", get(crate::proof_verify::proof_verify))
+        .route("/snapshots", get(crate::snapshots::snapshots))
         .route("/version", get(crate::version::version))
         .with_state(state)
 }

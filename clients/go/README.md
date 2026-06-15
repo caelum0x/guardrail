@@ -104,6 +104,8 @@ Headline routes return first-class structs:
 | `WalkForward` | `/walkforward` | `*WalkForwardResponse` |
 | `Sweep` | `/sweep` | `*SweepResponse` |
 | `Events` | `/events` | `*EventsResponse` |
+| `Ensemble` | `/ensemble` | `*EnsembleResponse` |
+| `Journal` | `/journal` | `*JournalResponse` |
 | `CompilePolicy` | `/policy/compile` | `*CompiledPolicyResponse` |
 
 Dynamic endpoints (for example `Cockpit`, `Assets`, `Trending`, `Indicators`,
@@ -119,6 +121,59 @@ offline:
 
 ```bash
 cd example && go run .
+```
+
+## Command-line tool: `guardrailctl`
+
+A small operator CLI lives in [`cmd/guardrailctl/`](./cmd/guardrailctl). Every
+subcommand is **offline-safe**: it prints a notice and exits `0` when the API is
+unreachable, so it is harmless to run in CI or against a stopped backend.
+
+```bash
+# Build a binary, or run directly with `go run`.
+go build -o guardrailctl ./cmd/guardrailctl
+go run ./cmd/guardrailctl <command> [flags]
+```
+
+Common flags (accepted by every subcommand):
+
+- `--base string` — API base URL (default `http://localhost:8080`).
+- `--json` — emit machine-readable JSON instead of a table.
+
+### `watch`
+
+Polls `/compete` and `/regime` on an interval and prints a refreshing one-line
+status. The table-mode line rewrites itself in place; `--json` prints one JSON
+object per tick. Stops cleanly on Ctrl-C (SIGINT/SIGTERM).
+
+```bash
+guardrailctl watch                 # refresh every 5s until interrupted
+guardrailctl watch --interval 2    # refresh every 2s
+guardrailctl watch --once          # print a single tick and exit
+guardrailctl watch --once --json   # single tick as JSON
+```
+
+Flags: `--interval N` (seconds, default 5; floored at 1), `--once`.
+
+### `ensemble`
+
+`GET /ensemble` — prints the current classified regime and the per-regime,
+per-skill ensemble weight table (the active regime row is marked with `*`).
+
+```bash
+guardrailctl ensemble
+guardrailctl ensemble --json
+```
+
+### `journal`
+
+`GET /journal` — prints a compact per-cycle decision journal: for each cycle,
+the regime, headline, top scored assets, proposed orders, risk-engine outcomes,
+confirmed trades, and ending NAV.
+
+```bash
+guardrailctl journal
+guardrailctl journal --json
 ```
 
 ## Proof verification
