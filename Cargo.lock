@@ -865,6 +865,7 @@ dependencies = [
  "anyhow",
  "clap",
  "event-store",
+ "serde",
  "serde_json",
 ]
 
