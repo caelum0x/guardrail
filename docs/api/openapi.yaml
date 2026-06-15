@@ -1079,6 +1079,80 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/VersionResponse"
+  /stream:
+    get:
+      tags: [realtime]
+      summary: Server-Sent Events stream of agent events
+      description: >-
+        A text/event-stream of live AgentEvents tailed from the append-only event
+        log (cross-process). Each frame is `event: agent_event` with a JSON
+        StoredEvent data payload, plus periodic keep-alive comments. Read-only.
+      responses:
+        "200":
+          description: SSE stream of agent events
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /proof/verify:
+    get:
+      tags: [proof]
+      summary: Independent proof verification
+      description: >-
+        Recomputes the agent's policy hash (sha256 of the risk policy file) and
+        validates the competition contract, wallet, BscScan URL, and registration
+        tx formats against data/run_report.json. Mirrors clients/proof-verifier.
+        Read-only.
+      responses:
+        "200":
+          description: Verification result (passed + per-check status)
+          content:
+            application/json:
+              schema:
+                type: object
+  /skills/{id}:
+    get:
+      tags: [skills]
+      summary: Skill detail
+      description: Catalog entry + parsed strategy-spec summary for one skill.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Skill detail
+          content:
+            application/json:
+              schema:
+                type: object
+  /skills/{id}/backtest:
+    get:
+      tags: [skills]
+      summary: Backtest a skill
+      description: >-
+        Runs the real strategy + risk + portfolio pipeline over the eligible
+        universe with the requested preset, contextualized by the skill. Read-only.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: preset
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Backtest metrics
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
   schemas:

@@ -60,6 +60,8 @@ machine-readable contract.
 | [SELF_CUSTODY.md](SELF_CUSTODY.md) | How self-custody is enforced in code and mapped to the Track 1 penalty ladder. |
 | [API_CLIENTS.md](API_CLIENTS.md) | Index of every client option for the read-only Guardrail API, with a chooser table. |
 | [ALERTING.md](ALERTING.md) | How operator alerts are surfaced and relayed to human channels. |
+| [REALTIME.md](REALTIME.md) | The SSE `/stream` route and the dashboard `/live` page for real-time telemetry. |
+| [SERVICES.md](SERVICES.md) | The read-only `services/` companion tree (control-bot, gateway, report-publisher). |
 
 ## Track 2
 
@@ -67,6 +69,7 @@ machine-readable contract.
 |---|---|
 | [TRACK2.md](TRACK2.md) | Track 2 submission: the `regime-routed-bsc-alpha` strategy skill. |
 | [SKILL_AUTHORING.md](SKILL_AUTHORING.md) | How to author a new Track-2 strategy skill: layout, contract, helpers. |
+| [SKILLS_MARKETPLACE.md](SKILLS_MARKETPLACE.md) | The `skill-loader` crate, `/skills/{id}` API routes, and the dashboard marketplace. |
 | [../skills/README.md](../skills/README.md) | The `skills/` catalog: all Track-2 strategy skills and the ensemble. |
 
 ## Operations
