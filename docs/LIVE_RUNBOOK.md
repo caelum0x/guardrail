@@ -10,6 +10,33 @@ Competition contract: `0x212c61b9b72c95d95bf29cf032f5e5635629aed5`
 
 ---
 
+## 0. The one-command paths
+
+Two turn-key scripts cover the whole lifecycle. Both auto-tick
+`docs/SUBMISSION_CHECKLIST.md` from real evidence.
+
+```bash
+# Offline-safe: paper run + kill-switch demo + proof capture. No keys needed.
+scripts/capture_submission.sh
+
+# Live: spends real money. Requires CMC_API_KEY, BSC_RPC_URL, and a funded TWAK
+# wallet (see §1). Preflights, confirms, registers on-chain, trades, captures.
+scripts/go_live.sh
+```
+
+Before going live, run the live preflight — it refuses to green until the
+credentials, live config, and conservative caps are all in place:
+
+```bash
+cargo run -q -p guardrail-doctor -- --live
+```
+
+`scripts/go_live.sh` runs this preflight for you, then the independent on-chain
+verifier against `BSC_RPC_URL`, and only then asks for a typed `GO LIVE`
+confirmation before placing any real trade.
+
+---
+
 ## 1. Required environment
 
 Export these before launch (in `.env` or the shell). See `.env.example`.

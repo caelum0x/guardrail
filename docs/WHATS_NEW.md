@@ -13,6 +13,29 @@ Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) �
 
 ## Phase 2 — engine, data, dashboard & tooling (newest)
 
+- **Submission-complete: one-command proof capture + turn-key go-live.** Closed
+  the gap between "demo-complete" and "submission-complete." New
+  `scripts/capture_submission.sh` runs the agent (paper) + a low-threshold
+  kill-switch demo, exports `submission.md`, runs the independent proof verifier,
+  and **auto-ticks `docs/SUBMISSION_CHECKLIST.md` from real event-log evidence**
+  (`python-lab/scripts/tick_checklist.py`) — honest by construction (items needing
+  a real on-chain tx stay `pending (live)`). A paper capture ticks **10/11**.
+  The live path is turn-key: `guardrail-doctor --live` is a credential/caps
+  safety gate, and `scripts/go_live.sh` preflights → verifies the chain → asks
+  for a typed `GO LIVE` confirmation → registers on-chain → trades → captures.
+  The competition registration tx now threads through `RunMeta` into the run
+  report, `AgentProof`, and `/proof/verify`'s on-chain receipt check (live only).
+  Detail: [LIVE_RUNBOOK.md](LIVE_RUNBOOK.md) §0, [SUBMISSION_CHECKLIST.md](SUBMISSION_CHECKLIST.md).
+- **CMC Agent Hub: verifiable data lineage.** `configs/cmc/capabilities.json`
+  declares each CMC dataset → the read-only capability it powers, with the exact
+  `cmc-client` source and the API route / MCP tool that exposes it. Served at
+  `GET /cmc/capabilities`, mirrored as MCP resource `guardrail://cmc/capabilities`,
+  advertised in the ERC-8004 agent card. No execution is exposed to the hub.
+  Detail: [CMC_AGENT_HUB.md](CMC_AGENT_HUB.md).
+- **Docker dashboard image fixed.** Deterministic pinned pnpm + `CI=true` (the
+  build was failing on a nondeterministic corepack "latest" pnpm). Verified with
+  a full local image build; greens the `docker` CI job.
+
 - **On-chain proof verification (BNB SDK).** The proof story was self-attested —
   hashes could be recomputed but nothing confirmed the chain. New crate
   `crates/chain-verifier` adds **read-only** BSC JSON-RPC checks (`eth_chainId`,

@@ -28,6 +28,12 @@ real files and commands that prove it.
 
 ## Proof artifacts
 
+> These boxes are ticked **from real evidence**, not by hand. Run
+> `scripts/capture_submission.sh` (offline/paper) or `scripts/go_live.sh` (live)
+> to (re)generate the artifacts and re-tick; the auto-generated evidence table at
+> the bottom is the source of truth. Competition registration ticks only after a
+> real on-chain registration (live) — paper leaves it pending.
+
 - [x] Policy hash generated — `guardrail-cli policy compile`, embedded in
   `AgentStarted` events, exposed at `GET /policy`.
 - [x] Agent identity + ERC-8004/8183 records — `guardrail-cli identity`.
