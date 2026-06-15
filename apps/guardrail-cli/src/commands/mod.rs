@@ -5,4 +5,5 @@
 //! helpers (`apply_preset`, `strategy_config`, the path constants) and the
 //! shared [`crate::util`] helpers.
 
+pub mod agent_surface;
 pub mod experiment;
