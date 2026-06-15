@@ -87,7 +87,7 @@ Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) �
     (`apps/guardrail-api/src/skills.rs`).
   - `GET /version` — service version, build target, run mode, and uptime
     (`apps/guardrail-api/src/version.rs`).
-  These bring the read-only surface to **56 routes** (`apps/guardrail-api/src/server.rs`).
+  These bring the read-only surface to **68 routes** (`apps/guardrail-api/src/server.rs`).
   Spec: [api/openapi.yaml](api/openapi.yaml). Index: [API.md](API.md).
   Verify: `curl -fsS http://127.0.0.1:8080/version`; `curl -fsS http://127.0.0.1:8080/skills`.
 

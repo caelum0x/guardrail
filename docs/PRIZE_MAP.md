@@ -9,10 +9,10 @@ also served at **`GET /prizes`** (`apps/guardrail-api/src/prizes.rs`).
 Companion docs: [PITCH.md](PITCH.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) ·
 [WHATS_NEW.md](WHATS_NEW.md) · [HACKATHON.md](HACKATHON.md) · [TRACK2.md](TRACK2.md).
 
-> **What changed recently:** six Track-2 skill directories + a regime ensemble
+> **What changed recently:** seven Track-2 skill directories + a regime ensemble
 > meta-allocator (now also a native `GET /ensemble` route) + a skill authoring kit
 > (Track 2); four new read-only API routes (`/journal`, `/ensemble`, `/skills`,
-> `/version`) bringing the surface to **56 routes**; a modular `guardrail-cli`
+> `/version`) bringing the surface to **68 routes**; a modular `guardrail-cli`
 > `commands/` tree and live TUI regime/positions/risk/alerts panels; the MCP
 > server now exposes tools **and** resources **and** prompts with a `manifest.json`
 > (CMC Agent Hub); an independent stdlib-only on-chain proof verifier (BNB SDK); a

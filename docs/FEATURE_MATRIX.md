@@ -32,7 +32,7 @@ script/CLI/SDK surface · Asset = committed config/spec/manifest consumed by cod
 | Walk-forward analysis | `crates/backtester` + CLI | `cargo run -p guardrail-cli -- walk-forward --windows 6 --steps 30`; `GET /walkforward` | Live |
 | Scenario / sentiment sweep | `apps/guardrail-sim` | `cargo run -p guardrail-sim`; `GET /sweep` | Live |
 | Daily-trade heartbeat | `crates/agent-runtime` (idle-cycle heartbeat) | `GET /heartbeat` | Live |
-| Read-only REST API (57 routes) | `apps/guardrail-api` (`src/server.rs::build_app`) | `cargo run -p guardrail-api`; `GET /health`, `/cockpit`, `/version`, `/snapshots`, … | Live |
+| Read-only REST API (68 routes) | `apps/guardrail-api` (`src/server.rs::build_app`) | `cargo run -p guardrail-api`; `GET /health`, `/cockpit`, `/version`, `/snapshots`, … | Live |
 | Admin / dev CLI (40 subcommands, modular `commands/`) | `apps/guardrail-cli` (`src/commands/{backtest,market,portfolio,identity,reporting,experiment,agent_surface,commerce}.rs`) | `cargo run -p guardrail-cli -- <cmd>` | Tooling |
 | Terminal cockpit (live regime/positions/risk/alerts panels) | `apps/guardrail-tui` (`src/{regime,positions,risk,alerts,render}.rs`) | `cargo run -p guardrail-tui` | Live |
 | Event-log audit / replay | `apps/guardrail-replay` | `cargo run -p guardrail-replay -- summary` / `journal` / `trades` | Live |

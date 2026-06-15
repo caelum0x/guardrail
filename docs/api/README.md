@@ -4,7 +4,7 @@
 read-only Guardrail Alpha HTTP API. Every documented endpoint is a `GET` and is
 side-effect free.
 
-The spec covers all **56 routes** currently registered in
+The spec covers all **68 routes** currently registered in
 [`apps/guardrail-api/src/server.rs`](../../apps/guardrail-api/src/server.rs) —
 including the newest `/journal`, `/ensemble`, `/skills`, and `/version`. A
 human-readable index with sample responses lives in [../API.md](../API.md).

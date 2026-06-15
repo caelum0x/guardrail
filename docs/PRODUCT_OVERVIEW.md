@@ -36,7 +36,7 @@ This file is the high-level tour. Deeper references:
 | Admin CLI | 40 subcommands in a modular `commands/` tree | `apps/guardrail-cli/src/commands/` |
 | Terminal cockpit | Live regime / positions / risk / alerts panels | `apps/guardrail-tui/src/` |
 | Analytics | Python lab over the event log + run report | `python-lab/` |
-| Dashboards | Next.js read-only cockpit (56 pages, Vercel) + zero-build web-lite | `dashboard/`, `clients/web-lite/` |
+| Dashboards | Next.js read-only cockpit (64 pages, Vercel) + zero-build web-lite | `dashboard/`, `clients/web-lite/` |
 | Track-2 skills | 6 advisory strategy skill dirs + regime ensemble + authoring kit | `skills/` |
 | Ecosystem clients | TS / Python / Go SDKs, MCP, LangChain, Postman | `clients/` |
 | Identity / proof | BNB agent identity + independent proof verifier | `crates/bnb-agent`, `clients/proof-verifier` |
@@ -77,7 +77,7 @@ This file is the high-level tour. Deeper references:
        ┌───────────────┼──────────────┬─────────────┬───────────────┤
        ▼               ▼              ▼             ▼               ▼
   guardrail-api   guardrail-     guardrail-    guardrail-      python-lab
-  (57 routes,     exporter       monitor       tui / replay    (analytics:
+  (68 routes,     exporter       monitor       tui / replay    (analytics:
    read-only)     /metrics:9100  ─► notifier   (terminal)       regime, drawdown,
        │              │              │                          montecarlo, ensemble,
        │              ▼              ▼                          journal, dossier)
@@ -88,7 +88,7 @@ This file is the high-level tour. Deeper references:
    ▼                  ▼               ▼              ▼             ▼
  dashboard       web-lite        clients/ts /     clients/mcp    clients/proof-
  (Next.js,       cockpit         python / go      (CMC Agent     verifier
-  56 pages)      (single file)   SDKs (read-only) Hub server)    (clean-room)
+  64 pages)      (single file)   SDKs (read-only) Hub server)    (clean-room)
 ```
 
 Authority flows in exactly one direction. Strategy never depends on the
@@ -112,7 +112,7 @@ step to the event store. Nine binaries sit on top (`apps/`): `guardrail-agent`
 `guardrail-tui`, `guardrail-monitor`, `guardrail-exporter`, `guardrail-replay`,
 `guardrail-sim`, and `guardrail-doctor`.
 
-- **Read-only API (57 routes).** `apps/guardrail-api/src/server.rs::build_app`
+- **Read-only API (68 routes).** `apps/guardrail-api/src/server.rs::build_app`
   wires 57 `GET` routes — every operational, portfolio, analytics, agent, and
   trading view — including the newest `/journal` (decision-journal projection),
   `/ensemble` (regime meta-allocator), `/skills` (skill catalog), `/version`
@@ -222,11 +222,11 @@ TS/Python/Go SDKs and dashboards are all read-only consumers of `guardrail-api`.
 |------|----------|
 | `crates/` | 20 Rust crates — the live engine (risk, strategy, twak, bnb-agent, …) |
 | `apps/` | 9 binaries — agent, api, cli, tui, monitor, exporter, replay, sim, doctor |
-| `apps/guardrail-api/src/` | 57-route read-only API (`server.rs` + per-route modules incl. `journal.rs`, `ensemble.rs`, `skills.rs`, `version.rs`, `snapshots.rs`) |
+| `apps/guardrail-api/src/` | 68-route read-only API (`server.rs` + per-route modules incl. `journal.rs`, `ensemble.rs`, `skills.rs`, `version.rs`, `snapshots.rs`) |
 | `apps/guardrail-cli/src/commands/` | Modular CLI command groups: backtest, market, portfolio, identity, reporting, experiment, agent_surface, commerce |
 | `apps/guardrail-tui/src/` | Terminal cockpit panels: regime, positions, risk, alerts (`render.rs` composes them) |
 | `agent-runtime` (crate) | Top crate composing every lower crate into the live loop |
-| `dashboard/` | Next.js read-only dashboard (56 pages under `src/app/`, Vercel auto-deploy) |
+| `dashboard/` | Next.js read-only dashboard (64 pages under `src/app/`, Vercel auto-deploy) |
 | `python-lab/` | Analytics CLI (`analyze.py`) + `guardrail_lab/` library |
 | `skills/` | 6 strategy skill dirs, `INDEX.json`, `ensemble.json`, `_template/` |
 | `clients/` | TS / Python / Go SDKs, MCP server, LangChain, Postman, web-lite, proof-verifier |

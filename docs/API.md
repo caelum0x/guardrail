@@ -15,7 +15,7 @@ cargo run -p guardrail-api                       # binds 127.0.0.1:8080
 curl -fsS http://127.0.0.1:8080/health
 ```
 
-There are **56 routes**. Everything is offline-safe (paper mode, deterministic
+There are **68 routes**. Everything is offline-safe (paper mode, deterministic
 mocks). The dashboard, web-lite cockpit, and the TS/Python/Go SDKs are all
 read-only consumers of this surface.
 
@@ -223,7 +223,7 @@ standalone `social-sentiment-momentum-bsc` skill directory also exists on disk.)
 
 ## See also
 
-- [api/openapi.yaml](api/openapi.yaml) — OpenAPI 3.1 spec for all 56 routes.
+- [api/openapi.yaml](api/openapi.yaml) — OpenAPI 3.1 spec for all 68 routes.
 - [api/README.md](api/README.md) — guide to the spec and the read-only surface.
 - [API_CLIENTS.md](API_CLIENTS.md) — every client option for this API.
 - [CLI.md](CLI.md) — the command-line surface that mirrors much of this API.

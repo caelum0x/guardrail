@@ -1,6 +1,6 @@
 # Guardrail API Clients
 
-The Guardrail Alpha API is a **read-only HTTP API**: all 58 routes are
+The Guardrail Alpha API is a **read-only HTTP API**: all 68 routes are
 side-effect-free `GET`s that never mutate the live book or the event log (see
 [docs/api/openapi.yaml](api/openapi.yaml)). Because the surface is simple and
 read-only, there are many equally valid ways to consume it. This page is the
@@ -118,7 +118,7 @@ Point any example or client at a non-default host with the
 
 ## See also
 
-- [docs/api/openapi.yaml](api/openapi.yaml) — the authoritative 58-route spec.
+- [docs/api/openapi.yaml](api/openapi.yaml) — the authoritative 68-route spec.
 - [docs/ENSEMBLE.md](ENSEMBLE.md) — the regime-routed ensemble that
   `ensemble_demo.py` mirrors.
 - [docs/EXPLAINABILITY.md](EXPLAINABILITY.md) — the event log that

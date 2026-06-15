@@ -1196,6 +1196,22 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/LooseObject"
+  /ensemble/live:
+    get:
+      tags: [analytics]
+      summary: Live ensemble routing from the event log
+      description: >-
+        Returns the per-skill ensemble weights the running agent actually
+        computed for the most recent classified regime, extracted from the latest
+        RegimeClassified event (distinct from /ensemble, which recomputes from the
+        embedded config). Read-only; degrades to {available:false} with no data.
+      responses:
+        "200":
+          description: Live ensemble routing
+          content:
+            application/json:
+              schema:
+                type: object
 
 components:
   schemas:
