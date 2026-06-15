@@ -402,7 +402,7 @@ pub fn run_drift(policy_path: &str) -> anyhow::Result<()> {
         }
         ordered.push((symbol, current_weight, target_weight, delta, abs_delta));
     }
-    ordered.sort_by(|a, b| b.4.cmp(&a.4));
+    ordered.sort_by_key(|b| std::cmp::Reverse(b.4));
     let status = if max_delta >= critical || turnover > max_turnover {
         "critical"
     } else if max_delta >= warning {
