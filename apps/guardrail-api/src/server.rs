@@ -32,6 +32,7 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/bnb-sdk", get(crate::bnb_sdk::bnb_sdk))
         .route("/readiness", get(crate::routes::readiness))
         .route("/events", get(crate::routes::events))
+        .route("/stream", get(crate::stream::stream))
         .route("/proof", get(crate::routes::proof))
         .route("/exposure", get(crate::exposure::exposure))
         .route("/cockpit", get(crate::routes::cockpit))

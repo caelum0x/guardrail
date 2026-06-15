@@ -1,0 +1,62 @@
+{
+  "scenario": "chop",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Directionless tape — attention is noisy and mean-reverts (the classic hype-without-volume trap). Exposure cut hard (multiplier 0.4); take only the single name whose trending climb is actually confirmed by money, small, and hold a large USDT reserve. Fade the loud-but-thin name. Fear & Greed 49 keeps the gate open.",
+  "inputs": {
+    "fear_greed": { "value": 49, "value_classification": "neutral" },
+    "global": { "total_market_cap_usd": 2300000000000, "btc_dominance_pct": 52.0 },
+    "market_breadth": { "breadth_pct": 50.0, "median_24h_return": 0.1 },
+    "quotes": [
+      { "symbol": "CAKE", "price_usd": 2.62, "percent_change_1h": 0.3, "percent_change_24h": 1.0, "percent_change_7d": 1.4, "market_cap_usd": 850000000, "volume_24h_usd": 175000000, "liquidity_usd": 9000000, "safety_score": 90, "security_flags": [] },
+      { "symbol": "SHIB", "price_usd": 0.0000168, "percent_change_1h": 0.6, "percent_change_24h": 2.2, "percent_change_7d": -1.0, "market_cap_usd": 9900000000, "volume_24h_usd": 150000000, "liquidity_usd": 3900000, "safety_score": 71, "security_flags": ["high_holder_concentration"] },
+      { "symbol": "LINK", "price_usd": 14.6, "percent_change_1h": -0.2, "percent_change_24h": -0.3, "percent_change_7d": 0.4, "market_cap_usd": 9100000000, "volume_24h_usd": 360000000, "liquidity_usd": 11000000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3400.0, "percent_change_1h": -0.1, "percent_change_24h": 0.2, "percent_change_7d": -0.5, "market_cap_usd": 408000000000, "volume_24h_usd": 12000000000, "liquidity_usd": 54000000, "safety_score": 98, "security_flags": [] }
+    ],
+    "attention": [
+      { "symbol": "CAKE", "trending_rank": 7, "rank_prev": 15, "rank_delta": 8, "velocity_norm": 0.80, "volume_ratio": 1.6, "social_score": 0.74, "social_momentum": 0.28 },
+      { "symbol": "SHIB", "trending_rank": 3, "rank_prev": 12, "rank_delta": 9, "velocity_norm": 0.90, "volume_ratio": 0.8, "social_score": 0.88, "social_momentum": 0.55 },
+      { "symbol": "LINK", "trending_rank": 14, "rank_prev": 13, "rank_delta": -1, "velocity_norm": -0.15, "volume_ratio": 0.9, "social_score": 0.45, "social_momentum": -0.05 },
+      { "symbol": "ETH", "trending_rank": 16, "rank_prev": 16, "rank_delta": 0, "velocity_norm": 0.00, "volume_ratio": 0.8, "social_score": 0.40, "social_momentum": -0.08 }
+    ]
+  },
+  "computed": {
+    "market_regime": "chop",
+    "regime_reason": "breadth_pct 50, |median_24h_return| 0.1 < 1, fear_greed 49 neutral, no higher rule matched -> chop (directionless range)",
+    "exposure_multiplier": 0.4,
+    "sentiment_gate_factor": 1.0,
+    "sentiment_gate_reason": "fear_greed 49 in (20, 80) -> not extreme",
+    "risk_budget_pct": 35.2,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 0.4 = 35.2; only the single money-confirmed attention name is taken small, the rest is USDT reserve to avoid attention whipsaw.",
+    "sentiment_scores": [
+      { "symbol": "CAKE", "trend_score": 0.90, "volume_component": 1.00, "social_component": 0.74, "attention_tilt": 0.90, "base_score": 0.62, "security_penalty": 0.03, "sentiment_score": 0.68, "components": "rank climb +8 CONFIRMED by volume_ratio 1.6 and positive social -> the one real attention move in a flat tape" },
+      { "symbol": "SHIB", "trend_score": 0.90, "volume_component": 0.00, "social_component": 0.88, "attention_tilt": 0.58, "base_score": 0.55, "security_penalty": 0.40, "sentiment_score": 0.30, "components": "loudest trending climb but volume_ratio 0.8 < 1.0 (HYPE WITHOUT VOLUME) and security penalty 0.40 -> faded, not chased" },
+      { "symbol": "LINK", "trend_score": 0.15, "volume_component": 0.00, "social_component": 0.00, "attention_tilt": 0.06, "base_score": 0.50, "security_penalty": 0.03, "sentiment_score": 0.36, "components": "attention slipping, volume_ratio 0.9, social negative" },
+      { "symbol": "ETH", "trend_score": 0.10, "volume_component": 0.00, "social_component": 0.00, "attention_tilt": 0.04, "base_score": 0.49, "security_penalty": 0.01, "sentiment_score": 0.36, "components": "no attention movement, volume_ratio 0.8" }
+    ],
+    "attention_reason": "In chop almost all attention is noise. SHIB has the loudest trending climb but it is HYPE WITHOUT VOLUME (volume_ratio 0.8) — exactly the trap this Skill fades. Only CAKE clears 0.65 with a trending climb CONFIRMED by a volume surge; it is taken at reduced size and the rest sits in the USDT reserve."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "CAKE", "weight_pct": 14.0 },
+      { "symbol": "USDT", "weight_pct": 86.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter only assets with sentiment_score >= 0.65 AND a volume-confirmed trending climb; in chop cap entries to the 1-2 cleanest names and size down.",
+        "FADE hype without volume: reject any attention spike on volume_ratio < 1.5 (manufactured hype is fakeout-prone in a range).",
+        "Per-name weight capped at 17%; keep the bulk of the book in the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when sentiment_score < 0.50 on the next rebalance (the attention faded back into noise).",
+        "Exit immediately if volume_ratio drops below 1.0 while held (the money left, only hype remains).",
+        "Force-exit at stop_loss 12% or take_profit 22%; rotate to USDT on a risk_off transition."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 14.0, "reason": "sentiment_score 0.68; the only money-confirmed attention climb in a flat tape, taken small", "execution": "twap" },
+      { "type": "reject", "symbol": "SHIB", "reason": "sentiment_score 0.30 < 0.65: loud trending climb but volume_ratio 0.8 < 1.0 (hype without volume) + security penalty 0.40" },
+      { "type": "no_entry", "symbol": "LINK", "reason": "sentiment_score 0.36 < 0.65: attention slipping, volume_ratio 0.9, social negative" },
+      { "type": "no_entry", "symbol": "ETH", "reason": "sentiment_score 0.36 < 0.65: no attention movement, volume_ratio 0.8" }
+    ]
+  }
+}

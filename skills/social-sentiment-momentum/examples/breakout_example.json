@@ -1,0 +1,75 @@
+{
+  "scenario": "breakout",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Home turf for attention momentum: a broad, well-bid advance. Exposure multiplier peaks (1.1); deploy the most capital into the names with the fastest, money-confirmed attention — five at the 17% per-name cap with a 15% USDT reserve. Fear & Greed 70 is bid but not extreme, so the sentiment gate is open (factor 1.0).",
+  "inputs": {
+    "fear_greed": { "value": 70, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2620000000000, "btc_dominance_pct": 49.5 },
+    "market_breadth": { "breadth_pct": 71.0, "median_24h_return": 3.4 },
+    "quotes": [
+      { "symbol": "INJ", "price_usd": 31.2, "percent_change_1h": 1.4, "percent_change_24h": 8.8, "percent_change_7d": 19.6, "market_cap_usd": 3050000000, "volume_24h_usd": 410000000, "liquidity_usd": 8800000, "safety_score": 88, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 3.05, "percent_change_1h": 1.6, "percent_change_24h": 9.4, "percent_change_7d": 22.0, "market_cap_usd": 980000000, "volume_24h_usd": 240000000, "liquidity_usd": 9500000, "safety_score": 90, "security_flags": [] },
+      { "symbol": "DOGE", "price_usd": 0.162, "percent_change_1h": 1.0, "percent_change_24h": 11.2, "percent_change_7d": 24.0, "market_cap_usd": 23000000000, "volume_24h_usd": 1900000000, "liquidity_usd": 12000000, "safety_score": 85, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 642.0, "percent_change_1h": 1.1, "percent_change_24h": 6.2, "percent_change_7d": 14.8, "market_cap_usd": 92000000000, "volume_24h_usd": 3100000000, "liquidity_usd": 44000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "AVAX", "price_usd": 41.5, "percent_change_1h": 1.0, "percent_change_24h": 6.9, "percent_change_7d": 15.2, "market_cap_usd": 16500000000, "volume_24h_usd": 720000000, "liquidity_usd": 14000000, "safety_score": 93, "security_flags": [] },
+      { "symbol": "SHIB", "price_usd": 0.0000182, "percent_change_1h": 0.4, "percent_change_24h": 7.1, "percent_change_7d": 16.0, "market_cap_usd": 10700000000, "volume_24h_usd": 380000000, "liquidity_usd": 4300000, "safety_score": 71, "security_flags": ["high_holder_concentration"] }
+    ],
+    "attention": [
+      { "symbol": "INJ", "trending_rank": 3, "rank_prev": 11, "rank_delta": 8, "velocity_norm": 0.80, "volume_ratio": 2.0, "social_score": 0.86, "social_momentum": 0.42 },
+      { "symbol": "CAKE", "trending_rank": 5, "rank_prev": 14, "rank_delta": 9, "velocity_norm": 0.90, "volume_ratio": 2.1, "social_score": 0.82, "social_momentum": 0.38 },
+      { "symbol": "DOGE", "trending_rank": 2, "rank_prev": 6, "rank_delta": 4, "velocity_norm": 0.55, "volume_ratio": 1.9, "social_score": 0.88, "social_momentum": 0.50 },
+      { "symbol": "WBNB", "trending_rank": 8, "rank_prev": 12, "rank_delta": 4, "velocity_norm": 0.50, "volume_ratio": 1.7, "social_score": 0.74, "social_momentum": 0.20 },
+      { "symbol": "AVAX", "trending_rank": 10, "rank_prev": 13, "rank_delta": 3, "velocity_norm": 0.40, "volume_ratio": 1.6, "social_score": 0.70, "social_momentum": 0.18 },
+      { "symbol": "SHIB", "trending_rank": 4, "rank_prev": 9, "rank_delta": 5, "velocity_norm": 0.65, "volume_ratio": 1.8, "social_score": 0.80, "social_momentum": 0.30 }
+    ]
+  },
+  "computed": {
+    "market_regime": "breakout",
+    "regime_reason": "breadth_pct 71 >= 65 AND median_24h_return 3.4 > 2 AND fear_greed 70 >= 60 -> breakout (broad, well-bid advance)",
+    "exposure_multiplier": 1.1,
+    "sentiment_gate_factor": 1.0,
+    "sentiment_gate_reason": "fear_greed 70 is in (20, 80) -> not an extreme, attention tilt not haircut",
+    "risk_budget_pct": 90.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.1 = 96.8, clamped to 100 - min_stable_reserve 10 = 90; five names at the 17% cap = 85, remainder is the USDT reserve.",
+    "sentiment_scores": [
+      { "symbol": "CAKE", "trend_score": 0.95, "volume_component": 1.00, "social_component": 0.82, "attention_tilt": 0.92, "base_score": 0.78, "security_penalty": 0.03, "sentiment_score": 0.91, "components": "rank climb +9, volume_ratio 2.1 confirms, social momentum +0.38 -> peak attention" },
+      { "symbol": "INJ", "trend_score": 0.90, "volume_component": 1.00, "social_component": 0.86, "attention_tilt": 0.91, "base_score": 0.77, "security_penalty": 0.06, "sentiment_score": 0.88, "components": "rank +8, volume_ratio 2.0 confirms, strong social" },
+      { "symbol": "DOGE", "trend_score": 0.78, "volume_component": 1.00, "social_component": 0.88, "attention_tilt": 0.86, "base_score": 0.75, "security_penalty": 0.05, "sentiment_score": 0.85, "components": "rank #2, volume_ratio 1.9 confirms, highest social momentum" },
+      { "symbol": "WBNB", "trend_score": 0.75, "volume_component": 1.00, "social_component": 0.74, "attention_tilt": 0.82, "base_score": 0.72, "security_penalty": 0.02, "sentiment_score": 0.83, "components": "large-cap attention climb, volume_ratio 1.7 confirms" },
+      { "symbol": "AVAX", "trend_score": 0.70, "volume_component": 1.00, "social_component": 0.70, "attention_tilt": 0.78, "base_score": 0.71, "security_penalty": 0.04, "sentiment_score": 0.80, "components": "rank +3, volume_ratio 1.6 confirms" },
+      { "symbol": "SHIB", "trend_score": 0.82, "volume_component": 1.00, "social_component": 0.80, "attention_tilt": 0.87, "base_score": 0.55, "security_penalty": 0.40, "sentiment_score": 0.40, "components": "confirmed attention but security penalty 0.40 (high_holder_concentration) haircuts below the entry bar" }
+    ],
+    "attention_reason": "Five lead names show rising trending rank confirmed by a volume surge (volume_ratio >= 1.5) and positive social momentum, so attention_tilt is high and sentiment_score clears 0.65. SHIB's identical attention is dominated by its security penalty."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "CAKE", "weight_pct": 17.0 },
+      { "symbol": "INJ", "weight_pct": 17.0 },
+      { "symbol": "DOGE", "weight_pct": 17.0 },
+      { "symbol": "WBNB", "weight_pct": 17.0 },
+      { "symbol": "AVAX", "weight_pct": 17.0 },
+      { "symbol": "USDT", "weight_pct": 15.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with sentiment_score >= 0.65, max 5, ordered by sentiment_score.",
+        "Require rising trending rank AND volume_ratio >= 1.5 (attention confirmed by money); fade hype where volume_ratio < 1.0.",
+        "Require positive social momentum to corroborate the trending climb.",
+        "Per-name weight capped at 17%; route by sentiment_score share of the risk budget; surplus falls to the USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when sentiment_score < min_score_to_hold 0.50 on the next rebalance (attention fading).",
+        "Exit when trending rank falls off the board or volume_ratio drops below 1.0 (the money left).",
+        "Force-exit at stop_loss 12% or take_profit 22% vs average cost; rotate to USDT on a risk_off transition or a sentiment-extreme flip."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.91; rank climb +9, volume_ratio 2.1 confirms", "execution": "twap" },
+      { "type": "entry", "symbol": "INJ", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.88; rank +8, volume_ratio 2.0", "execution": "twap" },
+      { "type": "entry", "symbol": "DOGE", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.85; rank #2, strongest social momentum", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.83; large-cap attention, volume confirmed", "execution": "twap" },
+      { "type": "entry", "symbol": "AVAX", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.80; rank +3, volume_ratio 1.6", "execution": "twap" },
+      { "type": "reject", "symbol": "SHIB", "reason": "sentiment_score 0.40 < 0.65; security penalty 0.40 (high_holder_concentration) dominates the confirmed attention" }
+    ]
+  }
+}

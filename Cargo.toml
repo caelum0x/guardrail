@@ -22,6 +22,7 @@ members = [
   "crates/agent-runtime",
   "crates/indicators",
   "crates/notifier",
+  "crates/skill-loader",
   "apps/guardrail-agent",
   "apps/guardrail-api",
   "apps/guardrail-cli",

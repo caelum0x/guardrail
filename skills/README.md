@@ -22,6 +22,7 @@ final word on every trade to the production Rust risk engine.
 | **mean-reversion-chop-bsc** | Same regime classifier + risk envelope, but a **counter-trend reversion tilt**: buy oversold dips (low RSI / lower-Bollinger-band touches), trim overbought stretches, hold a large reserve. **Inverted** exposure profile — most active in chop, steps aside in trending risk_on/breakout, minimal in risk_off. | risk_on, risk_off, chop, breakout | 4 | [`mean-reversion-chop/`](./mean-reversion-chop) |
 | **trend-breakout-momentum-bsc** | Same regime classifier + risk envelope, but a **momentum / breakout tilt**: enter only confirmed, volume-backed upside breakouts (aligned rising EMA stack + positive MACD histogram + close above the 20-bar Donchian high with `volume_ratio >= 1.5`), ride with ATR trailing stops. Exposure **peaks in breakout** (1.1) and risk_on, cut hard in chop/risk_off — the mirror image of mean-reversion-chop. | risk_on, risk_off, chop, breakout | 4 | [`trend-breakout-momentum/`](./trend-breakout-momentum) |
 | **volatility-targeted-risk-parity-bsc** | A **new axis** — risk-based *sizing*, not signal direction. Instead of deciding *what* to buy, it decides *how much*: size each name by the **inverse of its realised volatility** so every holding contributes ~equal risk (**risk parity**, mirroring `crates/portfolio-optimizer::inverse_volatility` / `risk_parity_lite`), then **scale gross to a 45% target portfolio volatility** (`target_vol_scalar = clamp(0.45/est_book_vol, 0.20, 1.00)`, never levered). **De-risks in risk_off** as vol spikes. Per-name cap 17%, USDT reserve remainder. Registered as an **additional standalone strategy** (the four-skill ensemble core in `ensemble.json` is unchanged). | risk_on, risk_off, chop, breakout | 4 | [`volatility-targeted-risk-parity/`](./volatility-targeted-risk-parity) |
+| **social-sentiment-momentum-bsc** | Same regime classifier + risk envelope, but a **social + sentiment attention tilt**: read the crowd, not the chart. Favour names with **accelerating attention CONFIRMED by money** — rising CMC trending-rank velocity + a volume surge (`volume_ratio >= 1.5`) + positive social momentum (`attention_tilt = 0.4*trend_score + 0.35*volume_component + 0.25*social_component`) — **fade hype without volume** (`volume_ratio < 1.0`), and **de-risk at sentiment extremes** via a Fear & Greed gate (factor 0.6 at >= 80 blowoff / <= 20 capitulation). Exposure full/peak in risk_on/breakout, cut in chop/risk_off. | risk_on, risk_off, chop, breakout | 4 | [`social-sentiment-momentum/`](./social-sentiment-momentum) |
 
 The machine-readable version of this table lives in
 [`INDEX.json`](./INDEX.json) — one entry per skill with `id`, `name`, `path`,
@@ -99,7 +100,8 @@ for d in ['../skills/cmc-regime-routed-alpha/examples',
           '../skills/funding-rate-carry/examples',
           '../skills/mean-reversion-chop/examples',
           '../skills/trend-breakout-momentum/examples',
-          '../skills/volatility-targeted-risk-parity/examples']:
+          '../skills/volatility-targeted-risk-parity/examples',
+          '../skills/social-sentiment-momentum/examples']:
     ex = load_skill_examples(d)
     assert ex and all(validate_example(e) == [] for e in ex), d
     print(d, 'ok', len(ex), 'examples')

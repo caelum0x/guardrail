@@ -1,0 +1,62 @@
+{
+  "scenario": "risk_off",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Fearful, broadly declining tape with EXTREME FEAR (Fear & Greed 18 <= 20). Two de-risk forces stack: the risk_off exposure multiplier (0.15) AND the sentiment gate (factor 0.6) at the capitulation extreme. Attention is fear chatter, not a rotation. Cut to a near-full USDT reserve, hold one resilient leader tiny, and place a heartbeat trade to satisfy the daily-trade requirement while protective exits run.",
+  "inputs": {
+    "fear_greed": { "value": 18, "value_classification": "extreme_fear" },
+    "global": { "total_market_cap_usd": 2050000000000, "btc_dominance_pct": 55.0 },
+    "market_breadth": { "breadth_pct": 31.0, "median_24h_return": -3.6 },
+    "quotes": [
+      { "symbol": "BTCB", "price_usd": 61000.0, "percent_change_1h": -0.4, "percent_change_24h": -1.8, "percent_change_7d": -5.0, "market_cap_usd": 1200000000000, "volume_24h_usd": 22000000000, "liquidity_usd": 60000000, "safety_score": 99, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 560.0, "percent_change_1h": -0.9, "percent_change_24h": -4.6, "percent_change_7d": -10.2, "market_cap_usd": 80000000000, "volume_24h_usd": 2400000000, "liquidity_usd": 41000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "ETH", "price_usd": 3150.0, "percent_change_1h": -1.1, "percent_change_24h": -5.2, "percent_change_7d": -11.0, "market_cap_usd": 378000000000, "volume_24h_usd": 17000000000, "liquidity_usd": 53000000, "safety_score": 98, "security_flags": [] },
+      { "symbol": "SHIB", "price_usd": 0.0000150, "percent_change_1h": -1.4, "percent_change_24h": -8.0, "percent_change_7d": -18.0, "market_cap_usd": 8800000000, "volume_24h_usd": 320000000, "liquidity_usd": 3700000, "safety_score": 71, "security_flags": ["high_holder_concentration"] }
+    ],
+    "attention": [
+      { "symbol": "BTCB", "trending_rank": 1, "rank_prev": 4, "rank_delta": 3, "velocity_norm": 0.40, "volume_ratio": 1.4, "social_score": 0.66, "social_momentum": 0.30 },
+      { "symbol": "SHIB", "trending_rank": 2, "rank_prev": 9, "rank_delta": 7, "velocity_norm": 0.70, "volume_ratio": 1.3, "social_score": 0.82, "social_momentum": 0.48 },
+      { "symbol": "WBNB", "trending_rank": 6, "rank_prev": 8, "rank_delta": 2, "velocity_norm": 0.25, "volume_ratio": 1.2, "social_score": 0.50, "social_momentum": 0.05 },
+      { "symbol": "ETH", "trending_rank": 5, "rank_prev": 7, "rank_delta": 2, "velocity_norm": 0.25, "volume_ratio": 1.1, "social_score": 0.48, "social_momentum": 0.02 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_off",
+    "regime_reason": "breadth_pct 31 <= 40 AND fear_greed 18 <= 30 AND median_24h_return -3.6 < -2 -> risk_off (broad decline; attention is fear chatter)",
+    "exposure_multiplier": 0.15,
+    "sentiment_gate_factor": 0.6,
+    "sentiment_gate_reason": "fear_greed 18 <= 20 -> EXTREME FEAR (capitulation), attention tilt haircut by 0.6",
+    "risk_budget_pct": 13.2,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 0.15 = 13.2; trending climbs here are capitulation/dead-cat chatter (the gate haircuts the tilt), so the book is a near-full USDT reserve with one tiny resilient-leader heartbeat starter.",
+    "sentiment_scores": [
+      { "symbol": "BTCB", "trend_score": 0.70, "volume_component": 0.50, "social_component": 0.66, "attention_tilt": 0.62, "sentiment_gate_factor": 0.6, "base_score": 0.58, "security_penalty": 0.01, "sentiment_score": 0.55, "components": "most resilient large-cap, trending #1, but volume only 1.4 (near) and tilt haircut by the extreme-fear gate -> below entry bar" },
+      { "symbol": "SHIB", "trend_score": 0.78, "volume_component": 0.50, "social_component": 0.82, "attention_tilt": 0.69, "sentiment_gate_factor": 0.6, "base_score": 0.45, "security_penalty": 0.40, "sentiment_score": 0.30, "components": "loud capitulation-bounce chatter, but extreme-fear gate + security penalty 0.40 crush it -> faded" },
+      { "symbol": "WBNB", "trend_score": 0.30, "volume_component": 0.50, "social_component": 0.00, "attention_tilt": 0.30, "sentiment_gate_factor": 0.6, "base_score": 0.45, "security_penalty": 0.02, "sentiment_score": 0.37, "components": "weak trending move, flat social, gate-haircut" },
+      { "symbol": "ETH", "trend_score": 0.30, "volume_component": 0.00, "social_component": 0.00, "attention_tilt": 0.12, "sentiment_gate_factor": 0.6, "base_score": 0.44, "security_penalty": 0.01, "sentiment_score": 0.33, "components": "volume_ratio 1.1 (no surge), flat social, gate-haircut" }
+    ],
+    "attention_reason": "In extreme-fear risk_off, trending climbs are capitulation / dead-cat chatter, not a rotation. The sentiment gate haircuts every attention tilt by 0.6 and no name clears 0.65. The Skill holds a near-full USDT reserve; a single tiny BTCB heartbeat trade keeps the agent daily-trade compliant while protective exits run."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "BTCB", "weight_pct": 6.0 },
+      { "symbol": "USDT", "weight_pct": 94.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Do not initiate attention entries in risk_off / extreme-fear (capitulation chatter); hold the USDT reserve.",
+        "If a daily heartbeat trade is required, place the smallest compliant clip in the single most resilient large-cap (highest sentiment_score) and bring exposure back to the reserve.",
+        "Per-name weight capped at 17%; min_stable_reserve floor 10% always honoured; the sentiment gate caps exposure at extremes."
+      ],
+      "exit": [
+        "Exit any inherited attention position whose sentiment_score < 0.50 or whose volume_ratio has dropped below 1.0.",
+        "Force-exit at stop_loss 12% or take_profit 22%; on the risk_off / extreme-fear transition rotate all risk into USDT.",
+        "Stay flat until breadth, momentum and Fear & Greed recover out of the extreme into risk_on/breakout."
+      ]
+    },
+    "actions": [
+      { "type": "exit", "symbol": "WBNB", "side": "sell", "target_weight_pct": 0.0, "reason": "risk_off transition + sentiment_score 0.37 < 0.50 -> rotate to USDT", "execution": "twap" },
+      { "type": "exit", "symbol": "ETH", "side": "sell", "target_weight_pct": 0.0, "reason": "no volume surge, fear chatter -> rotate to USDT", "execution": "twap" },
+      { "type": "reject", "symbol": "SHIB", "reason": "sentiment_score 0.30 < 0.65: capitulation-bounce hype crushed by the extreme-fear gate + security penalty" },
+      { "type": "heartbeat", "symbol": "BTCB", "side": "buy", "target_weight_pct": 6.0, "reason": "smallest compliant daily-trade clip in the most resilient large-cap; satisfies min_trades_per_day 1 without taking real attention risk", "execution": "twap" }
+    ]
+  }
+}

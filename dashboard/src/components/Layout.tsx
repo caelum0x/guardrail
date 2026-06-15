@@ -3,6 +3,7 @@ import { AutoRefresh } from "./AutoRefresh";
 
 const links = [
   "/",
+  "/live",
   "/portfolio",
   "/assets",
   "/watchlist",

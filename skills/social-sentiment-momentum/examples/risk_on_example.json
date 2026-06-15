@@ -1,0 +1,69 @@
+{
+  "scenario": "risk_on",
+  "as_of": "2026-06-14T00:00:00Z",
+  "note": "Constructive up-tape, attention rotating but breadth not blowout. Full deployment (multiplier 1.0); take the cleanest, money-confirmed attention names, four of them, with a larger USDT reserve than the breakout regime. Fear & Greed 58 keeps the sentiment gate open.",
+  "inputs": {
+    "fear_greed": { "value": 58, "value_classification": "greed" },
+    "global": { "total_market_cap_usd": 2410000000000, "btc_dominance_pct": 51.0 },
+    "market_breadth": { "breadth_pct": 57.0, "median_24h_return": 1.4 },
+    "quotes": [
+      { "symbol": "LINK", "price_usd": 15.4, "percent_change_1h": 0.7, "percent_change_24h": 3.1, "percent_change_7d": 7.7, "market_cap_usd": 9600000000, "volume_24h_usd": 470000000, "liquidity_usd": 11500000, "safety_score": 95, "security_flags": [] },
+      { "symbol": "INJ", "price_usd": 28.4, "percent_change_1h": 0.9, "percent_change_24h": 4.0, "percent_change_7d": 9.1, "market_cap_usd": 2780000000, "volume_24h_usd": 360000000, "liquidity_usd": 8400000, "safety_score": 88, "security_flags": [] },
+      { "symbol": "CAKE", "price_usd": 2.78, "percent_change_1h": 0.5, "percent_change_24h": 2.6, "percent_change_7d": 6.9, "market_cap_usd": 900000000, "volume_24h_usd": 190000000, "liquidity_usd": 9200000, "safety_score": 90, "security_flags": [] },
+      { "symbol": "WBNB", "price_usd": 614.0, "percent_change_1h": 0.6, "percent_change_24h": 2.4, "percent_change_7d": 6.1, "market_cap_usd": 88000000000, "volume_24h_usd": 2000000000, "liquidity_usd": 43000000, "safety_score": 96, "security_flags": [] },
+      { "symbol": "DOT", "price_usd": 7.2, "percent_change_1h": -0.1, "percent_change_24h": 0.6, "percent_change_7d": 1.2, "market_cap_usd": 10200000000, "volume_24h_usd": 280000000, "liquidity_usd": 9000000, "safety_score": 94, "security_flags": [] }
+    ],
+    "attention": [
+      { "symbol": "LINK", "trending_rank": 6, "rank_prev": 13, "rank_delta": 7, "velocity_norm": 0.72, "volume_ratio": 1.7, "social_score": 0.78, "social_momentum": 0.30 },
+      { "symbol": "INJ", "trending_rank": 7, "rank_prev": 12, "rank_delta": 5, "velocity_norm": 0.60, "volume_ratio": 1.6, "social_score": 0.74, "social_momentum": 0.26 },
+      { "symbol": "CAKE", "trending_rank": 9, "rank_prev": 14, "rank_delta": 5, "velocity_norm": 0.58, "volume_ratio": 1.6, "social_score": 0.72, "social_momentum": 0.22 },
+      { "symbol": "WBNB", "trending_rank": 11, "rank_prev": 15, "rank_delta": 4, "velocity_norm": 0.50, "volume_ratio": 1.5, "social_score": 0.68, "social_momentum": 0.16 },
+      { "symbol": "DOT", "trending_rank": null, "rank_prev": 18, "rank_delta": -2, "velocity_norm": -0.30, "volume_ratio": 0.9, "social_score": 0.40, "social_momentum": -0.10 }
+    ]
+  },
+  "computed": {
+    "market_regime": "risk_on",
+    "regime_reason": "breadth_pct 57 >= 55 AND fear_greed 58 >= 50 but median_24h_return 1.4 <= 2 -> risk_on (breakout breadth not yet met)",
+    "exposure_multiplier": 1.0,
+    "sentiment_gate_factor": 1.0,
+    "sentiment_gate_reason": "fear_greed 58 in (20, 80) -> not extreme",
+    "risk_budget_pct": 88.0,
+    "risk_budget_reason": "(100 - target_stable_reserve 12) * 1.0 = 88; four confirmed-attention names share it under the 17% cap, remainder is the USDT reserve.",
+    "sentiment_scores": [
+      { "symbol": "LINK", "trend_score": 0.86, "volume_component": 1.00, "social_component": 0.78, "attention_tilt": 0.88, "base_score": 0.71, "security_penalty": 0.03, "sentiment_score": 0.82, "components": "rank climb +7, volume_ratio 1.7 confirms, positive social" },
+      { "symbol": "INJ", "trend_score": 0.80, "volume_component": 1.00, "social_component": 0.74, "attention_tilt": 0.84, "base_score": 0.70, "security_penalty": 0.06, "sentiment_score": 0.79, "components": "rank +5, volume_ratio 1.6 confirms" },
+      { "symbol": "CAKE", "trend_score": 0.79, "volume_component": 1.00, "social_component": 0.72, "attention_tilt": 0.83, "base_score": 0.69, "security_penalty": 0.03, "sentiment_score": 0.78, "components": "rank +5, volume_ratio 1.6 confirms" },
+      { "symbol": "WBNB", "trend_score": 0.75, "volume_component": 1.00, "social_component": 0.68, "attention_tilt": 0.81, "base_score": 0.69, "security_penalty": 0.02, "sentiment_score": 0.78, "components": "rank +4, volume_ratio 1.5 (at the confirm threshold)" },
+      { "symbol": "DOT", "trend_score": 0.10, "volume_component": 0.00, "social_component": 0.00, "attention_tilt": 0.04, "base_score": 0.52, "security_penalty": 0.03, "sentiment_score": 0.37, "components": "fell off the trending board, volume_ratio 0.9 (no money), social declining -> attention fading" }
+    ],
+    "attention_reason": "Four names show rising trending rank confirmed by volume_ratio >= 1.5 and positive social momentum. DOT has fallen off the board on volume_ratio 0.9 with declining social, so its attention_tilt collapses and it stays out."
+  },
+  "decision": {
+    "target_portfolio": [
+      { "symbol": "LINK", "weight_pct": 17.0 },
+      { "symbol": "INJ", "weight_pct": 17.0 },
+      { "symbol": "CAKE", "weight_pct": 16.0 },
+      { "symbol": "WBNB", "weight_pct": 16.0 },
+      { "symbol": "USDT", "weight_pct": 34.0 }
+    ],
+    "rules": {
+      "entry": [
+        "Enter assets with sentiment_score >= 0.65, max 5, ordered by sentiment_score.",
+        "Require rising trending rank AND volume_ratio >= 1.5; reject hype where volume_ratio < 1.0.",
+        "Per-name weight capped at 17%; route by sentiment_score share of the risk budget; surplus to USDT reserve."
+      ],
+      "exit": [
+        "Trim/exit when sentiment_score < 0.50 on the next rebalance.",
+        "Exit when trending rank falls off the board or volume_ratio drops below 1.0.",
+        "Force-exit at stop_loss 12% or take_profit 22%; rotate to USDT on a risk_off transition or sentiment-extreme flip."
+      ]
+    },
+    "actions": [
+      { "type": "entry", "symbol": "LINK", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.82; rank climb +7, volume_ratio 1.7", "execution": "twap" },
+      { "type": "entry", "symbol": "INJ", "side": "buy", "target_weight_pct": 17.0, "reason": "sentiment_score 0.79; rank +5, volume_ratio 1.6", "execution": "twap" },
+      { "type": "entry", "symbol": "CAKE", "side": "buy", "target_weight_pct": 16.0, "reason": "sentiment_score 0.78; rank +5, volume confirmed", "execution": "twap" },
+      { "type": "entry", "symbol": "WBNB", "side": "buy", "target_weight_pct": 16.0, "reason": "sentiment_score 0.78; rank +4, volume_ratio 1.5 at threshold", "execution": "twap" },
+      { "type": "no_entry", "symbol": "DOT", "reason": "sentiment_score 0.37 < 0.65: off the trending board, volume_ratio 0.9 (no money), social declining" }
+    ]
+  }
+}

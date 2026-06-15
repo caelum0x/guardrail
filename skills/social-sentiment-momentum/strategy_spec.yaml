@@ -1,0 +1,373 @@
+# =============================================================================
+# Social / Sentiment Momentum (ATTENTION-driven) — Backtestable Strategy Spec
+# =============================================================================
+# Track 2 (Strategy Skills) deliverable for the Guardrail hackathon.
+#
+# This file is the single source of truth for a CMC-data-driven, SOCIAL +
+# SENTIMENT momentum strategy over a fixed universe of 20 eligible BSC tokens.
+# It is a sibling of skills/cmc-regime-routed-alpha, skills/funding-rate-carry,
+# skills/mean-reversion-chop, skills/trend-breakout-momentum and
+# skills/volatility-targeted-risk-parity: same universe, same four-regime
+# classifier, same allocator shape and risk envelope. The DIFFERENCE is the alpha
+# thesis. Instead of asking "is the chart breaking out?", it asks "is ATTENTION
+# accelerating, and is that attention CONFIRMED by money?".
+#
+# The signal blends three attention/sentiment legs:
+#   trending-rank VELOCITY  — a name climbing the CMC trending / most-visited board
+#                             (rising attention vs the prior cycle)
+#   volume SURGE            — 24h volume vs its trailing average (attention CONFIRMED
+#                             by money; hype with no volume is a trap to be FADED)
+#   social ATTENTION        — social/attention proxies (mentions / views momentum)
+# gated by the market-wide Fear & Greed REGIME: it favours names with accelerating
+# attention plus positive sentiment confirmation, FADES hype without volume, and
+# DE-RISKS at sentiment EXTREMES (extreme-greed = blowoff-top risk; extreme-fear =
+# capitulation). It respects the SAME risk envelope (17% per-name cap, USDT
+# reserve, 12% stop, 22% throttle, 24% kill switch) as its sibling Skills.
+#
+#   regime model            -> crates/strategy-engine/src/regime.rs
+#   base alpha score         -> crates/strategy-engine/src/alpha_score.rs
+#   position sizing          -> crates/strategy-engine/src/allocator.rs
+#   risk policy / thresholds -> crates/strategy-engine/src/strategy_config.rs
+#                               crates/risk-engine/src/policy.rs
+#
+# Nothing here executes trades; the Rust risk engine remains the final authority.
+# =============================================================================
+
+spec_version: "1.0.0"
+name: social-sentiment-momentum-bsc
+track: "Track 2 — Strategy Skills"
+description: >
+  A social / sentiment momentum strategy over 20 eligible BSC tokens. The signal
+  measures ATTENTION rather than price structure: a trending-rank VELOCITY leg
+  (a name climbing the CMC trending / most-visited board vs the prior cycle), a
+  VOLUME SURGE leg (24h volume above its trailing average — attention confirmed by
+  money), and a SOCIAL ATTENTION leg (mentions / views momentum). The three legs
+  blend into an attention tilt in 0..1 that PEAKS when rising trending rank is
+  CONFIRMED by a volume surge and positive social momentum, and COLLAPSES to a
+  fade when attention spikes on thin volume (hype with no money). The whole book
+  is gated by the market-wide Fear & Greed REGIME: it de-risks at extreme-greed
+  (blowoff-top risk) and extreme-fear (capitulation). The attention tilt
+  multiplies the base alpha score, the security penalty is re-applied as a
+  haircut, and a score-proportional allocator with a per-name cap and a USDT
+  reserve builds the target book. Exposure is strongest in risk_on / breakout
+  (attention momentum pays when the tape is bid) and cut in chop / risk_off.
+
+# -----------------------------------------------------------------------------
+# 1. UNIVERSE — the 20 eligible BSC tokens (configs/eligible_assets.bsc.json)
+# -----------------------------------------------------------------------------
+universe:
+  chain: bsc
+  chain_id: 56
+  source: configs/eligible_assets.bsc.json
+  # Stables are the reserve/quote leg and never attention candidates.
+  reserve_symbol: USDT
+  assets:
+    - { symbol: USDT,  cmc_id: 825,  category: stable }
+    - { symbol: USDC,  cmc_id: 3408, category: stable }
+    - { symbol: WBNB,  cmc_id: 1839, category: core }
+    - { symbol: ETH,   cmc_id: 1027, category: core }
+    - { symbol: BTCB,  cmc_id: 4023, category: core }
+    - { symbol: CAKE,  cmc_id: 7186, category: defi }
+    - { symbol: UNI,   cmc_id: 7083, category: defi }
+    - { symbol: AAVE,  cmc_id: 7278, category: defi }
+    - { symbol: LINK,  cmc_id: 1975, category: infrastructure }
+    - { symbol: DOT,   cmc_id: 6636, category: infrastructure }
+    - { symbol: ATOM,  cmc_id: 3794, category: infrastructure }
+    - { symbol: FIL,   cmc_id: 2280, category: infrastructure }
+    - { symbol: INJ,   cmc_id: 7226, category: defi }
+    - { symbol: XRP,   cmc_id: 52,   category: other }
+    - { symbol: ADA,   cmc_id: 2010, category: other }
+    - { symbol: LTC,   cmc_id: 2,    category: other }
+    - { symbol: DOGE,  cmc_id: 74,   category: meme }
+    - { symbol: SHIB,  cmc_id: 5994, category: meme }
+    - { symbol: TWT,   cmc_id: 5964, category: defi }
+    - { symbol: AVAX,  cmc_id: 5805, category: infrastructure }
+  eligibility_floors:
+    note: >
+      min_liquidity_usd / min_volume_24h_usd are defined per asset in the config
+      (core/stable: 1,000,000; defi/major: 500,000; long-tail: 200,000-300,000).
+      An asset below its floor is ineligible this cycle. Attention strategies are
+      especially exposed to manufactured hype on thin names — a trending spike on
+      an illiquid token is more likely a wash-trading / shill spike than tradable
+      attention, so the floors are enforced hard.
+
+# -----------------------------------------------------------------------------
+# 2. INPUTS — the feeds the strategy consumes each cycle
+# -----------------------------------------------------------------------------
+inputs:
+  cmc_quotes:
+    description: Latest USD price, % change 1h/24h/7d, market cap, 24h volume.
+    fields: [price_usd, percent_change_1h, percent_change_24h, percent_change_7d, market_cap_usd, volume_24h_usd]
+    endpoint: /v2/cryptocurrency/quotes/latest
+  cmc_trending:
+    description: >
+      The CMC trending / most-visited board: each eligible asset's current
+      trending rank (1 = most-visited; absent/null = off the board). The raw
+      source for the trending-rank velocity attention leg.
+    fields: [symbol, trending_rank, on_board]
+    endpoint: /v1/cryptocurrency/trending/latest
+  trending_rank_velocity:
+    description: >
+      Change in trending rank vs the prior cycle (rank_prev - rank_now): POSITIVE
+      means the name is CLIMBING the board (rising attention); negative means it is
+      FADING. A name that newly appears on the board (was off, now ranked) is
+      treated as a strong positive velocity. Normalised to [-1, 1] for scoring.
+    fields: [symbol, rank_now, rank_prev, rank_delta, velocity_norm]
+  volume_surge:
+    description: >
+      24h volume relative to its trailing average (volume_ratio = volume_24h /
+      avg_volume). A ratio >= 1.5 CONFIRMS the attention is backed by real money;
+      a ratio < 1.0 marks attention with no participation (HYPE TO FADE).
+    fields: [symbol, volume_ratio]
+    confirm_ratio: 1.5
+    fakeout_ratio: 1.0
+  social_attention:
+    description: >
+      Social / attention proxies: a normalised momentum of mentions / views /
+      engagement vs its trailing baseline (social_score in 0..1). Corroborates the
+      trending-rank velocity with off-board chatter; positive sentiment confirms,
+      flat/declining social does not.
+    fields: [symbol, social_score, social_momentum]
+  cmc_fear_greed:
+    description: >
+      Market-wide 0..100 Fear & Greed index. One value applies to all assets this
+      cycle. Drives the regime gate AND the sentiment-extreme de-risk: at
+      extreme-greed (>= 80) blowoff-top risk caps exposure; at extreme-fear (<= 20)
+      capitulation risk caps exposure.
+    fields: [value, value_classification]
+    endpoint: /v3/fear-and-greed/latest
+  cmc_dex_liquidity:
+    description: On-chain DEX liquidity depth (USD) per pool, used for liquidity and execution-quality features.
+    fields: [liquidity_usd, num_pairs]
+    endpoint: /v4/dex/spot-pairs/latest
+  cmc_token_security:
+    description: Token-security signals feeding the security penalty (safety score + risk flags).
+    fields: [safety_score, security_flags]
+  cmc_global:
+    description: Global market metrics (total market cap, BTC dominance) used as a regime sanity check.
+    endpoint: /v1/global-metrics/quotes/latest
+
+# -----------------------------------------------------------------------------
+# 3. REGIME MODEL — mirrors strategy-engine/src/regime.rs::classify()
+# -----------------------------------------------------------------------------
+# Three market-wide inputs drive the regime:
+#   breadth_pct       — % of risk assets with a positive 24h return
+#   median_24h_return — median 24h % return across the risk universe
+#   fear_greed        — CMC Fear & Greed value (0..100)
+#
+# Rules are evaluated TOP-DOWN; the first match wins (exactly as in Rust).
+#
+# Attention momentum pays when the tape is broadly bid (risk_on / breakout):
+# accelerating attention there tends to mark a real rotation. In chop attention
+# is noisy and reverts (whipsaw); in risk_off attention is mostly fear-driven
+# capitulation chatter, so the Skill cuts to a USDT reserve.
+regime_model:
+  inputs: [breadth_pct, median_24h_return, fear_greed]
+  classification_order:
+    - regime: breakout
+      when: "breadth_pct >= 65 AND median_24h_return > 2 AND fear_greed >= 60"
+      rationale: Strong, broad, well-bid advance — accelerating attention confirms a real rotation.
+    - regime: risk_on
+      when: "breadth_pct >= 55 AND fear_greed >= 50"
+      rationale: Healthy directional appetite — attention momentum pays in an up-tape.
+    - regime: risk_off
+      when: "breadth_pct <= 40 OR fear_greed <= 30 OR median_24h_return < -2"
+      rationale: Fearful, broadly declining — attention is capitulation chatter; cut to a USDT reserve.
+    - regime: chop
+      when: "(default — none of the above)"
+      rationale: Directionless market — attention is noisy and mean-reverts; trade small.
+  exposure_multipliers:
+    breakout: 1.1      # over-deployment — broad rotation, attention is real
+    risk_on: 1.0       # full deployment — attention momentum pays in an up-tape
+    chop: 0.4          # noisy attention — small, only the best-confirmed names
+    risk_off: 0.15     # fear-driven chatter — minimal exposure, mostly reserve
+
+# -----------------------------------------------------------------------------
+# 4. SOCIAL / SENTIMENT ATTENTION SIGNAL — the distinguishing layer of this Skill
+# -----------------------------------------------------------------------------
+# Three attention legs locate accelerating, money-confirmed attention, then a
+# market-wide sentiment gate de-risks at extremes.
+#
+#   trending velocity : rising trending rank vs prior cycle -> rising attention
+#   volume surge      : volume_ratio >= 1.5                 -> attention confirmed by money
+#   social momentum   : rising mentions/views vs baseline   -> off-board confirmation
+#   sentiment gate    : Fear & Greed not at an extreme       -> de-risk blowoff/capitulation
+#
+# The buy-side attention score PEAKS when trending rank is RISING, the volume
+# surge CONFIRMS it (volume_ratio >= 1.5) and social momentum is positive. It
+# COLLAPSES to a fade when attention spikes on THIN volume (volume_ratio < 1.0 —
+# hype with no money), when trending rank is FALLING (attention fading), or when
+# Fear & Greed is at an extreme (blowoff-top / capitulation de-risk).
+attention_signal:
+  trending_velocity:
+    description: "Climb on the trending / most-visited board vs the prior cycle."
+    rising: "rank_delta > 0 OR newly on the board"          # attention accelerating
+    falling: "rank_delta < 0 AND on the board prior"         # attention fading -> trend_score decays
+    normalise: "velocity_norm = clamp(rank_delta / max_rank_delta, -1, 1)"
+  volume_surge:
+    confirm_ratio: 1.5     # volume_ratio >= 1.5 -> attention CONFIRMED by money
+    fakeout_ratio: 1.0     # volume_ratio < 1.0 with attention spike -> HYPE TO FADE, score 0
+    description: "24h volume vs trailing average; attention without money is a trap."
+  social_momentum:
+    positive: "social_momentum > 0 AND social_score >= 0.5"  # off-board chatter confirms
+    flat_or_negative: "social_momentum <= 0"                 # no confirmation -> social_score low
+  sentiment_gate:
+    extreme_greed: 80      # fear_greed >= 80 -> blowoff-top risk, de-risk (cap attention exposure)
+    extreme_fear: 20       # fear_greed <= 20 -> capitulation risk, de-risk
+    description: >
+      At a sentiment EXTREME the attention tilt is haircut (sentiment_gate_factor
+      < 1.0): crowded attention at extreme-greed is blowoff-top fuel, attention at
+      extreme-fear is capitulation panic — both are faded, not chased.
+  # The legs blend into a single buy-side attention tilt in 0..1.
+  attention_tilt:
+    trending_component:
+      rising_peak: "trend_score = clamp01((velocity_norm + 1) / 2) when rising"
+      newly_on_board: "trend_score = 0.9 when newly appears on the trending board"
+      falling_zero: "trend_score = 0.0 when trending rank falling off the board"
+    volume_component:
+      confirmed_peak: "vol_score = 1.0 when volume_ratio >= 1.5 (attention confirmed by money)"
+      near:           "vol_score = 0.5 when 1.2 <= volume_ratio < 1.5"
+      hype_zero:      "vol_score = 0.0 when volume_ratio < 1.0 (hype without volume)"
+    social_component:
+      positive_peak: "social_comp = clamp01(social_score) when social_momentum > 0"
+      flat_zero:     "social_comp = 0.0 when social_momentum <= 0"
+    blend: "attention_tilt = 0.4 * trend_score + 0.35 * volume_component + 0.25 * social_component"  # in [0, 1]
+    sentiment_gate_factor:
+      formula: "1.0 when 20 < fear_greed < 80; 0.6 when fear_greed >= 80 (extreme greed) or fear_greed <= 20 (extreme fear)"
+      note: "De-risk at sentiment extremes — fade blowoff-top and capitulation."
+  apply:
+    # The tilt re-weights the base alpha score; factor stays within [0.7, 1.3] so
+    # attention can re-rank and re-size candidates but never invents conviction
+    # beyond the base score. The sentiment gate haircuts the whole tilt at extremes.
+    factor: "0.7 + 0.6 * attention_tilt * sentiment_gate_factor"   # in [0.7, 1.3]
+    formula: "sentiment_score = clamp01( base_score * (0.7 + 0.6 * attention_tilt * sentiment_gate_factor) * (1 - security_penalty) )"
+    note: >
+      Security penalty is re-applied multiplicatively after the tilt so a strong
+      attention reading can never resurrect a security-flagged asset the base score
+      already haircut. sentiment_score is in 0..1, sorted descending.
+
+# -----------------------------------------------------------------------------
+# 5. ENTRY RULES
+# -----------------------------------------------------------------------------
+entry_rules:
+  candidate_filter:
+    - "Asset is non-stable and enabled in the eligible universe."
+    - "Asset passes its per-asset liquidity and 24h-volume floor (attention is hype/wash-trade sensitive)."
+    - "Asset has a trending-rank reading, a volume_ratio and a social_score this cycle."
+    - "Asset is allowed by the Rust risk policy (allowed_assets / allowed_chains)."
+  selection:
+    min_score_to_enter: 0.65          # strategy_config.rs (applied to sentiment_score)
+    max_positions: 5                  # top-N by sentiment score
+    ordering: "descending sentiment_score; ties broken by higher volume_ratio, then higher trending velocity, then liquidity, then symbol"
+  attention_preference:
+    - "Strongly prefer CONFIRMED attention: rising trending rank AND volume_ratio >= 1.5 AND positive social momentum."
+    - "FADE hype without volume: a trending spike on volume_ratio < 1.0 is attention with no money — no-initiate."
+    - "Do not chase attention that is already FADING (trending rank falling off the board)."
+    - "DE-RISK at sentiment extremes: at extreme-greed (>= 80) or extreme-fear (<= 20) shrink/skip entries (the sentiment gate haircuts the tilt)."
+    - "Only chase attention with conviction in risk_on/breakout; in chop the exposure multiplier shrinks the book sharply (attention whipsaw)."
+  execution:
+    require_quote_before_swap: true   # risk-engine/src/policy.rs
+    execution_layer: twap_only        # large clips split to respect max_slippage_pct
+    max_slippage_pct: 0.8
+
+# -----------------------------------------------------------------------------
+# 6. EXIT RULES
+# -----------------------------------------------------------------------------
+exit_rules:
+  attention_intact_hold:
+    - "HOLD a winner while attention is intact: trending rank still rising or on-board, volume_ratio still elevated, social momentum still positive."
+    - "TRIM into a parabolic attention spike if a single name exceeds the per-name cap after a run-up (surplus to reserve)."
+  attention_decay:
+    - "EXIT when attention fades: trending rank falls off the board OR volume_ratio drops below 1.0 (the money left, only hype remains)."
+    - "EXIT when social momentum rolls over (mentions/views decelerate while held)."
+    - "EXIT on a sentiment extreme flip: rotate out when Fear & Greed crosses into extreme-greed (blowoff) or extreme-fear (capitulation)."
+  score_decay:
+    min_score_to_hold: 0.50           # below this sentiment_score, trim/exit on next rebalance
+    rebalance_threshold_pct: 3.0      # only act if target vs current drifts > 3% of NAV
+  protective:
+    stop_loss_pct: 12.0               # hard floor force-exit at -12% vs avg cost
+    take_profit_pct: 22.0             # take attention-momentum profit at +22% vs avg cost
+    fade_exit: "If a fresh entry's attention is not confirmed by volume within 2 cycles (volume_ratio stays < 1.2), exit: the attention was hype."
+  regime_exit:
+    - "On transition to chop, cut to the 0.4x multiplier (attention whipsaw): keep only the best-confirmed names and trail the rest tight."
+    - "On transition to risk_off, cut to the 0.15x multiplier and rotate to the USDT reserve — attention is fear chatter in fear."
+    - "On a continuing risk_on/breakout, hold/add: ride confirmed attention up to the 1.0x/1.1x budget."
+  portfolio_protection:
+    drawdown_throttle_pct: 22.0       # risk-engine: max_total_drawdown_pct — block new BUYs while breached
+    kill_switch_pct: 24.0             # risk-engine: kill_switch_drawdown_pct — halt all trading (latching)
+    note: >
+      The throttle is soft (no new risk, existing exits still allowed). The kill
+      switch latches: once engaged it stays engaged for the run and only
+      protective/heartbeat flows continue.
+
+# -----------------------------------------------------------------------------
+# 7. POSITION SIZING — mirrors allocator.rs::build_targets()
+# -----------------------------------------------------------------------------
+position_sizing:
+  method: score_proportional          # proportional to sentiment_score
+  steps:
+    - "Select entries with sentiment_score >= min_score_to_enter, capped at max_positions."
+    - "If none qualify -> hold full reserve (USDT)."
+    - "risk_budget = (100 - target_stable_reserve_pct) * regime.exposure_multiplier, clamped to [0, 100 - min_stable_reserve]."
+    - "Per name: weight = risk_budget * (sentiment_score / Σ selected_sentiment_scores)."
+    - "Cap each weight at max_position_weight_pct; surplus falls back to the stable reserve (never rejected)."
+    - "Stable reserve = 100 - Σ allocated (the remainder — small in risk_on/breakout, large in chop/risk_off)."
+  parameters:
+    target_stable_reserve_pct: 12.0   # strategy_config.rs analogue (floor; >= risk policy min_stable_reserve 10)
+    max_position_weight_pct: 17.0     # <= risk policy max_position_pct (18)
+    max_new_position_pct: 12.0        # risk-engine cap on a single new buy
+  regime_exposure_multiplier:
+    breakout: 1.1
+    risk_on: 1.0
+    chop: 0.4
+    risk_off: 0.15
+  note: >
+    The per-name 17% cap and the >= 10% min_stable_reserve floor always bound the
+    book; surplus over caps falls back to the USDT reserve. The allocator and the
+    Rust risk engine clamp any over-allocation, including the 1.1x breakout
+    over-deployment.
+
+# -----------------------------------------------------------------------------
+# 8. DAILY-TRADE REQUIREMENT — risk-engine/src/policy.rs::DailyTradeRequirement
+# -----------------------------------------------------------------------------
+daily_trade_requirement:
+  enabled: true
+  min_trades_per_day: 1
+  max_heartbeat_trade_pct: 0.10       # if no signal-driven trade occurs, a tiny
+                                      # heartbeat trade (<= 0.10% NAV) satisfies the
+                                      # requirement without taking real risk.
+  rationale: >
+    The competition mandates demonstrable daily activity. This Skill is flat for
+    long stretches (chop with noisy attention, or risk_off). When flat a minimal
+    heartbeat trade keeps the agent compliant while the kill switch / throttle
+    still gate everything else.
+
+# -----------------------------------------------------------------------------
+# 9. RISK POLICY SUMMARY — the Rust engine is the final authority
+# -----------------------------------------------------------------------------
+risk_policy:
+  source: crates/risk-engine/src/policy.rs (defaults)
+  max_total_drawdown_pct: 22.0
+  max_daily_drawdown_pct: 7.0
+  max_position_pct: 18.0
+  max_new_position_pct: 12.0
+  min_stable_reserve_pct: 10.0
+  max_slippage_pct: 0.8
+  kill_switch_drawdown_pct: 24.0
+  require_quote_before_swap: true
+  execution_layer: twap_only
+  require_rust_policy_validation: true
+  note: >
+    All LLM-proposed targets are validated by the Rust risk engine before any
+    swap. The attention tilt can re-rank and re-size candidates but cannot
+    override risk — proposals that violate caps are clamped or rejected.
+
+# -----------------------------------------------------------------------------
+# 10. OUTPUTS — the decision payload (see examples/*.json)
+# -----------------------------------------------------------------------------
+outputs:
+  market_regime: "one of risk_on | risk_off | chop | breakout"
+  sentiment_scores: "list of { symbol, base_score, trend_score, volume_component, social_component, attention_tilt, sentiment_gate_factor, sentiment_score, security_penalty }"
+  target_portfolio: "list of { symbol, weight_pct }"
+  actions: "list of entry/exit/trim/rebalance/heartbeat orders"
+  risk_policy: "the effective caps applied this cycle"

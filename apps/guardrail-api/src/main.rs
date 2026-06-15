@@ -37,6 +37,7 @@ mod sdk_catalog;
 mod server;
 mod signing_policy;
 mod skill;
+mod stream;
 mod skills;
 mod sweep;
 mod trending;

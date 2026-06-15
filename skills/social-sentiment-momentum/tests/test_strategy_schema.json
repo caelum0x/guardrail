@@ -1,0 +1,36 @@
+{
+  "description": "Required-output schema contract for the social-sentiment-momentum-bsc Skill.",
+  "required_outputs": [
+    "market_regime",
+    "sentiment_scores",
+    "target_portfolio",
+    "actions",
+    "risk_policy"
+  ],
+  "market_regime_enum": ["risk_on", "risk_off", "chop", "breakout"],
+  "sentiment_score_fields": ["symbol", "trend_score", "volume_component", "social_component", "attention_tilt", "base_score", "security_penalty", "sentiment_score"],
+  "target_portfolio_fields": ["symbol", "weight_pct"],
+  "action_types": ["entry", "exit", "rebalance", "trim", "no_entry", "reject", "heartbeat"],
+  "invariants": {
+    "score_range": [0.0, 1.0],
+    "attention_tilt_range": [0.0, 1.0],
+    "volume_component_range": [0.0, 1.0],
+    "weights_sum_pct": 100,
+    "max_position_weight_pct": 17.0,
+    "min_score_to_enter": 0.65,
+    "min_score_to_hold": 0.50,
+    "target_stable_reserve_pct": 12.0,
+    "min_stable_reserve_pct": 10.0,
+    "max_positions": 5,
+    "tilt_blend": "0.4*trend_score + 0.35*volume_component + 0.25*social_component",
+    "volume_confirm_ratio": 1.5,
+    "volume_fakeout_ratio": 1.0,
+    "sentiment_gate": { "extreme_greed": 80, "extreme_fear": 20, "factor_at_extreme": 0.6 },
+    "stop_loss_pct": 12.0,
+    "take_profit_pct": 22.0,
+    "drawdown_throttle_pct": 22.0,
+    "kill_switch_pct": 24.0,
+    "exposure_multipliers": { "breakout": 1.1, "risk_on": 1.0, "chop": 0.4, "risk_off": 0.15 },
+    "reserve_symbol": "USDT"
+  }
+}

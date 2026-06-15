@@ -105,5 +105,27 @@
     "eligible_universe_size": 20,
     "examples_count": 4,
     "spec_file": "skills/volatility-targeted-risk-parity/strategy_spec.yaml"
+  },
+  {
+    "id": "social-sentiment-momentum",
+    "name": "social-sentiment-momentum-bsc",
+    "path": "skills/social-sentiment-momentum",
+    "summary": "A social + sentiment momentum strategy over 20 eligible BSC tokens that reads the crowd rather than the chart: it asks whether ATTENTION is accelerating and whether that attention is CONFIRMED by money. The signal blends a trending-rank VELOCITY leg (a name climbing the CMC trending / most-visited board vs the prior cycle), a VOLUME SURGE leg (volume_ratio = volume_24h / avg_volume >= 1.5), and a SOCIAL ATTENTION leg (mentions/views momentum): attention_tilt = 0.4*trend_score + 0.35*volume_component + 0.25*social_component, where hype without volume (volume_ratio < 1.0) collapses volume_component to 0 (faded). A market-wide Fear & Greed sentiment gate haircuts the tilt by 0.6 at extremes (>= 80 blowoff-top, <= 20 capitulation). The tilt multiplies the base alpha score, the security penalty is re-applied as a haircut, and a score-proportional allocator with a per-name cap and a USDT reserve builds the target book. Exposure is full/peak in risk_on/breakout (1.0/1.1) and cut in chop (0.4) / risk_off (0.15).",
+    "regimes": ["risk_on", "risk_off", "chop", "breakout"],
+    "inputs": [
+      "cmc_quotes",
+      "cmc_trending",
+      "trending_rank_velocity",
+      "volume_surge",
+      "social_attention",
+      "cmc_fear_greed",
+      "cmc_dex_liquidity",
+      "cmc_token_security",
+      "cmc_global",
+      "eligible_asset_list"
+    ],
+    "eligible_universe_size": 20,
+    "examples_count": 4,
+    "spec_file": "skills/social-sentiment-momentum/strategy_spec.yaml"
   }
 ]
