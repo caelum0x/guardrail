@@ -6,4 +6,5 @@
 //! shared [`crate::util`] helpers.
 
 pub mod agent_surface;
+pub mod commerce;
 pub mod experiment;
