@@ -23,6 +23,7 @@ members = [
   "crates/indicators",
   "crates/notifier",
   "crates/skill-loader",
+  "crates/chain-verifier",
   "apps/guardrail-agent",
   "apps/guardrail-api",
   "apps/guardrail-cli",
@@ -58,6 +59,7 @@ policy-compiler = { path = "crates/policy-compiler" }
 llm-interface = { path = "crates/llm-interface" }
 observability = { path = "crates/observability" }
 agent-runtime = { path = "crates/agent-runtime" }
+chain-verifier = { path = "crates/chain-verifier" }
 
 # Third-party
 tokio = { version = "1", features = ["full"] }

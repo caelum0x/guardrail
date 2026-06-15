@@ -241,7 +241,7 @@ pub fn run_exit_triggers(policy_path: &str) -> anyhow::Result<()> {
         };
         rows.push((symbol, status, weight, value, ret_24h));
     }
-    rows.sort_by(|a, b| a.4.cmp(&b.4));
+    rows.sort_by_key(|a| a.4);
 
     println!("# Exit Triggers");
     println!();

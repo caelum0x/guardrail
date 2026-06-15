@@ -280,7 +280,7 @@ pub fn run_liquidity(policy_path: &str, limit: usize) -> anyhow::Result<()> {
         }
         anyhow::Ok(rows)
     })?;
-    rows.sort_by(|a, b| a.5.cmp(&b.5));
+    rows.sort_by_key(|a| a.5);
     rows.truncate(limit.clamp(1, 50));
 
     println!("# Liquidity");

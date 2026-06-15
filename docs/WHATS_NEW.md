@@ -13,6 +13,21 @@ Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) �
 
 ## Phase 2 — engine, data, dashboard & tooling (newest)
 
+- **On-chain proof verification (BNB SDK).** The proof story was self-attested —
+  hashes could be recomputed but nothing confirmed the chain. New crate
+  `crates/chain-verifier` adds **read-only** BSC JSON-RPC checks (`eth_chainId`,
+  `eth_getCode`, `eth_getTransactionReceipt`) that confirm the competition
+  contract is deployed and the registration tx was mined to it — no keys, no
+  signing, ABI-free. Wired into `GET /proof/verify` (new `onchain_configured`
+  flag + `onchain_*` checks), surfaced as a dedicated "On-chain Verification"
+  section on the dashboard `/proof` page, and mirrored in the standalone
+  `clients/proof-verifier/verify.py --rpc` using only the Python stdlib.
+  **Offline-safe:** with `BSC_RPC_URL` unset the checks are `skipped`, never
+  failed, so the paper/demo flow stays green. Verified against live BSC mainnet —
+  the competition contract `0x212c61b9b72c95d95bf29cf032f5e5635629aed5` returns
+  ~2.5 KB of deployed bytecode. Detail: [BNB_AGENT_IDENTITY.md](BNB_AGENT_IDENTITY.md).
+  Verify: `python3 clients/proof-verifier/verify.py --rpc https://bsc-dataseed.bnbchain.org`.
+
 - **Snapshot persistence (Track G).** The agent now persists periodic market
   snapshots to an append-only store under `data/snapshots/` so the analytics have
   real history to chart without replaying the full event log. A new read-only

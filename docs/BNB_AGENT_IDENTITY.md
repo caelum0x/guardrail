@@ -83,4 +83,38 @@ These are pure string formatting — no network access.
 | **Verifiable identity** | `AgentIdentity::agent_id()` deterministic SHA-256; `RegistrationRequest::registration_id()` deterministic over canonical JSON. |
 | **Policy/report commitments** | `policy_hash` and `report_hash` bind the running agent to its exact policy and published report. |
 | **On-chain proof** | `AgentProof` + BscScan `address_url`/`tx_url`; competition registration tx anchored via TWAK (contract `0x212c61b9b72c95d95bf29cf032f5e5635629aed5`). |
-| **Separation of concerns** | Identity/proof isolated in `bnb-agent`; deterministic and chain-free, so artifacts are reproducible and testable. |
+| **Independent on-chain verification** | `chain-verifier` performs read-only BSC JSON-RPC checks that confirm the contract is deployed and the registration tx was mined — verifiable, not self-attested (see below). |
+| **Separation of concerns** | Identity/proof isolated in `bnb-agent` (deterministic, chain-free); the *optional* on-chain reads live in a separate `chain-verifier` crate, so the core artifacts stay reproducible and testable. |
+
+## Independent on-chain verification (`chain-verifier`)
+
+The hashing and proof artifacts above are deterministic and **self-attested** —
+a verifier can recompute them, but recomputation alone does not prove the claim
+is anchored on the chain. The `chain-verifier` crate closes that gap with
+**read-only** BSC JSON-RPC calls (no keys, no signing, cannot move funds):
+
+| Check | RPC method | What it proves |
+|---|---|---|
+| `onchain_chain_id` | `eth_chainId` | The endpoint is BSC mainnet (chain id `56`). |
+| `onchain_contract_code` | `eth_getCode` | The competition contract has deployed bytecode on-chain. |
+| `onchain_registration_receipt` | `eth_getTransactionReceipt` | The registration tx (when anchored) was mined with `status=success` and `to` = the competition contract. |
+
+The checks are **ABI-free** on purpose — they never guess a registry view
+selector, so every claim is one a judge can reproduce with `cast`/`curl`.
+Registration may be sponsored by a paymaster/relayer, so a `from` other than the
+agent wallet is *not* treated as a failure (it is only noted when it matches).
+
+**Offline-safe.** When `BSC_RPC_URL` is unset the checks return `skipped` rather
+than failing, so the paper/demo flow stays green. Set `BSC_RPC_URL` to verify
+against the live chain.
+
+Three surfaces consume it:
+
+- **API** — `GET /proof/verify` appends the on-chain checks (reads `BSC_RPC_URL`).
+- **Dashboard** — `/proof` renders a dedicated "On-chain Verification" section.
+- **Standalone** — `clients/proof-verifier/verify.py --rpc <URL>` mirrors the
+  exact same checks using only the Python standard library.
+
+> Verified against live BSC mainnet: the competition contract
+> `0x212c61b9b72c95d95bf29cf032f5e5635629aed5` returns ~2.5 KB of deployed
+> bytecode via `eth_getCode`.

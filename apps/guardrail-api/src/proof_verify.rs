@@ -7,6 +7,12 @@
 //! API so a judge can verify without leaving the dashboard. Recomputation uses
 //! the same `bnb_agent::sha256_hex_str` the runtime used to produce the hashes.
 //!
+//! When `BSC_RPC_URL` is set it additionally performs read-only on-chain checks
+//! (via the `chain-verifier` crate) — chain id, deployed contract bytecode, and
+//! the registration transaction receipt — so the proof is verifiable against
+//! the chain itself, not just self-attested. With no RPC configured those
+//! checks are `skipped` and the offline flow stays green.
+//!
 //! Read-only and panic-free: a missing report degrades to a clear "no report"
 //! result rather than an error.
 
@@ -95,13 +101,37 @@ pub async fn proof_verify() -> Json<Value> {
         if tx.is_empty() { "not registered (optional in paper)".to_string() } else { tx.clone() },
     ));
 
-    let passed = checks
+    // 7. on-chain verification (read-only BSC JSON-RPC). When `BSC_RPC_URL` is
+    //    set, this confirms the chain id, that the competition contract has
+    //    deployed bytecode, and that the registration tx (if any) was mined to
+    //    that contract. When it is unset the checks are `skipped`, never failed,
+    //    so the offline paper/demo flow stays green.
+    let rpc_url = chain_verifier::rpc_url_from_env();
+    let onchain = chain_verifier::verify_onchain(
+        rpc_url.as_deref(),
+        COMPETITION_CONTRACT,
+        &wallet,
+        if tx.is_empty() { None } else { Some(tx.as_str()) },
+    )
+    .await;
+    for c in &onchain.checks {
+        checks.push(json!({
+            "name": c.name,
+            "status": c.status.as_str(),
+            "detail": c.detail,
+        }));
+    }
+
+    // A proof passes when no check failed; `skipped` checks (e.g. on-chain when
+    // no RPC is configured) do not block it.
+    let passed = !checks
         .iter()
-        .all(|c| c.get("status").and_then(Value::as_str) == Some("pass"));
+        .any(|c| c.get("status").and_then(Value::as_str) == Some("fail"));
 
     Json(json!({
         "passed": passed,
         "report_path": REPORT_PATH,
+        "onchain_configured": onchain.configured,
         "recomputed_policy_hashes": recomputed.iter().map(|(f, h)| json!({"file": f, "sha256": h})).collect::<Vec<_>>(),
         "checks": checks,
     }))

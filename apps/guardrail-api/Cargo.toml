@@ -15,6 +15,7 @@ strategy-engine.workspace = true
 risk-engine.workspace = true
 backtester.workspace = true
 bnb-agent.workspace = true
+chain-verifier.workspace = true
 indicators = { path = "../../crates/indicators" }
 portfolio-optimizer = { path = "../../crates/portfolio-optimizer" }
 skill-loader = { path = "../../crates/skill-loader" }
