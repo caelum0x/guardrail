@@ -29,6 +29,7 @@ mod mandates;
 mod optimize;
 mod orderbook;
 mod playbook;
+mod pnl;
 mod presets;
 mod prizes;
 mod quotes;

@@ -15,7 +15,7 @@ cargo run -p guardrail-api                       # binds 127.0.0.1:8080
 curl -fsS http://127.0.0.1:8080/health
 ```
 
-There are **73 routes**. Everything is offline-safe (paper mode, deterministic
+There are **74 routes**. Everything is offline-safe (paper mode, deterministic
 mocks). The dashboard, web-lite cockpit, and the TS/Python/Go SDKs are all
 read-only consumers of this surface.
 
