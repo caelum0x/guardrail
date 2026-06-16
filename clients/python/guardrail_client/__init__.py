@@ -525,3 +525,13 @@ class GuardrailClient:
     def portfolio_risk(self) -> Dict[str, Any]:
         """Portfolio concentration metrics: HHI, effective-N, … (``/portfolio/risk``)."""
         return self._get_json("/portfolio/risk")
+
+    def orderbook(self, orders: Optional[str] = None) -> Dict[str, Any]:
+        """Run the matching engine over a compact order spec (``/orderbook``).
+
+        ``orders`` is a ``;``-separated list of ``side,kind,price,qty`` entries,
+        e.g. ``b,limit,100,5;s,market,,3``. Omit it for the server's demo book.
+        """
+        if orders:
+            return self._get_json(self._build_path("/orderbook", {"orders": orders}))
+        return self._get_json("/orderbook")

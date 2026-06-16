@@ -61,6 +61,9 @@ declare function clearInterval(handle: unknown): void;
 // mistake exits non-zero.
 const EXIT_OK = 0;
 const EXIT_USAGE = 2;
+// `smoke` is the one command that is NOT offline-safe by design: it is a
+// pre-ship gate, so it exits non-zero when any quant endpoint fails to respond.
+const EXIT_SMOKE_FAIL = 1;
 
 const DEFAULT_BASE_URL = "http://localhost:8080";
 const REQUEST_TIMEOUT_MS = 5000;
@@ -417,6 +420,80 @@ async function cmdWatch(args: ParsedArgs): Promise<number> {
   });
 }
 
+/** One quant endpoint to smoke, paired with the SDK call that exercises it. */
+interface SmokeCheck {
+  name: string;
+  run: (client: GuardrailClient) => Promise<Record<string, unknown>>;
+}
+
+// Mirrors scripts/smoke_quant.sh: the same nine read-only quant endpoints, with
+// inputs that produce a real (non-error) response. This is the typed,
+// cross-platform sibling of that bash script.
+const SMOKE_CHECKS: readonly SmokeCheck[] = [
+  { name: "ta", run: (c) => c.ta({ indicator: "rsi", series: [44, 44.3, 44.1, 43.6, 44.3, 44.8], period: 5 }) },
+  { name: "fees", run: (c) => c.fees({ notionalUsd: 25000, quantity: 12, side: "buy" }) },
+  { name: "sizer", run: (c) => c.sizer({ method: "kelly", win_prob: 0.6, odds: 1.5 }) },
+  { name: "orderbook", run: (c) => c.orderbook("s,limit,101,5;b,market,,6") },
+  { name: "pnl", run: (c) => c.pnl("CAKE,buy,10,2;CAKE,sell,4,3", "CAKE:3") },
+  { name: "correlation", run: (c) => c.correlation("BTC:0.01,-0.02,0.03;ETH:0.012,-0.018,0.025") },
+  { name: "equity/indicators", run: (c) => c.equityIndicators("rsi", 14) },
+  { name: "portfolio/risk", run: (c) => c.portfolioRisk() },
+  { name: "cmc/capabilities", run: (c) => c.cmcCapabilities() },
+];
+
+type SmokeOutcome = "pass" | "warn" | "fail";
+
+/** Classify one endpoint's result: a throw is FAIL, an `error` field is WARN
+ * (reachable but needs a prior run), otherwise PASS. */
+function classifySmoke(result: Record<string, unknown> | null, threw: unknown): SmokeOutcome {
+  if (threw !== undefined || result == null) return "fail";
+  return "error" in result ? "warn" : "pass";
+}
+
+async function cmdSmoke(args: ParsedArgs): Promise<number> {
+  const client = newClient(args.base);
+  const results: { name: string; outcome: SmokeOutcome; detail: string }[] = [];
+
+  for (const check of SMOKE_CHECKS) {
+    let result: Record<string, unknown> | null = null;
+    let threw: unknown;
+    try {
+      result = await check.run(client);
+    } catch (error) {
+      threw = error ?? new Error("unknown error");
+    }
+    const outcome = classifySmoke(result, threw);
+    const detail =
+      outcome === "fail"
+        ? errorMessage(threw ?? new Error("no response"))
+        : outcome === "warn"
+          ? String((result as Record<string, unknown>).error)
+          : "";
+    results.push({ name: check.name, outcome, detail });
+  }
+
+  const fails = results.filter((r) => r.outcome === "fail").length;
+
+  if (args.json) {
+    printJSON({ base: args.base, fails, results });
+    return fails === 0 ? EXIT_OK : EXIT_SMOKE_FAIL;
+  }
+
+  println(`quant API smoke against ${args.base}`);
+  for (const r of results) {
+    const tag = r.outcome.toUpperCase().padEnd(4);
+    const suffix = r.detail ? `  (${r.detail})` : "";
+    println(`  [${tag}] ${r.name.padEnd(20)}${suffix}`);
+  }
+  println("");
+  println(
+    fails === 0
+      ? "OK — all quant endpoints responded with valid JSON"
+      : `FAILED — ${fails} endpoint(s) did not respond correctly`,
+  );
+  return fails === 0 ? EXIT_OK : EXIT_SMOKE_FAIL;
+}
+
 // --- Help + dispatch ------------------------------------------------------
 
 const USAGE = `guardrail — operator CLI for the Guardrail Alpha API
@@ -433,6 +510,7 @@ Commands:
   verify     show the server-side /proof/verify pass/fail table
   snapshots  show the latest run summary and per-asset latest-price sample
   watch      poll /compete + /regime on an interval, refreshing a status line
+  smoke      exercise every quant endpoint; PASS/FAIL table, non-zero on failure
   help       show this help
 
 Common flags:
@@ -444,8 +522,8 @@ watch flags:
   --once        print a single status tick and exit
   (--json emits one JSON object per tick; Ctrl-C stops cleanly)
 
-All commands are offline-safe: they print a notice and exit 0 when the API is
-unreachable.`;
+All commands except \`smoke\` are offline-safe: they print a notice and exit 0
+when the API is unreachable. \`smoke\` is a gate and exits non-zero on failure.`;
 
 /** Dispatch a parsed command to its handler. Pure of process.exit. */
 async function dispatch(args: ParsedArgs): Promise<number> {
@@ -466,6 +544,8 @@ async function dispatch(args: ParsedArgs): Promise<number> {
       return cmdSnapshots(args);
     case "watch":
       return cmdWatch(args);
+    case "smoke":
+      return cmdSmoke(args);
     case "help":
     case "-h":
     case "--help":

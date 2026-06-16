@@ -470,6 +470,14 @@ export class GuardrailClient {
   portfolioRisk(): Promise<Record<string, unknown>> {
     return this.getJson("/portfolio/risk");
   }
+
+  /** Run the matching engine over a compact order spec (``/orderbook``).
+   * `orders` is `;`-separated `side,kind,price,qty` entries, e.g.
+   * `b,limit,100,5;s,market,,3`. Omitted → the server's demo book. */
+  orderbook(orders?: string): Promise<Record<string, unknown>> {
+    const qs = orders ? `?orders=${encodeURIComponent(orders)}` : "";
+    return this.getJson(`/orderbook${qs}`);
+  }
 }
 
 export default GuardrailClient;
