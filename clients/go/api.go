@@ -553,6 +553,16 @@ func (c *Client) PnL(ctx context.Context, fills, marks string) (map[string]any, 
 	return c.getMapQuery(ctx, "/pnl", q)
 }
 
+// Correlation returns a pairwise correlation matrix over named return series
+// (/correlation). series is "name:v1,v2,…;name2:…" (empty for the server default).
+func (c *Client) Correlation(ctx context.Context, series string) (map[string]any, error) {
+	q := url.Values{}
+	if series != "" {
+		q.Set("series", series)
+	}
+	return c.getMapQuery(ctx, "/correlation", q)
+}
+
 func joinInts(values []int) string {
 	parts := make([]string, len(values))
 	for i, v := range values {

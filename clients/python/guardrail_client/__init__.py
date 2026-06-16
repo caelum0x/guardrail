@@ -501,3 +501,12 @@ class GuardrailClient:
         """
         params = {k: v for k, v in {"fills": fills, "marks": marks}.items() if v is not None}
         return self._get_json(self._build_path("/pnl", params) if params else "/pnl")
+
+    def correlation(self, series: Optional[str] = None) -> Dict[str, Any]:
+        """Pairwise correlation matrix over named return series (``/correlation``).
+
+        ``series`` is ``name:v1,v2,…;name2:…``.
+        """
+        if series:
+            return self._get_json(self._build_path("/correlation", {"series": series}))
+        return self._get_json("/correlation")

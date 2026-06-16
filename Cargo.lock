@@ -825,6 +825,7 @@ dependencies = [
  "clap",
  "cmc-client",
  "common",
+ "correlation",
  "fee-model",
  "indicators",
  "market-data",
