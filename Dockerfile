@@ -17,6 +17,11 @@ COPY --from=builder /app/target/release/guardrail-api /usr/local/bin/guardrail-a
 RUN useradd --create-home --uid 10002 guardrail \
     && mkdir -p /app/data \
     && chown -R guardrail /app
+# Seed the read-only API with a deterministic paper dataset so the deployed
+# dashboard shows real data on first load (ephemeral on free tier; overridden
+# if a real agent ever writes to a mounted disk here).
+COPY --chown=guardrail:guardrail deploy/seed/guardrail_alpha.db /app/data/guardrail_alpha.db
+COPY --chown=guardrail:guardrail deploy/seed/run_report.json /app/data/run_report.json
 USER guardrail
 ENV RUST_LOG=info
 # Render injects $PORT; the API's bind_addr honors PORT (host fixed to 0.0.0.0).
