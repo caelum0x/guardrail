@@ -49,6 +49,13 @@ const TOOLS: Tool[] = [
     api: "GET /pnl",
     example: "/pnl?fills=CAKE,buy,10,2;CAKE,sell,4,3&marks=CAKE:3",
   },
+  {
+    href: "/correlation",
+    title: "Correlation Matrix",
+    blurb: "Pairwise Pearson correlation over named return series.",
+    api: "GET /correlation",
+    example: "/correlation?series=BTC:0.01,-0.02,0.03;ETH:0.012,-0.018,0.025",
+  },
 ];
 
 export default async function QuantPage() {

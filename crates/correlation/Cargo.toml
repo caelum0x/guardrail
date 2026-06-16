@@ -1,0 +1,9 @@
+[package]
+name = "correlation"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Pearson correlation, covariance, beta, and a correlation matrix over return series."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
