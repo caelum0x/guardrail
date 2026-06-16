@@ -94,9 +94,12 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
             get(crate::ensemble_live::ensemble_live),
         )
         .route("/skills", get(crate::skills::skills))
-        .route("/skills/{id}", get(crate::skill_detail::skill_detail))
+        // axum 0.7 (matchit 0.7) uses `:id` for path params, not `{id}`. The
+        // `{id}` form is treated as a literal segment, so these routes 404'd on
+        // every real id until corrected here.
+        .route("/skills/:id", get(crate::skill_detail::skill_detail))
         .route(
-            "/skills/{id}/backtest",
+            "/skills/:id/backtest",
             get(crate::skill_detail::skill_backtest),
         )
         .route("/proof/verify", get(crate::proof_verify::proof_verify))

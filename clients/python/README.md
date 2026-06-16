@@ -210,12 +210,27 @@ A stdlib-only operator CLI ships in the package, mirroring the TypeScript
 
 ```bash
 python -m guardrail_client status                       # /health + /readiness + /regime
-python -m guardrail_client regime --json
+python -m guardrail_client journal --json
+python -m guardrail_client skills cmc-regime-routed-alpha
 python -m guardrail_client smoke --base http://127.0.0.1:8091
 ```
 
-Subcommands: `status`, `regime`, `smoke`, `help`. Common flags: `--base URL`
-(default `$GUARDRAIL_BASE_URL` or `http://localhost:8080`) and `--json`.
+Subcommands:
+
+| Command | Routes | Description |
+|---|---|---|
+| `status` | `/health` + `/readiness` + `/regime` | one-line status summary |
+| `regime` | `/regime` | current market regime + inputs |
+| `journal` | `/journal` | compact per-cycle decision journal |
+| `ensemble` | `/ensemble` | current regime + per-skill weights |
+| `snapshots` | `/snapshots` | latest run summary + price sample |
+| `skills [ID]` | `/skills`, `/skills/{id}` | skill catalog, or one skill's detail |
+| `verify` | `/proof/verify` | server-side proof pass/fail table |
+| `smoke` | all 9 quant endpoints | PASS/WARN/FAIL gate (non-zero on failure) |
+| `help` | — | usage |
+
+Common flags: `--base URL` (default `$GUARDRAIL_BASE_URL` or
+`http://localhost:8080`) and `--json`.
 
 Every subcommand except `smoke` is **offline-safe**: it prints a notice and
 exits `0` when the API is unreachable. `smoke` is the lone exception — a
