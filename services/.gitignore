@@ -1,0 +1,4 @@
+# Compiled Go service binaries (built by `go build`/`go run`)
+price-oracle/price-oracle
+notification-relay/notification-relay
+health-aggregator/health-aggregator
