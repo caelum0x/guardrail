@@ -31,6 +31,15 @@ against deterministic CMC + TWAK mocks — no API keys or chain access required.
 
 > 📹 Hosted walkthrough: _add your Loom / YouTube link here_
 
+## Live
+
+| | URL |
+|---|---|
+| **Dashboard** (Vercel, read-only) | https://dashboard-neon-beta-80.vercel.app |
+| **API** (Render, read-only) | https://guardrail-rlzb.onrender.com — try [`/health`](https://guardrail-rlzb.onrender.com/health), [`/proof`](https://guardrail-rlzb.onrender.com/proof), [`/cockpit`](https://guardrail-rlzb.onrender.com/cockpit) |
+
+> The Render free instance spins down on inactivity — the first request after idle can take ~50 s to cold-start, then it's fast.
+
 ## Architecture
 
 Rust live engine (the only thing that trades) → emits an append-only event log +
@@ -175,11 +184,27 @@ on deterministic mocks if any are absent. See
 
 ## Submission proof
 
-**Track 1 — live BSC agent (self-custody):**
+### Addresses & on-chain references
 
-- Agent wallet (BSC, chain `56`): [`0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E`](https://bscscan.com/address/0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E) — created via `twak wallet create`; keys stay on-device.
-- Competition contract: [`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`](https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5) — register with `twak compete register`.
-- ERC-8004 Identity Registry (BSC): [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432) — anchored on a live autonomous run; surfaced on `/proof`.
+**Track 1 agent (self-custody):**
+
+| What | Address (BSC, chain `56`) |
+|---|---|
+| **Agent wallet** (Track 1 submission) | [`0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E`](https://bscscan.com/address/0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E) — created via `twak wallet create`; keys stay on-device |
+| **Competition contract** | [`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`](https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5) — register with `twak compete register` |
+
+**BNB AI Agent SDK — identity & commerce (mainnet `56` / testnet `97`):**
+
+| Contract | Mainnet (56) | Testnet (97) |
+|---|---|---|
+| ERC-8004 Identity Registry | [`0x8004A169…a432`](https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432) | `0x8004A818…BD9e` |
+| ERC-8183 AgenticCommerce | `0xea4daa31…6eba6` | `0xa206c051…3b0de` |
+| ERC-8183 EvaluatorRouter | `0x51895229…cd6da` | `0xd7d36d66…f66f25` |
+| ERC-8183 OptimisticPolicy | `0x9c018457…66de5` | `0x4f4678d4…b78a6` |
+
+**x402 payment token** (EIP-3009, signed by the TWAK self-custody signer): mainnet [`0xcE24439F2D9C6a2289F741120FE202248B666666`](https://bscscan.com/address/0xcE24439F2D9C6a2289F741120FE202248B666666) · testnet `0xc70B8741…48E5565` · policy: [`configs/x402/signing_policy.json`](configs/x402/signing_policy.json).
+
+**Eligible trading universe:** 20 BEP-20 tokens, all `chain_id 56` — [`configs/eligible_assets.bsc.json`](configs/eligible_assets.bsc.json). The ERC-8004 `agentId` + mint tx populate on `/proof` after a live autonomous anchor run.
 
 Everything tying the running agent to its commitments is deterministic and
 inspectable offline:
