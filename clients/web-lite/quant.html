@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guardrail — Quant Playground</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0d1117; --card:#161b22; --line:#30363d; --text:#e6edf3; --muted:#8b949e; --accent:#58a6ff; }
+    * { box-sizing: border-box; }
+    body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+    header { padding:16px 20px; border-bottom:1px solid var(--line); display:flex; gap:12px; align-items:center; flex-wrap:wrap; }
+    header h1 { font-size:16px; margin:0; }
+    header input { background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; min-width:280px; }
+    main { display:grid; grid-template-columns:repeat(auto-fill,minmax(360px,1fr)); gap:16px; padding:20px; }
+    .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; }
+    .card h2 { font-size:14px; margin:0 0 8px; }
+    .card .api { color:var(--muted); font-family:ui-monospace,Menlo,monospace; font-size:12px; }
+    label { display:block; color:var(--muted); font-size:12px; margin:8px 0 2px; }
+    input.q, select.q { width:100%; background:var(--bg); color:var(--text); border:1px solid var(--line); border-radius:6px; padding:6px 8px; }
+    button { margin-top:10px; background:var(--accent); color:#0d1117; border:0; border-radius:6px; padding:7px 12px; font-weight:600; cursor:pointer; }
+    pre { background:var(--bg); border:1px solid var(--line); border-radius:6px; padding:10px; overflow:auto; max-height:260px; font-size:12px; margin-top:10px; }
+    .err { color:#f85149; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Guardrail · Quant Playground</h1>
+    <label style="margin:0;color:var(--muted)">API
+      <input id="api" value="http://127.0.0.1:8080" />
+    </label>
+    <span class="api">zero-build · read-only</span>
+  </header>
+  <main id="cards"></main>
+
+  <script>
+    const tools = [
+      { id:"ta", title:"TA Studio", api:"GET /ta",
+        fields:[["indicator","rsi"],["series","44,44.3,44.1,43.6,44.3,44.8,45.1,45.4,45.8,46"],["period","5"]],
+        path:f => `/ta?indicator=${enc(f.indicator)}&series=${enc(f.series)}&period=${enc(f.period)}` },
+      { id:"fees", title:"Swap Cost", api:"GET /fees",
+        fields:[["notional_usd","25000"],["quantity","12"],["side","buy"]],
+        path:f => `/fees?notional_usd=${enc(f.notional_usd)}&quantity=${enc(f.quantity)}&side=${enc(f.side)}` },
+      { id:"sizer", title:"Position Sizer", api:"GET /sizer",
+        fields:[["method","kelly"],["win_prob","0.6"],["odds","1.5"]],
+        path:f => `/sizer?method=${enc(f.method)}&win_prob=${enc(f.win_prob)}&odds=${enc(f.odds)}` },
+      { id:"pnl", title:"PnL Attribution", api:"GET /pnl",
+        fields:[["fills","CAKE,buy,10,2;CAKE,sell,4,3"],["marks","CAKE:3"]],
+        path:f => `/pnl?fills=${enc(f.fills)}&marks=${enc(f.marks)}` },
+      { id:"correlation", title:"Correlation", api:"GET /correlation",
+        fields:[["series","BTC:0.01,-0.02,0.03;ETH:0.012,-0.018,0.025"]],
+        path:f => `/correlation?series=${enc(f.series)}` },
+      { id:"orderbook", title:"Order Book", api:"GET /orderbook",
+        fields:[["orders","s,limit,101,5;b,limit,99,5;b,market,,6"]],
+        path:f => `/orderbook?orders=${enc(f.orders)}` },
+    ];
+
+    function enc(v) { return encodeURIComponent(v); }
+
+    function render() {
+      const root = document.getElementById("cards");
+      for (const t of tools) {
+        const card = document.createElement("section");
+        card.className = "card";
+        card.innerHTML = `<h2>${t.title}</h2><div class="api">${t.api}</div>`;
+        const inputs = {};
+        for (const [name, def] of t.fields) {
+          const label = document.createElement("label"); label.textContent = name;
+          const input = document.createElement("input"); input.className = "q"; input.value = def;
+          inputs[name] = input;
+          card.appendChild(label); card.appendChild(input);
+        }
+        const out = document.createElement("pre"); out.textContent = "(run to fetch)";
+        const btn = document.createElement("button"); btn.textContent = "Run";
+        btn.onclick = async () => {
+          const f = {}; for (const k in inputs) f[k] = inputs[k].value;
+          const base = document.getElementById("api").value.replace(/\/+$/, "");
+          out.classList.remove("err"); out.textContent = "…";
+          try {
+            const res = await fetch(base + t.path(f));
+            const json = await res.json();
+            out.textContent = JSON.stringify(json, null, 2);
+          } catch (e) {
+            out.classList.add("err");
+            out.textContent = "error (is the API running?): " + e;
+          }
+        };
+        card.appendChild(btn); card.appendChild(out);
+        root.appendChild(card);
+      }
+    }
+    render();
+  </script>
+</body>
+</html>

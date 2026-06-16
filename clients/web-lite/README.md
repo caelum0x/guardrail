@@ -193,3 +193,9 @@ API, the Guardrail API (built on `tower-http`) must send permissive CORS headers
 
 If you instead serve `index.html` from the **same origin** as the API (same host and port, e.g.
 behind a reverse proxy or mounted as a static route), **no CORS configuration is needed**.
+
+## Quant playground
+
+`quant.html` is a self-contained zero-build page for the quant endpoints
+(`/ta`, `/fees`, `/sizer`, `/pnl`, `/correlation`, `/orderbook`). Open it in a
+browser and point the API field at a running `guardrail-api`.
