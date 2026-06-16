@@ -45,6 +45,7 @@ mod skill_detail;
 mod stream;
 mod skills;
 mod sweep;
+mod ta;
 mod trending;
 mod version;
 mod walkforward;

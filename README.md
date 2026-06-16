@@ -37,7 +37,7 @@ Authority flows one way; nothing downstream can reach TWAK.
               ┌───────────────────┬──────────────┴───────┬──────────────────┐
               ▼                   ▼                       ▼                  ▼
         event-store         data/run_report.json    guardrail-api      guardrail-
-        (SQLite)            (NAV, drawdown,          (69 GET routes,    exporter /
+        (SQLite)            (NAV, drawdown,          (70 GET routes,    exporter /
                             kill switch)             read-only)         metrics:9100
                                                           │
         ┌─────────────┬──────────────┬──────────────┬────┴──────┬──────────────┐

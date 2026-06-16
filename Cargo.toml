@@ -24,6 +24,8 @@ members = [
   "crates/notifier",
   "crates/skill-loader",
   "crates/chain-verifier",
+  "crates/orderbook",
+  "crates/ta-signals",
   "apps/guardrail-agent",
   "apps/guardrail-api",
   "apps/guardrail-cli",

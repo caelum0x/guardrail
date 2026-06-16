@@ -1,0 +1,14 @@
+[package]
+name = "ta-signals"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Pure-Rust technical-analysis signals library (SMA, EMA, RSI, MACD, Bollinger, ATR, Stochastic, OBV, ADX, VWAP)."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rust_decimal = { version = "1", optional = true }
+
+[features]
+default = []
+decimal = ["dep:rust_decimal"]
