@@ -185,7 +185,7 @@ truth: `apps/guardrail-api/src/server.rs::build_app`.
 ## Dashboard page inventory (`dashboard/`)
 
 The dashboard is **read-only** — it has no trading path and only renders
-`guardrail-api` responses. 64 pages (`dashboard/src/app/*`, routed via
+`guardrail-api` responses. 70 pages (`dashboard/src/app/*`, routed via
 `components/Layout.tsx`):
 
 | Page | Page | Page |

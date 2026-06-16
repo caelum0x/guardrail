@@ -12,6 +12,8 @@ const links = [
   "/liquidity",
   "/indicators",
   "/ta-studio",
+  "/fees",
+  "/sizer",
   "/trending",
   "/quotes",
   "/costs",
