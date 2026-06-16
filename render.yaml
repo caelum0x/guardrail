@@ -12,7 +12,7 @@ services:
     runtime: docker
     repo: https://github.com/caelum0x/guardrail
     branch: main
-    dockerfilePath: ./infra/Dockerfile.api
+    dockerfilePath: ./Dockerfile
     dockerContext: .
     plan: free
     healthCheckPath: /health

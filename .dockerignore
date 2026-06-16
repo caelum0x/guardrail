@@ -1,0 +1,16 @@
+# Keep the Docker build context small + fast (esp. on Render free build).
+.git
+target
+**/node_modules
+**/.next
+**/.vercel
+**/.pnpm-store
+data
+public
+docs/assets/*.mp4
+*.log
+__pycache__
+**/__pycache__
+.claude
+.env
+.env.*
