@@ -12,6 +12,10 @@ license = { text = "MIT" }
 # No runtime dependencies: this client uses only the Python standard library.
 dependencies = []
 
+[project.scripts]
+# Installs a `guardrail` console command; also runnable as `python -m guardrail_client`.
+guardrail = "guardrail_client.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["guardrail_client*"]
