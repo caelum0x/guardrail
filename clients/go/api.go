@@ -499,6 +499,47 @@ func (c *Client) getMapQuery(ctx context.Context, path string, q url.Values) (ma
 	return out, nil
 }
 
+// TA computes a technical indicator over a close-price series (/ta).
+// indicator is one of sma|ema|rsi|macd|bollinger; period/mult are optional (0 = omit).
+func (c *Client) TA(ctx context.Context, indicator string, series []float64, period int, mult float64) (map[string]any, error) {
+	q := url.Values{}
+	q.Set("indicator", indicator)
+	q.Set("series", joinFloats(series))
+	if period != 0 {
+		q.Set("period", strconv.Itoa(period))
+	}
+	if mult != 0 {
+		q.Set("mult", strconv.FormatFloat(mult, 'f', -1, 64))
+	}
+	return c.getMapQuery(ctx, "/ta", q)
+}
+
+// Fees estimates the all-in cost of a swap (/fees). Pass nil for all defaults;
+// keys: notional_usd, quantity, side, gas_units, gas_price_gwei, native_usd,
+// pool_liquidity_usd, linear_slippage_bps, protocol_fee_bps.
+func (c *Client) Fees(ctx context.Context, params map[string]string) (map[string]any, error) {
+	q := url.Values{}
+	for k, v := range params {
+		q.Set(k, v)
+	}
+	return c.getMapQuery(ctx, "/fees", q)
+}
+
+// Sizer computes a position size by method (/sizer): fixed_fractional|vol_target|kelly.
+func (c *Client) Sizer(ctx context.Context, method string, params map[string]string) (map[string]any, error) {
+	q := url.Values{}
+	q.Set("method", method)
+	for k, v := range params {
+		q.Set(k, v)
+	}
+	return c.getMapQuery(ctx, "/sizer", q)
+}
+
+// CMCCapabilities returns the CMC data->capability lineage (/cmc/capabilities).
+func (c *Client) CMCCapabilities(ctx context.Context) (map[string]any, error) {
+	return c.getMapQuery(ctx, "/cmc/capabilities", nil)
+}
+
 func joinInts(values []int) string {
 	parts := make([]string, len(values))
 	for i, v := range values {
