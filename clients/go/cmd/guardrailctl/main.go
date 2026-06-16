@@ -15,6 +15,8 @@
 //	snapshots  print the latest run summary + per-asset latest-price sample.
 //	skills     print the Skill catalog, or the detail for a given skill id.
 //	verify     print the server-side proof per-check pass/fail table.
+//	smoke      exercise every quant endpoint and print a PASS/FAIL table; the
+//	           one non-offline-safe command, it exits non-zero on failure.
 package main
 
 import (
@@ -34,6 +36,9 @@ import (
 const (
 	exitOK    = 0
 	exitUsage = 2
+	// exitSmokeFail is returned by the `smoke` gate when any quant endpoint
+	// fails to respond. It is the one command that is not offline-safe.
+	exitSmokeFail = 1
 )
 
 // requestTimeout bounds each individual HTTP call so an unreachable host fails
@@ -67,6 +72,8 @@ func run(argv []string) int {
 		return cmdSkills(rest)
 	case "verify":
 		return cmdVerify(rest)
+	case "smoke":
+		return cmdSmoke(rest)
 	case "help", "-h", "--help":
 		usage(os.Stdout)
 		return exitOK
@@ -128,13 +135,15 @@ Commands:
   snapshots  show the latest run summary and per-asset latest-price sample
   skills     show the Skill catalog, or one skill's detail (skills ID)
   verify     show the server-side proof per-check pass/fail table
+  smoke      exercise every quant endpoint; PASS/FAIL table, non-zero on failure
   help       show this help
 
 Common flags:
   --base string   API base URL (default `+guardrail.DefaultBaseURL+`)
   --json          emit JSON instead of a table (where supported)
 
-All commands are offline-safe: they print a notice and exit 0 when the API is
-unreachable. Run "guardrailctl <command> -h" for command-specific flags.
+All commands except "smoke" are offline-safe: they print a notice and exit 0
+when the API is unreachable. "smoke" is a pre-ship gate and exits non-zero on
+failure. Run "guardrailctl <command> -h" for command-specific flags.
 `)
 }
