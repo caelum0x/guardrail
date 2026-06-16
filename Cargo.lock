@@ -821,6 +821,7 @@ dependencies = [
  "indicators",
  "market-data",
  "orderbook",
+ "pnl-attribution",
  "policy-compiler",
  "position-sizer",
  "risk-engine",

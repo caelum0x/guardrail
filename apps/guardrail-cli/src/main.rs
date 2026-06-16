@@ -380,6 +380,13 @@ enum Commands {
         #[arg(long, default_value = "s,limit,101,5;b,limit,99,5;b,market,,6")]
         orders: String,
     },
+    /// Average-cost PnL attribution from a fill spec (pnl-attribution).
+    Pnl {
+        #[arg(long, default_value = "CAKE,buy,10,2;CAKE,sell,4,3;WBNB,buy,5,600")]
+        fills: String,
+        #[arg(long, default_value = "")]
+        marks: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -525,6 +532,7 @@ fn main() -> anyhow::Result<()> {
             commands::quant::run_size(&method, capital, win_prob, odds)?
         }
         Commands::Book { orders } => commands::quant::run_book(&orders)?,
+        Commands::Pnl { fills, marks } => commands::quant::run_pnl(&fills, &marks)?,
         Commands::KillSwitch { reason } => {
             println!(
                 "kill_switch_triggered reason={}",

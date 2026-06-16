@@ -33,7 +33,7 @@ through [`commands/mod.rs`](../apps/guardrail-cli/src/commands/mod.rs):
 | `agent_surface` | `commands/agent_surface.rs` | Agent card / services / scorecard / SDK catalog |
 | `commerce` | `commands/commerce.rs` | BNB SDK map, ERC-8183 commerce, x402 signing policy |
 
-There are **44 top-level subcommands** (defined in the `Commands` enum in
+There are **45 top-level subcommands** (defined in the `Commands` enum in
 `main.rs`), two of which — `policy` and `experiment` — have their own nested
 subcommands. Common flags: most analytics commands accept `--config`
 (default `configs/paper.toml`), `--steps`, and `--preset`
