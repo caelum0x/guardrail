@@ -272,3 +272,39 @@ Accept: application/json
 GET {{baseUrl}}/heartbeat
 Accept: application/json
 
+
+### /ta — technical indicator over a series
+GET {{baseUrl}}/ta?indicator=rsi&series=44,44.3,44.1,43.6,44.3,44.8&period=5
+Accept: application/json
+
+### /fees — all-in swap cost
+GET {{baseUrl}}/fees?notional_usd=25000&quantity=12&side=buy
+Accept: application/json
+
+### /sizer — position sizing
+GET {{baseUrl}}/sizer?method=kelly&win_prob=0.6&odds=1.5
+Accept: application/json
+
+### /orderbook — matching engine over an order spec
+GET {{baseUrl}}/orderbook?orders=s,limit,101,5;b,market,,6
+Accept: application/json
+
+### /pnl — average-cost PnL attribution
+GET {{baseUrl}}/pnl?fills=CAKE,buy,10,2;CAKE,sell,4,3&marks=CAKE:3
+Accept: application/json
+
+### /correlation — correlation matrix over named return series
+GET {{baseUrl}}/correlation?series=BTC:0.01,-0.02,0.03;ETH:0.012,-0.018,0.025
+Accept: application/json
+
+### /equity/indicators — indicator over the live NAV curve
+GET {{baseUrl}}/equity/indicators?indicator=rsi&period=14
+Accept: application/json
+
+### /portfolio/risk — concentration metrics (HHI, effective-N)
+GET {{baseUrl}}/portfolio/risk
+Accept: application/json
+
+### /cmc/capabilities — CMC data->capability lineage
+GET {{baseUrl}}/cmc/capabilities
+Accept: application/json
