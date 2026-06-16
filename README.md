@@ -144,6 +144,7 @@ absent. See [docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md). Longer step-by-step:
 - **[docs/INDEX.md](docs/INDEX.md)** — master table of contents for all documentation.
 - **[docs/PRODUCT_OVERVIEW.md](docs/PRODUCT_OVERVIEW.md)** — the high-level product tour and system map.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — crate graph, flows, and trust boundaries.
+- **[docs/QUANT.md](docs/QUANT.md)** — the quant suite (6 tools × crate/API/page/SDK/CLI).
 - **[docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md)** — taking the agent live (real keys, go-live).
 - **[PLAN_V2.md](PLAN_V2.md)** — expansion roadmap (offline-safe).
 - Earlier competition writeups are archived under **[docs/archive/hackathon/](docs/archive/hackathon/)**.
