@@ -16,6 +16,7 @@ const links = [
   "/sizer",
   "/orderbook",
   "/pnl",
+  "/quant",
   "/trending",
   "/quotes",
   "/costs",
