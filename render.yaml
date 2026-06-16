@@ -1,0 +1,31 @@
+# Render Blueprint — deploys the read-only Guardrail Alpha backend API.
+# Connect this repo at https://render.com (New → Blueprint); Render builds the
+# Docker image from infra/Dockerfile.api and injects $PORT (the API's bind_addr
+# honors PORT, so no host/port is hardcoded here).
+#
+# The API is read-only: it serves the dashboard from the SQLite event store.
+# To populate it with live paper data, run the agent (locally or as a Render
+# worker writing to the same disk) — see docs/LIVE_RUNBOOK.md.
+services:
+  - type: web
+    name: guardrail-api
+    runtime: docker
+    repo: https://github.com/caelum0x/guardrail
+    branch: main
+    dockerfilePath: ./infra/Dockerfile.api
+    dockerContext: .
+    plan: free
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: RUST_LOG
+        value: info
+      - key: DATABASE_URL
+        value: sqlite:///app/data/guardrail_alpha.db
+      # CORS origin for the Vercel dashboard (set to your dashboard URL).
+      - key: GUARDRAIL_API_CORS_ORIGIN
+        sync: false
+    disk:
+      name: guardrail-data
+      mountPath: /app/data
+      sizeGB: 1

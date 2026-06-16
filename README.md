@@ -15,6 +15,22 @@ proof commitments, and every decision is logged to an append-only SQLite event
 store, hashed, and replayable. The whole pipeline runs **offline in paper mode**
 against deterministic CMC + TWAK mocks — no API keys or chain access required.
 
+## Demo
+
+<p align="center">
+  <a href="docs/assets/product-demo.mp4">
+    <img src="docs/assets/screenshot-cockpit.png" alt="Guardrail Alpha — product tour" width="760" />
+  </a>
+  <br/>
+  <em>▶ <a href="docs/assets/product-demo.mp4">Watch the 30-second product tour</a> — cockpit → on-chain proof (ERC-8004) → Track 1 &amp; 2 → risk engine → self-custody.</em>
+</p>
+
+| Live cockpit | On-chain proof (ERC-8004) |
+|---|---|
+| <img src="docs/assets/screenshot-cockpit.png" width="380" alt="Live cockpit"/> | <img src="docs/assets/screenshot-proof.png" width="380" alt="On-chain proof"/> |
+
+> 📹 Hosted walkthrough: _add your Loom / YouTube link here_
+
 ## Architecture
 
 Rust live engine (the only thing that trades) → emits an append-only event log +
@@ -129,8 +145,10 @@ the full stack; `deploy/k8s` carries Kustomize manifests and `deploy/helm` a Hel
 chart.
 
 A real **live** run uses `scripts/compete.sh` and requires `CMC_API_KEY`,
-`TWAK_BASE_URL`, and `BSC_RPC_URL`; it stays on deterministic mocks if any are
-absent. See [docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md). Longer step-by-step:
+`TWAK_ACCESS_ID` + `TWAK_HMAC_SECRET` (from `twak setup` — needed for *every*
+`twak` call), `TWAK_WALLET_PASSWORD` (only to sign), and `BSC_RPC_URL`; it stays
+on deterministic mocks if any are absent. See
+[docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md). Longer step-by-step:
 [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
 ## Capabilities
@@ -153,8 +171,15 @@ absent. See [docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md). Longer step-by-step:
 - **[PLAN_V2.md](PLAN_V2.md)** — expansion roadmap (offline-safe).
 - Earlier competition writeups are archived under **[docs/archive/hackathon/](docs/archive/hackathon/)**.
 - **Dashboard (Vercel):** the read-only Next.js dashboard auto-deploys to Vercel on every push — see [docs/VERCEL_DEPLOY.md](docs/VERCEL_DEPLOY.md).
+- **Backend API (Render):** the read-only API deploys to Render from [`render.yaml`](render.yaml) (Docker via `infra/Dockerfile.api`) — connect the repo as a Render Blueprint.
 
 ## Submission proof
+
+**Track 1 — live BSC agent (self-custody):**
+
+- Agent wallet (BSC, chain `56`): [`0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E`](https://bscscan.com/address/0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E) — created via `twak wallet create`; keys stay on-device.
+- Competition contract: [`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`](https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5) — register with `twak compete register`.
+- ERC-8004 Identity Registry (BSC): [`0x8004A169FB4a3325136EB29fA0ceB6D2e539a432`](https://bscscan.com/address/0x8004A169FB4a3325136EB29fA0ceB6D2e539a432) — anchored on a live autonomous run; surfaced on `/proof`.
 
 Everything tying the running agent to its commitments is deterministic and
 inspectable offline:

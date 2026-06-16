@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "skills": {
+    "trust-wallet-api": {
+      "source": "trustwallet/tw-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/api/SKILL.md",
+      "computedHash": "cb43a9e7ade55158e7d5d8ff60c5ef3b5fed53b4caea1b09cbad0dc9e142ed7d"
+    },
+    "trust-wallet-cli": {
+      "source": "trustwallet/tw-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/wallet/SKILL.md",
+      "computedHash": "21007e45b33f8d48455ca1f9f43f935417f4559108c1220d3b5bfcb064fcf90c"
+    },
+    "trust-wallet-sdk": {
+      "source": "trustwallet/tw-agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/sdk/SKILL.md",
+      "computedHash": "fb5954be424742be85d12fce9fd561504957e168d7ce6e06339351ae6897a1d2"
+    },
+    "your-skill-name": {
+      "source": "trustwallet/tw-agent-skills",
+      "sourceType": "github",
+      "skillPath": "template/SKILL.md",
+      "computedHash": "eabf3053468aeebd1580192bea4a2d412774a174a4b165e61ae12fd260deef0f"
+    }
+  }
+}
