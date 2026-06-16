@@ -790,6 +790,7 @@ dependencies = [
  "indicators",
  "market-data",
  "observability",
+ "orderbook",
  "policy-compiler",
  "portfolio-optimizer",
  "position-sizer",

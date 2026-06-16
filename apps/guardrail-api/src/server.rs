@@ -108,6 +108,7 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/ta", get(crate::ta::ta))
         .route("/fees", get(crate::fees::fees))
         .route("/sizer", get(crate::sizer::sizer))
+        .route("/orderbook", get(crate::orderbook::orderbook))
         .route("/version", get(crate::version::version))
         .with_state(state)
 }
