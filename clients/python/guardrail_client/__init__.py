@@ -491,3 +491,13 @@ class GuardrailClient:
     def cmc_capabilities(self) -> Dict[str, Any]:
         """CMC data -> capability lineage descriptor (``/cmc/capabilities``)."""
         return self._get_json("/cmc/capabilities")
+
+    def pnl(
+        self, fills: Optional[str] = None, marks: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """Average-cost PnL attribution from a fill spec (``/pnl``).
+
+        ``fills`` is ``symbol,side,qty,price[,fee];…``; ``marks`` is ``SYM:price,…``.
+        """
+        params = {k: v for k, v in {"fills": fills, "marks": marks}.items() if v is not None}
+        return self._get_json(self._build_path("/pnl", params) if params else "/pnl")

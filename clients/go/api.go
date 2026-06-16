@@ -540,6 +540,19 @@ func (c *Client) CMCCapabilities(ctx context.Context) (map[string]any, error) {
 	return c.getMapQuery(ctx, "/cmc/capabilities", nil)
 }
 
+// PnL returns average-cost PnL attribution from a fill spec (/pnl).
+// fills is "symbol,side,qty,price[,fee];…"; marks is "SYM:price,…" (either may be empty).
+func (c *Client) PnL(ctx context.Context, fills, marks string) (map[string]any, error) {
+	q := url.Values{}
+	if fills != "" {
+		q.Set("fills", fills)
+	}
+	if marks != "" {
+		q.Set("marks", marks)
+	}
+	return c.getMapQuery(ctx, "/pnl", q)
+}
+
 func joinInts(values []int) string {
 	parts := make([]string, len(values))
 	for i, v := range values {

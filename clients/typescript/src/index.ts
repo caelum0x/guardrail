@@ -439,6 +439,16 @@ export class GuardrailClient {
   cmcCapabilities(): Promise<Record<string, unknown>> {
     return this.getJson("/cmc/capabilities");
   }
+
+  /** Average-cost PnL attribution from a fill spec (``/pnl``).
+   * `fills` is `symbol,side,qty,price[,fee];…`; `marks` is `SYM:price,…`. */
+  pnl(fills?: string, marks?: string): Promise<Record<string, unknown>> {
+    const q = new URLSearchParams();
+    if (fills) q.set("fills", fills);
+    if (marks) q.set("marks", marks);
+    const qs = q.toString();
+    return this.getJson(qs ? `/pnl?${qs}` : "/pnl");
+  }
 }
 
 export default GuardrailClient;
