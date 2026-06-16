@@ -1,0 +1,17 @@
+[project]
+name = "guardrail-reporting"
+version = "0.1.0"
+description = "Self-contained HTML/text report generator for the Guardrail agent SQLite event log and run report."
+requires-python = ">=3.10"
+# Pure standard library — sqlite3, json, html and string templating only. No third-party deps.
+dependencies = []
+
+[project.scripts]
+guardrail-report = "reporting.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["reporting"]

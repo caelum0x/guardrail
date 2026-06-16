@@ -11,6 +11,7 @@ const links = [
   "/watchlist",
   "/liquidity",
   "/indicators",
+  "/ta-studio",
   "/trending",
   "/quotes",
   "/costs",

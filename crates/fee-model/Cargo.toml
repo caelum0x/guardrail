@@ -1,0 +1,13 @@
+[package]
+name = "fee-model"
+version = "0.1.0"
+edition = "2021"
+description = "All-in swap cost estimation: gas, slippage/price-impact, protocol fees"
+license = "MIT"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rust_decimal = { version = "1", features = ["serde", "maths"] }
+
+[dev-dependencies]
+serde_json = "1"

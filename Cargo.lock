@@ -586,6 +586,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fee-model"
+version = "0.1.0"
+dependencies = [
+ "rust_decimal",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1514,6 +1523,14 @@ dependencies = [
 name = "portfolio-optimizer"
 version = "0.1.0"
 dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "position-sizer"
+version = "0.1.0"
+dependencies = [
+ "rust_decimal",
  "serde",
 ]
 
