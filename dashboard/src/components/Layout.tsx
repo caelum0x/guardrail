@@ -65,6 +65,9 @@ const links = [
   "/compete",
   "/submission",
   "/reports",
+  "/market-oracle",
+  "/transports",
+  "/journal-pro",
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
