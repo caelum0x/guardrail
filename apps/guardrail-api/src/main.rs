@@ -15,6 +15,7 @@ mod costs;
 mod drift;
 mod ensemble;
 mod ensemble_live;
+mod equity_ta;
 mod exit_triggers;
 mod experiments;
 mod exposure;
