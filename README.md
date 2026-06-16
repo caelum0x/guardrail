@@ -64,11 +64,11 @@ All counts verified against the repo:
 
 | Surface | Count | Where |
 |---|---:|---|
-| Rust crates (live engine) | **21** | `crates/` |
+| Rust crates (live engine) | **24** | `crates/` |
 | Binaries (apps) | **9** | `apps/` |
-| Read-only API routes (`GET`) | **68** | `apps/guardrail-api/src/server.rs` |
+| Read-only API routes (`GET`) | **70** | `apps/guardrail-api/src/server.rs` |
 | Track-2 strategy skills (registered) | **7** | `skills/INDEX.json` (7 skill dirs on disk) |
-| Dashboard pages (Next.js) | **63** | `dashboard/src/app/**/page.tsx` |
+| Dashboard pages (Next.js) | **64** | `dashboard/src/app/**/page.tsx` |
 | Ecosystem clients | **9** | `clients/` |
 | Eligible BSC universe | **20** tokens, all `chain_id 56` | `configs/eligible_assets.bsc.json` |
 
