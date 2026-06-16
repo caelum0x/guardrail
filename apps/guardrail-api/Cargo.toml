@@ -17,6 +17,8 @@ backtester.workspace = true
 bnb-agent.workspace = true
 chain-verifier.workspace = true
 ta-signals = { path = "../../crates/ta-signals" }
+fee-model = { path = "../../crates/fee-model" }
+position-sizer = { path = "../../crates/position-sizer" }
 indicators = { path = "../../crates/indicators" }
 portfolio-optimizer = { path = "../../crates/portfolio-optimizer" }
 skill-loader = { path = "../../crates/skill-loader" }
