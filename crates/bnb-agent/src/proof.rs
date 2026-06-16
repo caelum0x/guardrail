@@ -23,6 +23,12 @@ pub struct AgentProof {
     pub policy_hash: String,
     /// SHA-256 commitment to the submitted report.
     pub report_hash: String,
+    /// On-chain ERC-8004 `agentId` once the identity NFT is minted via TWAK.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub onchain_agent_id: Option<String>,
+    /// Transaction hash that minted the ERC-8004 identity.
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub identity_tx: Option<String>,
 }
 
 impl AgentProof {
@@ -39,6 +45,8 @@ impl AgentProof {
             registration_tx: None,
             policy_hash: policy_hash.into(),
             report_hash: report_hash.into(),
+            onchain_agent_id: None,
+            identity_tx: None,
         }
     }
 
@@ -48,6 +56,26 @@ impl AgentProof {
             registration_tx: Some(tx.into()),
             ..self
         }
+    }
+
+    /// Returns a copy with the on-chain ERC-8004 identity (`agentId` + mint tx).
+    pub fn with_onchain_identity(
+        self,
+        agent_id: impl Into<String>,
+        identity_tx: impl Into<String>,
+    ) -> Self {
+        Self {
+            onchain_agent_id: Some(agent_id.into()),
+            identity_tx: Some(identity_tx.into()),
+            ..self
+        }
+    }
+
+    /// BscScan URL for the ERC-8004 identity-mint transaction, if present.
+    pub fn identity_tx_url(&self) -> Option<String> {
+        self.identity_tx
+            .as_ref()
+            .map(|tx| format!("{BSCSCAN_BASE_URL}/tx/{tx}"))
     }
 
     /// Formats a BscScan URL for the registration transaction.

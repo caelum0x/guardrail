@@ -333,16 +333,20 @@ pub async fn events(State(state): State<AppState>) -> Json<Value> {
 pub async fn proof(State(state): State<AppState>) -> Json<Value> {
     let events = read_recent(&state);
     let run_report = read_run_report(&state).ok();
-    let competition_tx = events.iter().find_map(|event| {
-        if matches!(event.event_type, AgentEvent::TxConfirmed) {
-            event
-                .payload_json
-                .get("competition_tx")
-                .and_then(|value| value.as_str())
-        } else {
-            None
-        }
-    });
+    let tx_payload = |key: &'static str| {
+        events.iter().find_map(move |event| {
+            if matches!(event.event_type, AgentEvent::TxConfirmed) {
+                event.payload_json.get(key).and_then(|value| value.as_str())
+            } else {
+                None
+            }
+        })
+    };
+    let competition_tx = tx_payload("competition_tx");
+    // ERC-8004 on-chain identity (anchored via TWAK in live+autonomous runs).
+    const ERC8004_REGISTRY: &str = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432";
+    let erc8004_agent_id = tx_payload("erc8004_agent_id");
+    let erc8004_tx = tx_payload("erc8004_tx");
     let latest_report = latest_event(&events, |event| {
         matches!(event.event_type, AgentEvent::AgentReportPublished)
     });
@@ -350,6 +354,14 @@ pub async fn proof(State(state): State<AppState>) -> Json<Value> {
     Json(json!({
         "agent": "guardrail-alpha",
         "registration_tx": competition_tx,
+        "erc8004": {
+            "registry": ERC8004_REGISTRY,
+            "registry_url": format!("https://bscscan.com/address/{ERC8004_REGISTRY}"),
+            "agent_id": erc8004_agent_id,
+            "identity_tx": erc8004_tx,
+            "identity_tx_url": erc8004_tx.map(|tx| format!("https://bscscan.com/tx/{tx}")),
+            "anchored": erc8004_tx.is_some(),
+        },
         "latest_report": latest_report.map(|event| &event.payload_json),
         "run_report": run_report,
         "source_event_id": latest_report.map(|event| &event.id)

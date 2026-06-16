@@ -268,6 +268,15 @@ impl TwakExecutor for TwakCliClient {
         let v = self.run_json(&["compete", "register", "--json"])?;
         Ok(parse::tx_receipt(&v))
     }
+
+    async fn anchor_identity(
+        &self,
+        uri: &str,
+        metadata: &[(String, String)],
+    ) -> Result<Erc8004Identity, TwakError> {
+        // Delegates to the gated `erc8004 register` (autonomous + password).
+        self.erc8004_register(uri, metadata).await
+    }
 }
 
 #[cfg(test)]

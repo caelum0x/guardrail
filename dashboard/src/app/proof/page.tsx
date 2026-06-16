@@ -40,9 +40,54 @@ export default async function ProofPage() {
   const onchainChecks = checks.filter((c) => c.name.startsWith("onchain"));
   const offlineChecks = checks.filter((c) => !c.name.startsWith("onchain"));
 
+  const erc8004 = proof?.erc8004 ?? null;
+
   return (
     <main className="grid">
       <ProofCard proof={proof} />
+
+      {erc8004 ? (
+        <section className="card">
+          <h2>Agent Identity (ERC-8004)</h2>
+          <p>
+            On-chain agent identity via the Trust Wallet Agent Kit. Keys stay in
+            TWAK; the identity NFT is minted on BSC under self-custody — verifiable
+            on-chain, not self-attested.
+          </p>
+          <p>
+            <strong>Status:</strong>{" "}
+            {erc8004.anchored ? "✅ Anchored on-chain" : "⏳ Not yet anchored"}
+          </p>
+          <ul>
+            <li>
+              <strong>Identity registry:</strong>{" "}
+              <a href={erc8004.registry_url} target="_blank" rel="noreferrer">
+                {erc8004.registry}
+              </a>
+            </li>
+            {erc8004.agent_id ? (
+              <li>
+                <strong>agentId:</strong> <code>{erc8004.agent_id}</code>
+              </li>
+            ) : null}
+            {erc8004.identity_tx && erc8004.identity_tx_url ? (
+              <li>
+                <strong>Mint tx:</strong>{" "}
+                <a href={erc8004.identity_tx_url} target="_blank" rel="noreferrer">
+                  {erc8004.identity_tx}
+                </a>
+              </li>
+            ) : null}
+          </ul>
+          {!erc8004.anchored ? (
+            <p>
+              Anchoring runs in a live, autonomous session with{" "}
+              <code>GUARDRAIL_ANCHOR_IDENTITY=1</code> — gated on a wallet
+              password, so paper/demo runs never mint.
+            </p>
+          ) : null}
+        </section>
+      ) : null}
 
       <section className="card">
         <h2>Independent Verification</h2>

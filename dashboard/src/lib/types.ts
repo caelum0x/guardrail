@@ -121,9 +121,19 @@ export type ReadinessResponse = {
   artifacts: Record<string, string>;
 };
 
+export type Erc8004Identity = {
+  registry: string;
+  registry_url: string;
+  agent_id?: string | null;
+  identity_tx?: string | null;
+  identity_tx_url?: string | null;
+  anchored: boolean;
+};
+
 export type ProofResponse = {
   agent: string;
   registration_tx?: string | null;
+  erc8004?: Erc8004Identity | null;
   latest_report?: LatestReport | null;
   run_report?: RunReport | null;
   source_event_id?: string | null;

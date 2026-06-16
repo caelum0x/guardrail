@@ -140,6 +140,43 @@ impl AgentRuntime {
             }
         }
 
+        // BNB SDK: anchor the agent's ERC-8004 identity on-chain. Money/gas
+        // action, so it is doubly gated — live mode AND an explicit operator
+        // opt-in (`GUARDRAIL_ANCHOR_IDENTITY=1`) — and the CLI transport itself
+        // refuses to mint without autonomous mode + a wallet password. Surfaced
+        // as a proof artifact via the same TxConfirmed event the API reads.
+        let anchor_identity = std::env::var("GUARDRAIL_ANCHOR_IDENTITY")
+            .map(|v| v == "1" || v.eq_ignore_ascii_case("true"))
+            .unwrap_or(false);
+        if s.app.is_live() && anchor_identity {
+            let uri = format!(
+                "data:application/json,{{\"agent_id\":\"{}\",\"policy_hash\":\"{}\"}}",
+                meta.agent_id, meta.policy_hash
+            );
+            let metadata = vec![
+                ("agent_id".to_string(), meta.agent_id.clone()),
+                ("policy_hash".to_string(), meta.policy_hash.clone()),
+            ];
+            match executor.anchor_identity(&uri, &metadata).await {
+                Ok(id) => {
+                    tracing::info!(
+                        agent_id = ?id.agent_id,
+                        tx = ?id.tx_hash,
+                        "ERC-8004 identity anchored on-chain"
+                    );
+                    events.append(
+                        &run_id,
+                        AgentEvent::TxConfirmed,
+                        json!({
+                            "erc8004_agent_id": id.agent_id,
+                            "erc8004_tx": id.tx_hash,
+                        }),
+                    );
+                }
+                Err(e) => tracing::warn!(error = %e, "ERC-8004 identity anchor skipped"),
+            }
+        }
+
         // --- Loop control -------------------------------------------------
         let cycles: u32 = std::env::var("GUARDRAIL_CYCLES")
             .ok()

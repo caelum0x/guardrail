@@ -13,6 +13,20 @@ use crate::metadata::AgentMetadata;
 /// Marker for the supported ERC-8004 schema version of this record.
 pub const ERC8004_VERSION: &str = "erc8004:1";
 
+/// ERC-8004 Identity Registry contract on BSC mainnet (chain id 56).
+pub const ERC8004_REGISTRY_BSC_MAINNET: &str = "0x8004A169FB4a3325136EB29fA0ceB6D2e539a432";
+/// ERC-8004 Identity Registry contract on BSC testnet (chain id 97).
+pub const ERC8004_REGISTRY_BSC_TESTNET: &str = "0x8004A818BFB912233c491871b3d84c89A494BD9e";
+
+/// The ERC-8004 Identity Registry address for a BSC chain id (56 mainnet,
+/// 97 testnet); defaults to mainnet for any other id.
+pub fn registry_for_chain(chain_id: u64) -> &'static str {
+    match chain_id {
+        97 => ERC8004_REGISTRY_BSC_TESTNET,
+        _ => ERC8004_REGISTRY_BSC_MAINNET,
+    }
+}
+
 /// Typed mirror of an ERC-8004 on-chain registry record.
 ///
 /// Field names mirror the registry record entries (agent id, owner wallet,

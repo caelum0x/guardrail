@@ -54,6 +54,21 @@ pub trait TwakExecutor: Send + Sync {
     async fn quote_swap(&self, intent: &OrderIntent) -> Result<SwapQuote, TwakError>;
     async fn execute_swap(&self, approved: &ApprovedOrder) -> Result<TxReceipt, TwakError>;
     async fn register_competition(&self) -> Result<TxReceipt, TwakError>;
+
+    /// Anchor the agent's ERC-8004 identity on-chain (mint the identity NFT).
+    ///
+    /// Only the CLI transport (which holds the keys in TWAK) implements this;
+    /// other transports return [`TwakError::Rejected`]. The CLI implementation
+    /// is money-gated (requires autonomous mode + a wallet password).
+    async fn anchor_identity(
+        &self,
+        _uri: &str,
+        _metadata: &[(String, String)],
+    ) -> Result<Erc8004Identity, TwakError> {
+        Err(TwakError::Rejected(
+            "ERC-8004 identity anchoring is only supported on the TWAK CLI transport".into(),
+        ))
+    }
 }
 
 /// Which TWAK execution surface to drive. `Mock` is the offline default that
