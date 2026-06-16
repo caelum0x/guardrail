@@ -449,6 +449,13 @@ export class GuardrailClient {
     const qs = q.toString();
     return this.getJson(qs ? `/pnl?${qs}` : "/pnl");
   }
+
+  /** Pairwise correlation matrix over named return series (``/correlation``).
+   * `series` is `name:v1,v2,…;name2:…`. */
+  correlation(series?: string): Promise<Record<string, unknown>> {
+    const qs = series ? `?series=${encodeURIComponent(series)}` : "";
+    return this.getJson(`/correlation${qs}`);
+  }
 }
 
 export default GuardrailClient;

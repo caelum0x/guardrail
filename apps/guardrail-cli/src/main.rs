@@ -387,6 +387,11 @@ enum Commands {
         #[arg(long, default_value = "")]
         marks: String,
     },
+    /// Pairwise correlation matrix over named return series (correlation).
+    Corr {
+        #[arg(long, default_value = "BTC:0.01,-0.02,0.03,-0.01;ETH:0.012,-0.018,0.028,-0.008;CAKE:-0.005,0.03,-0.02,0.01")]
+        series: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -533,6 +538,7 @@ fn main() -> anyhow::Result<()> {
         }
         Commands::Book { orders } => commands::quant::run_book(&orders)?,
         Commands::Pnl { fills, marks } => commands::quant::run_pnl(&fills, &marks)?,
+        Commands::Corr { series } => commands::quant::run_corr(&series)?,
         Commands::KillSwitch { reason } => {
             println!(
                 "kill_switch_triggered reason={}",

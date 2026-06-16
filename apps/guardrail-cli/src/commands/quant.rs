@@ -171,6 +171,40 @@ pub fn run_pnl(fills: &str, marks: &str) -> anyhow::Result<()> {
     Ok(())
 }
 
+/// `corr` — pairwise Pearson correlation matrix over named return series.
+/// `series` is `name:v1,v2,…;name2:…`.
+pub fn run_corr(series: &str) -> anyhow::Result<()> {
+    use std::collections::BTreeMap;
+    let mut map: BTreeMap<String, Vec<f64>> = BTreeMap::new();
+    for (i, raw) in series.split(';').filter(|s| !s.trim().is_empty()).enumerate() {
+        let (name, vals) = raw
+            .split_once(':')
+            .ok_or_else(|| anyhow::anyhow!("series {i}: expected 'name:v1,v2,…'"))?;
+        let parsed: Vec<f64> = vals.split(',').filter_map(|v| v.trim().parse().ok()).collect();
+        if parsed.len() < 2 {
+            anyhow::bail!("series '{}' needs at least 2 values", name.trim());
+        }
+        map.insert(name.trim().to_string(), parsed);
+    }
+    if map.len() < 2 {
+        anyhow::bail!("need at least 2 named series");
+    }
+    let m = correlation::correlation_matrix(&map);
+    print!("{:>8}", "");
+    for n in &m.names {
+        print!("{n:>8}");
+    }
+    println!();
+    for (i, row) in m.matrix.iter().enumerate() {
+        print!("{:>8}", m.names[i]);
+        for v in row {
+            print!("{v:>8.2}");
+        }
+        println!();
+    }
+    Ok(())
+}
+
 /// `book` — run the matching engine over a compact order spec.
 pub fn run_book(orders: &str) -> anyhow::Result<()> {
     use orderbook::{Order, OrderBook, Side};
