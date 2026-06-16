@@ -346,6 +346,40 @@ enum Commands {
         #[arg(long, default_value = "configs/bnb/job_simulator.json")]
         config: String,
     },
+    /// Compute a technical indicator over a close-price series (ta-signals).
+    Ta {
+        #[arg(long, default_value = "sma")]
+        indicator: String,
+        #[arg(long)]
+        series: String,
+        #[arg(long, default_value_t = 14)]
+        period: usize,
+    },
+    /// Estimate the all-in cost of a swap (fee-model).
+    Fees {
+        #[arg(long, default_value_t = 10_000.0)]
+        notional: f64,
+        #[arg(long, default_value_t = 5.0)]
+        quantity: f64,
+        #[arg(long, default_value = "buy")]
+        side: String,
+    },
+    /// Compute a position size (position-sizer).
+    Size {
+        #[arg(long, default_value = "kelly")]
+        method: String,
+        #[arg(long, default_value_t = 10_000.0)]
+        capital: f64,
+        #[arg(long, default_value_t = 0.55)]
+        win_prob: f64,
+        #[arg(long, default_value_t = 1.0)]
+        odds: f64,
+    },
+    /// Run the order-book matching engine over an order spec (orderbook).
+    Book {
+        #[arg(long, default_value = "s,limit,101,5;b,limit,99,5;b,market,,6")]
+        orders: String,
+    },
 }
 
 #[derive(Debug, Subcommand)]
@@ -485,6 +519,12 @@ fn main() -> anyhow::Result<()> {
         Commands::AgentServices { config } => commands::agent_surface::run_agent_services(&config)?,
         Commands::AgentCard { config } => commands::agent_surface::run_agent_card(&config)?,
         Commands::JobSimulator { config } => commands::agent_surface::run_job_simulator(&config)?,
+        Commands::Ta { indicator, series, period } => commands::quant::run_ta(&indicator, &series, period)?,
+        Commands::Fees { notional, quantity, side } => commands::quant::run_fees(notional, quantity, &side)?,
+        Commands::Size { method, capital, win_prob, odds } => {
+            commands::quant::run_size(&method, capital, win_prob, odds)?
+        }
+        Commands::Book { orders } => commands::quant::run_book(&orders)?,
         Commands::KillSwitch { reason } => {
             println!(
                 "kill_switch_triggered reason={}",

@@ -12,4 +12,5 @@ pub mod experiment;
 pub mod identity;
 pub mod market;
 pub mod portfolio;
+pub mod quant;
 pub mod reporting;

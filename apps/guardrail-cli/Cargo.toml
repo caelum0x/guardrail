@@ -12,6 +12,10 @@ market-data.workspace = true
 cmc-client.workspace = true
 strategy-engine.workspace = true
 risk-engine.workspace = true
+ta-signals = { path = "../../crates/ta-signals" }
+fee-model = { path = "../../crates/fee-model" }
+position-sizer = { path = "../../crates/position-sizer" }
+orderbook = { path = "../../crates/orderbook" }
 bnb-agent.workspace = true
 twak-client.workspace = true
 indicators = { path = "../../crates/indicators" }
