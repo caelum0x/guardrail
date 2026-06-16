@@ -107,7 +107,7 @@ impl TwakMcpClient {
     async fn call_swap(&self, method: &str, mut params: Value) -> Result<Value, TwakError> {
         let result = self.call(method, params.clone()).await?;
         if let Some(terms) = payment_required(&result) {
-            let signed = x402::sign_authorization(&terms, &self.url);
+            let signed = x402::sign_challenge(&terms, &self.url);
             let payment =
                 serde_json::to_value(&signed).map_err(|e| TwakError::Parse(e.to_string()))?;
             if let Some(obj) = params.as_object_mut() {

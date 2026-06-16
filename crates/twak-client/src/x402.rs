@@ -22,7 +22,21 @@
 
 pub const X402_SUPPORTED: bool = true;
 
+/// Env selecting the signing backend: `bnb-sdk` routes to the real
+/// EIP-712/EIP-3009 signer; anything else (or unset) uses the offline mock.
+pub const SIGNER_ENV: &str = "X402_SIGNER";
+/// Env carrying the payee the caller commits to (anti-MITM guard for the real
+/// signer). Sourced independently of the 402 challenge body.
+pub const EXPECTED_TO_ENV: &str = "X402_EXPECTED_TO";
+/// Env overriding the signer command (default: the bundled Python helper).
+pub const SIGNER_CMD_ENV: &str = "X402_SIGNER_CMD";
+
+/// Default command that runs the real signer helper.
+const DEFAULT_SIGNER_CMD: &str = "python3 integrations/x402-signer/x402_sign.py";
+
 use serde::{Deserialize, Serialize};
+use std::io::Write;
+use std::process::{Command, Stdio};
 
 /// A signed x402 authorization ready to attach to the `X-PAYMENT` header.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -54,6 +68,95 @@ pub fn sign_authorization(authorization: &str, signer: &str) -> SignedAuthorizat
     }
 }
 
+/// Sign an x402 challenge, dispatching to the real BNB-SDK signer when
+/// `X402_SIGNER=bnb-sdk`, otherwise the deterministic offline mock.
+///
+/// `challenge_json` is the raw x402 v2 body from the 402 response. The real
+/// path is gated: it runs only when explicitly enabled, a committed payee is
+/// available (`X402_EXPECTED_TO`), and the helper finds a `WALLET_PASSWORD`. Any
+/// failure falls back to the mock so a misconfigured live run cannot stall —
+/// and never signs a real spend.
+pub fn sign_challenge(challenge_json: &str, signer_hint: &str) -> SignedAuthorization {
+    let use_real = std::env::var(SIGNER_ENV)
+        .map(|v| v.eq_ignore_ascii_case("bnb-sdk"))
+        .unwrap_or(false);
+    if !use_real {
+        return sign_authorization(challenge_json, signer_hint);
+    }
+    match sign_via_bnb_sdk(challenge_json) {
+        Ok(signed) => signed,
+        Err(e) => {
+            tracing::warn!(error = %e, "x402 bnb-sdk signer failed; falling back to mock");
+            sign_authorization(challenge_json, signer_hint)
+        }
+    }
+}
+
+/// Shell out to the BNB-SDK signer helper, piping the challenge to stdin and
+/// parsing its `{signature, from, envelope}` JSON into a [`SignedAuthorization`].
+fn sign_via_bnb_sdk(challenge_json: &str) -> Result<SignedAuthorization, String> {
+    let expected_to = std::env::var(EXPECTED_TO_ENV)
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+        .ok_or_else(|| format!("${EXPECTED_TO_ENV} not set (committed payee required)"))?;
+
+    let cmd = std::env::var(SIGNER_CMD_ENV).unwrap_or_else(|_| DEFAULT_SIGNER_CMD.to_string());
+    let mut parts = cmd.split_whitespace();
+    let program = parts.next().ok_or("empty signer command")?;
+    let prog_args: Vec<&str> = parts.collect();
+
+    let mut child = Command::new(program)
+        .args(&prog_args)
+        .arg("--expected-to")
+        .arg(&expected_to)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .map_err(|e| format!("failed to spawn signer `{program}`: {e}"))?;
+
+    child
+        .stdin
+        .take()
+        .ok_or("no stdin handle")?
+        .write_all(challenge_json.as_bytes())
+        .map_err(|e| format!("failed writing challenge to signer: {e}"))?;
+
+    let out = child
+        .wait_with_output()
+        .map_err(|e| format!("signer wait failed: {e}"))?;
+    if !out.status.success() {
+        return Err(format!(
+            "signer exited {}: {}",
+            out.status,
+            String::from_utf8_lossy(&out.stderr).trim()
+        ));
+    }
+    let v: serde_json::Value = serde_json::from_slice(&out.stdout)
+        .map_err(|e| format!("signer output not JSON: {e}"))?;
+    let signature = v
+        .get("signature")
+        .and_then(|s| s.as_str())
+        .ok_or("signer output missing `signature`")?
+        .to_string();
+    let signer = v
+        .get("from")
+        .and_then(|s| s.as_str())
+        .unwrap_or_default()
+        .to_string();
+    // Prefer the ready-to-send X-PAYMENT envelope as the authorization blob.
+    let authorization = v
+        .get("envelope")
+        .and_then(|s| s.as_str())
+        .unwrap_or(challenge_json)
+        .to_string();
+    Ok(SignedAuthorization {
+        authorization,
+        signature,
+        signer,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -83,6 +186,15 @@ mod tests {
         let a = sign_authorization(AUTH, SIGNER);
         let b = sign_authorization(r#"{"amount":"2000000","from":"0xPayer"}"#, SIGNER);
         assert_ne!(a.signature, b.signature);
+    }
+
+    #[test]
+    fn sign_challenge_falls_back_to_mock_without_env() {
+        std::env::remove_var(SIGNER_ENV);
+        let viaq = sign_challenge(AUTH, SIGNER);
+        let mock = sign_authorization(AUTH, SIGNER);
+        assert_eq!(viaq.signature, mock.signature);
+        assert_eq!(viaq.signer, SIGNER);
     }
 
     #[test]

@@ -95,7 +95,7 @@ impl TwakRestClient {
     ) -> Result<Value, TwakError> {
         let terms = challenge.text().await.unwrap_or_default();
         let signer = self.base_url.clone();
-        let signed = x402::sign_authorization(&terms, &signer);
+        let signed = x402::sign_challenge(&terms, &signer);
         let header = serde_json::to_string(&signed).unwrap_or_default();
 
         let resp = self

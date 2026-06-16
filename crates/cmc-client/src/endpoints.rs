@@ -2,6 +2,14 @@
 
 pub const BASE_URL: &str = "https://pro-api.coinmarketcap.com";
 
+/// CoinMarketCap AI Agent Hub MCP endpoint (header API-key auth via
+/// `X-CMC-MCP-API-KEY`).
+pub const MCP_URL: &str = "https://mcp.coinmarketcap.com/mcp";
+/// Keyless x402 MCP endpoint — pays $0.01 USDC per request instead of a key.
+pub const MCP_X402_URL: &str = "https://mcp.coinmarketcap.com/x402/mcp";
+/// Header carrying the MCP API key on the keyed endpoint.
+pub const MCP_API_KEY_HEADER: &str = "X-CMC-MCP-API-KEY";
+
 pub const LATEST_QUOTES: &str = "/v2/cryptocurrency/quotes/latest";
 pub const OHLCV: &str = "/v2/cryptocurrency/ohlcv/historical";
 pub const FEAR_GREED: &str = "/v3/fear-and-greed/latest";

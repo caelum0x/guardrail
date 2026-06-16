@@ -4,6 +4,7 @@ pub mod approvals;
 pub mod cli;
 pub mod competition;
 pub mod error;
+pub mod identity;
 pub mod mcp;
 pub mod mock;
 pub mod parse;
@@ -18,13 +19,14 @@ pub mod x402;
 
 pub use cli::TwakCliClient;
 pub use error::TwakError;
+pub use identity::Erc8004Identity;
 pub use mcp::TwakMcpClient;
 pub use mock::MockTwakClient;
 pub use portfolio::{TwakBalance, TwakPortfolio};
 pub use quote::SwapQuote;
 pub use rest::TwakRestClient;
 pub use swap::TxReceipt;
-pub use x402::{sign_authorization, SignedAuthorization};
+pub use x402::{sign_authorization, sign_challenge, SignedAuthorization};
 
 use async_trait::async_trait;
 use common::{Address, OrderIntent};
@@ -89,7 +91,7 @@ pub fn executor_from(
             Some(url) => Box::new(TwakMcpClient::new(url)),
             None => Box::new(MockTwakClient::new()),
         },
-        TwakTransport::Cli => Box::new(TwakCliClient::default()),
+        TwakTransport::Cli => Box::new(TwakCliClient::default().with_autonomous(autonomous)),
         TwakTransport::Mock => Box::new(MockTwakClient::new()),
     }
 }

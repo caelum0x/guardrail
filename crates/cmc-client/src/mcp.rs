@@ -28,6 +28,7 @@ pub struct CmcMcpConfig {
 pub struct CmcMcpClient {
     url: String,
     http: reqwest::Client,
+    api_key: Option<String>,
 }
 
 impl CmcMcpClient {
@@ -40,7 +41,20 @@ impl CmcMcpClient {
         let http = reqwest::Client::builder()
             .timeout(Duration::from_millis(timeout_ms))
             .build()?;
-        Ok(CmcMcpClient { url, http })
+        Ok(CmcMcpClient {
+            url,
+            http,
+            api_key: None,
+        })
+    }
+
+    /// Attach the CMC MCP API key, sent as `X-CMC-MCP-API-KEY` on every call.
+    /// Required by the official `mcp.coinmarketcap.com/mcp` endpoint; empty
+    /// keys are ignored (e.g. when using the keyless x402 endpoint).
+    pub fn with_api_key(mut self, key: impl Into<String>) -> Self {
+        let key = key.into();
+        self.api_key = (!key.trim().is_empty()).then_some(key);
+        self
     }
 
     /// Build a client from a [`CmcMcpConfig`].
@@ -59,14 +73,15 @@ impl CmcMcpClient {
             "params": params,
         });
 
-        let resp = self
+        let mut req = self
             .http
             .post(&self.url)
             .header("Accept", "application/json")
-            .header("Content-Type", "application/json")
-            .json(&body)
-            .send()
-            .await?;
+            .header("Content-Type", "application/json");
+        if let Some(key) = &self.api_key {
+            req = req.header(crate::endpoints::MCP_API_KEY_HEADER, key);
+        }
+        let resp = req.json(&body).send().await?;
 
         let status = resp.status().as_u16();
         if status == 429 {

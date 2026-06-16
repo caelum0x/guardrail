@@ -64,10 +64,13 @@ pub fn source_from(
     mcp_url: impl Into<String>,
     timeout_ms: u64,
 ) -> Result<Box<dyn CmcDataSource>, CmcError> {
+    let api_key = api_key.into();
     match transport {
         CmcTransport::Mock => Ok(Box::new(MockCmcClient::new())),
         CmcTransport::Rest => Ok(Box::new(CmcRestClient::new(api_key, timeout_ms)?)),
-        CmcTransport::Mcp => Ok(Box::new(CmcMcpClient::new(mcp_url, timeout_ms)?)),
+        CmcTransport::Mcp => Ok(Box::new(
+            CmcMcpClient::new(mcp_url, timeout_ms)?.with_api_key(api_key),
+        )),
     }
 }
 
