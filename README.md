@@ -69,16 +69,19 @@ All counts verified against the repo:
 | Read-only API routes (`GET`) | **72** | `apps/guardrail-api/src/server.rs` |
 | Track-2 strategy skills (registered) | **7** | `skills/INDEX.json` (7 skill dirs on disk) |
 | Dashboard pages (Next.js) | **70** | `dashboard/src/app/**/page.tsx` |
-| Ecosystem clients | **9** | `clients/` |
+| Ecosystem clients | **11** | `clients/` |
 | Eligible BSC universe | **20** tokens, all `chain_id 56` | `configs/eligible_assets.bsc.json` |
 
 The **9 binaries** are `guardrail-agent` (the only one that trades),
 `guardrail-api`, `guardrail-cli`, `guardrail-tui`, `guardrail-monitor`,
 `guardrail-exporter`, `guardrail-replay`, `guardrail-sim`, and `guardrail-doctor`.
-The **9 clients** are `typescript` (`@guardrail/client`), `python`
-(`guardrail_client`), `go` (read-only SDK + `guardrailctl`), `mcp` (CMC Agent Hub
+The **11 clients** are `typescript` (`@guardrail/client`), `python`
+(`guardrail_client`), `go` (read-only SDK + `guardrailctl`), `go-cli` (`grctl`
+operator CLI), `ts-terminal` (`guardrail-term` CLI), `mcp` (CMC Agent Hub
 server), `langchain`, `postman`, `proof-verifier` (clean-room verifier),
-`web-lite` (cockpit), and `examples`.
+`web-lite` (cockpit), and `examples`. New backend services live in `services/`
+(`price-oracle`, `risk-analytics`, `notification-relay`, `gateway`,
+`control-bot`, `report-publisher`).
 
 ## Quickstart
 
