@@ -37,7 +37,7 @@ Authority flows one way; nothing downstream can reach TWAK.
               ┌───────────────────┬──────────────┴───────┬──────────────────┐
               ▼                   ▼                       ▼                  ▼
         event-store         data/run_report.json    guardrail-api      guardrail-
-        (SQLite)            (NAV, drawdown,          (68 GET routes,    exporter /
+        (SQLite)            (NAV, drawdown,          (69 GET routes,    exporter /
                             kill switch)             read-only)         metrics:9100
                                                           │
         ┌─────────────┬──────────────┬──────────────┬────┴──────┬──────────────┐
@@ -86,11 +86,11 @@ server), `langchain`, `postman`, `proof-verifier` (clean-room verifier),
 # 1. Build the Rust workspace
 cargo build
 
-# 2. One-command judge tour: build + paper run + API on :8080 + web-lite cockpit
-scripts/judge_quickstart.sh
-
-# 3. Full offline end-to-end demo (all prize evidence in one run)
+# 2. Full offline end-to-end demo: paper run + API on :8080 + web-lite cockpit
 scripts/demo.sh
+
+# 3. Capture a paper run + proof artifacts (run report, submission.md, verifier)
+scripts/capture_submission.sh
 ```
 
 Run the pieces individually (all offline, paper mode):
@@ -126,27 +126,24 @@ A real **live** run uses `scripts/compete.sh` and requires `CMC_API_KEY`,
 absent. See [docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md). Longer step-by-step:
 [docs/QUICKSTART.md](docs/QUICKSTART.md).
 
-## Hackathon tracks
+## Capabilities
 
-Submission targets **Track 1 — Autonomous Trading Agents**, **Track 2 — Strategy
-Skills**, and three special prizes:
-
-| Track / Prize | One-line claim |
+| Capability | What it does |
 |---|---|
-| **Track 1 — Autonomous Trading** | Unattended Rust loop (market → regime → risk → TWAK → reconcile → log); risk engine is the sole gate; dual risk check + kill switch; on-chain registration; 20-asset BSC universe; explainable via the decision journal. |
-| **Track 2 — Strategy Skills** | 7 advisory regime-aware strategy skills (`skills/INDEX.json`) + a regime ensemble meta-allocator (`GET /ensemble`, live in `crates/strategy-ensemble`) + a skill authoring kit (`skills/_template/`, `scripts/new_skill.sh`, `scripts/lint_skills.sh`). |
-| **Best Use of TWAK** | TWAK is the sole execution layer; self-custody is type-enforced; Mock / REST / MCP / CLI transports; x402 signing; narrated self-custody demo (`scripts/self_custody_demo.sh`). |
-| **Best Use of Agent Hub (CoinMarketCap)** | All 7 CMC data methods (`crates/cmc-client`), an MCP server to the CMC Agent Hub (`clients/mcp/`), x402 pay-and-retry, and a packaged CMC Skill (`skills/cmc-regime-routed-alpha`). |
-| **Best Use of BNB AI Agent SDK** | ERC-8004 / ERC-8183 identity records, deterministic agent / registration ids, `policy_hash` + `report_hash` proof commitments with BscScan links, and an independent stdlib-only verifier (`clients/proof-verifier`). |
+| **Autonomous trading** | Unattended Rust loop (market → regime → risk → TWAK → reconcile → log); the risk engine is the sole gate; dual risk check + kill switch; on-chain registration; 20-asset BSC universe; explainable via the decision journal. In live mode the agent refuses to start on mock data. |
+| **Strategy skills** | 7 advisory regime-aware strategy skills (`skills/INDEX.json`) + a regime ensemble meta-allocator (`GET /ensemble`, live in `crates/strategy-ensemble`) + a skill authoring kit (`skills/_template/`, `scripts/new_skill.sh`, `scripts/lint_skills.sh`). |
+| **Self-custody execution** | TWAK is the sole execution layer; self-custody is type-enforced; Mock / REST / MCP / CLI transports (20s timeouts); x402 signing; narrated self-custody demo (`scripts/self_custody_demo.sh`). |
+| **CMC market intelligence** | All 7 CMC data methods (`crates/cmc-client`), an MCP server + a verifiable CMC data→capability lineage (`GET /cmc/capabilities`, [docs/CMC_AGENT_HUB.md](docs/CMC_AGENT_HUB.md)), x402 pay-and-retry, and a packaged CMC Skill. |
+| **Verifiable identity** | ERC-8004 / ERC-8183 identity records, deterministic agent / registration ids, `policy_hash` + `report_hash` commitments with BscScan links, an independent stdlib-only verifier (`clients/proof-verifier`), and read-only on-chain verification (`crates/chain-verifier`). |
 
 ## Docs & links
 
 - **[docs/INDEX.md](docs/INDEX.md)** — master table of contents for all documentation.
-- **[docs/PRIZE_MAP.md](docs/PRIZE_MAP.md)** — evidence table mapping every targeted prize to concrete code and a verify command.
 - **[docs/PRODUCT_OVERVIEW.md](docs/PRODUCT_OVERVIEW.md)** — the high-level product tour and system map.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — crate graph, flows, and trust boundaries.
-- **[PLAN_V2.md](PLAN_V2.md)** — Phase-2 expansion roadmap (offline-safe).
-- **[SUBMISSION.md](SUBMISSION.md)** — full submission writeup; **[docs/HACKATHON.md](docs/HACKATHON.md)** — requirement-to-code map.
+- **[docs/LIVE_RUNBOOK.md](docs/LIVE_RUNBOOK.md)** — taking the agent live (real keys, go-live).
+- **[PLAN_V2.md](PLAN_V2.md)** — expansion roadmap (offline-safe).
+- Earlier competition writeups are archived under **[docs/archive/hackathon/](docs/archive/hackathon/)**.
 - **Dashboard (Vercel):** the read-only Next.js dashboard auto-deploys to Vercel on every push — see [docs/VERCEL_DEPLOY.md](docs/VERCEL_DEPLOY.md).
 
 ## Submission proof

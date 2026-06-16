@@ -75,8 +75,15 @@ impl AgentRuntime {
         })?;
         let policy = RiskPolicy::from_json_str(&policy_raw)?;
 
-        let data_source = build_data_source(s)?;
-        let executor = build_executor(s)?;
+        let (data_source, cmc_transport) = build_data_source(s)?;
+        let (executor, twak_transport) = build_executor(s)?;
+        // Surface the resolved transports so operators can see at a glance which
+        // data source and executor are live vs mock for this run.
+        tracing::info!(
+            cmc_transport,
+            twak_transport,
+            "transports resolved"
+        );
         // Size positions just under the risk cap so targets are not rejected.
         let position_cap = (to_f64(policy.max_position_pct) - 1.0).max(1.0);
         let strategy = StrategyEngine::new(build_strategy_config(s, position_cap));
@@ -108,7 +115,7 @@ impl AgentRuntime {
         events.append(
             &run_id,
             AgentEvent::AgentStarted,
-            json!({ "mode": s.app.mode, "agent_id": agent_id, "wallet": wallet, "policy_hash": policy_hash }),
+            json!({ "mode": s.app.mode, "agent_id": agent_id, "wallet": wallet, "policy_hash": policy_hash, "cmc_transport": cmc_transport, "twak_transport": twak_transport }),
         );
 
         // Track 1: register the competition wallet before trading.
@@ -669,7 +676,7 @@ fn sqlite_path(database_url: &str) -> Option<std::path::PathBuf> {
 /// real CMC transport (missing `CMC_API_KEY`/`mcp_url`, or `use_mock = true`),
 /// or construction fails, this returns an error so the agent refuses to trade on
 /// fake data. In paper mode it degrades to the offline mock as before.
-fn build_data_source(s: &Settings) -> anyhow::Result<Box<dyn CmcDataSource>> {
+fn build_data_source(s: &Settings) -> anyhow::Result<(Box<dyn CmcDataSource>, &'static str)> {
     let api_key = std::env::var("CMC_API_KEY").unwrap_or_default();
     let mcp_url = s.cmc.mcp_url.clone().unwrap_or_default();
     let live = s.app.is_live();
@@ -694,13 +701,25 @@ fn build_data_source(s: &Settings) -> anyhow::Result<Box<dyn CmcDataSource>> {
         CmcTransport::Mock
     };
 
+    let label = cmc_transport_label(transport);
+
     match cmc_client::source_from(transport, api_key, mcp_url, s.cmc.request_timeout_ms) {
-        Ok(source) => Ok(source),
+        Ok(source) => Ok((source, label)),
         Err(e) if live => Err(anyhow::anyhow!("failed to init live CMC data source: {e}")),
         Err(e) => {
             tracing::warn!(error = %e, "failed to init CMC data source; using mock (paper)");
-            Ok(Box::new(MockCmcClient::new()))
+            Ok((Box::new(MockCmcClient::new()), "mock"))
         }
+    }
+}
+
+/// Stable operator-facing label for a CMC transport, used in startup logging and
+/// the `AgentStarted` event so it's visible which source is live vs mock.
+fn cmc_transport_label(transport: CmcTransport) -> &'static str {
+    match transport {
+        CmcTransport::Mock => "mock",
+        CmcTransport::Mcp => "mcp",
+        CmcTransport::Rest => "rest",
     }
 }
 
@@ -713,7 +732,7 @@ fn build_data_source(s: &Settings) -> anyhow::Result<Box<dyn CmcDataSource>> {
 /// **Live mode never silently uses the mock.** A live run with `twak.mode =
 /// "mock"`, an unknown mode, or a network transport without a `base_url` returns
 /// an error rather than executing fake swaps. Paper mode degrades to the mock.
-fn build_executor(s: &Settings) -> anyhow::Result<Box<dyn TwakExecutor>> {
+fn build_executor(s: &Settings) -> anyhow::Result<(Box<dyn TwakExecutor>, &'static str)> {
     let live = s.app.is_live();
     let transport = match s.twak.mode.as_str() {
         "rest" => TwakTransport::Rest,
@@ -744,7 +763,22 @@ fn build_executor(s: &Settings) -> anyhow::Result<Box<dyn TwakExecutor>> {
         );
     }
 
-    Ok(twak_client::executor_from(transport, base_url, s.twak.autonomous))
+    let label = twak_transport_label(transport);
+    Ok((
+        twak_client::executor_from(transport, base_url, s.twak.autonomous),
+        label,
+    ))
+}
+
+/// Stable operator-facing label for a TWAK transport, used in startup logging
+/// and the `AgentStarted` event so it's visible which executor is live vs mock.
+fn twak_transport_label(transport: TwakTransport) -> &'static str {
+    match transport {
+        TwakTransport::Mock => "mock",
+        TwakTransport::Rest => "rest",
+        TwakTransport::Mcp => "mcp",
+        TwakTransport::Cli => "cli",
+    }
 }
 
 /// Immutable per-run metadata shared with each cycle's run-report write.
