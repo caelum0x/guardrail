@@ -47,7 +47,7 @@ impl TwakMcpClient {
     pub fn new(url: impl Into<String>) -> Self {
         TwakMcpClient {
             url: url.into(),
-            http: reqwest::Client::new(),
+            http: crate::http_client(),
             id: AtomicU64::new(1),
         }
     }

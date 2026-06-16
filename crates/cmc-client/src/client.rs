@@ -148,10 +148,24 @@ impl CmcDataSource for CmcRestClient {
             };
             let Some(obj) = obj else { continue };
             let usd = obj.pointer("/quote/USD");
+            // A missing or non-positive price is invalid data, not a $0 signal.
+            // Skip the asset this cycle (and warn) rather than feeding the
+            // strategy/risk engine a zero price.
+            let price_usd = match usd.and_then(|u| dec(&u["price"])) {
+                Some(price) if price > rust_decimal::Decimal::ZERO => price,
+                _ => {
+                    tracing::warn!(
+                        symbol = %asset.symbol,
+                        cmc_id = asset.cmc_id,
+                        "CMC quote missing or non-positive price; skipping asset this cycle"
+                    );
+                    continue;
+                }
+            };
             out.push(CmcQuote {
                 cmc_id: asset.cmc_id,
                 symbol: asset.symbol.clone(),
-                price_usd: usd.and_then(|u| dec(&u["price"])).unwrap_or_default(),
+                price_usd,
                 volume_24h_usd: usd.and_then(|u| dec(&u["volume_24h"])).unwrap_or_default(),
                 market_cap_usd: usd.and_then(|u| dec(&u["market_cap"])),
                 percent_change_1h: usd.and_then(|u| dec(&u["percent_change_1h"])),
