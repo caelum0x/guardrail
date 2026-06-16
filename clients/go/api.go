@@ -563,6 +563,26 @@ func (c *Client) Correlation(ctx context.Context, series string) (map[string]any
 	return c.getMapQuery(ctx, "/correlation", q)
 }
 
+// EquityIndicators computes a technical indicator over the live NAV curve
+// (/equity/indicators). indicator is sma|ema|rsi (empty -> server default);
+// period 0 -> server default.
+func (c *Client) EquityIndicators(ctx context.Context, indicator string, period int) (map[string]any, error) {
+	q := url.Values{}
+	if indicator != "" {
+		q.Set("indicator", indicator)
+	}
+	if period != 0 {
+		q.Set("period", strconv.Itoa(period))
+	}
+	return c.getMapQuery(ctx, "/equity/indicators", q)
+}
+
+// PortfolioRisk returns portfolio concentration metrics (HHI, effective-N, …)
+// over the live positions (/portfolio/risk).
+func (c *Client) PortfolioRisk(ctx context.Context) (map[string]any, error) {
+	return c.getMapQuery(ctx, "/portfolio/risk", nil)
+}
+
 func joinInts(values []int) string {
 	parts := make([]string, len(values))
 	for i, v := range values {

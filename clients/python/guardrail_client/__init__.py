@@ -510,3 +510,18 @@ class GuardrailClient:
         if series:
             return self._get_json(self._build_path("/correlation", {"series": series}))
         return self._get_json("/correlation")
+
+    def equity_indicators(
+        self, indicator: Optional[str] = None, period: Optional[int] = None
+    ) -> Dict[str, Any]:
+        """Technical indicator over the live NAV curve (``/equity/indicators``)."""
+        params: Dict[str, str] = {}
+        if indicator:
+            params["indicator"] = indicator
+        if period is not None:
+            params["period"] = str(period)
+        return self._get_json(self._build_path("/equity/indicators", params))
+
+    def portfolio_risk(self) -> Dict[str, Any]:
+        """Portfolio concentration metrics: HHI, effective-N, … (``/portfolio/risk``)."""
+        return self._get_json("/portfolio/risk")

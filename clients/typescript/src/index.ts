@@ -456,6 +456,20 @@ export class GuardrailClient {
     const qs = series ? `?series=${encodeURIComponent(series)}` : "";
     return this.getJson(`/correlation${qs}`);
   }
+
+  /** Technical indicator over the live NAV curve (``/equity/indicators``). */
+  equityIndicators(indicator?: string, period?: number): Promise<Record<string, unknown>> {
+    const q = new URLSearchParams();
+    if (indicator) q.set("indicator", indicator);
+    if (period != null) q.set("period", String(period));
+    const qs = q.toString();
+    return this.getJson(qs ? `/equity/indicators?${qs}` : "/equity/indicators");
+  }
+
+  /** Portfolio concentration metrics: HHI, effective-N, … (``/portfolio/risk``). */
+  portfolioRisk(): Promise<Record<string, unknown>> {
+    return this.getJson("/portfolio/risk");
+  }
 }
 
 export default GuardrailClient;
