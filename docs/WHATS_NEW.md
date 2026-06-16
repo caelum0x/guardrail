@@ -14,6 +14,18 @@ Companion docs: [PRODUCT_OVERVIEW.md](PRODUCT_OVERVIEW.md) ·
 
 ## Phase 3 — product expansion (newest)
 
+Quant suite completed end to end — each crate is reachable as **crate → API route
+→ dashboard page → SDK (TS/Python/Go) → CLI subcommand**:
+- `pnl-attribution` crate + `GET /pnl` + `/pnl` page + `guardrail-cli pnl` — average-cost
+  realized/unrealized PnL from a fill stream.
+- `orderbook` matching engine exposed at `GET /orderbook` + `/orderbook` page + `book` CLI.
+- `GET /ta`, `/fees`, `/sizer` + their pages and `ta`/`fees`/`size` CLI subcommands.
+- `/quant` dashboard hub indexes the whole suite.
+- Read-only ops: `services/health-aggregator` (Go) aggregates all services' `/health`.
+- 3-language SDK parity for every new endpoint.
+
+
+
 New real, self-contained product components across Rust/Go/Python/TS — new
 directories, no mocks. All build green; the Rust crates carry unit tests.
 
