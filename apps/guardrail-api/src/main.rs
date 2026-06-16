@@ -63,5 +63,23 @@ mod watchlist;
 async fn main() -> anyhow::Result<()> {
     observability::tracing_setup::init();
     version::init_uptime();
-    server::serve("0.0.0.0:8080").await
+    server::serve(&bind_addr()).await
+}
+
+/// Resolve the listen address, in precedence order:
+/// `GUARDRAIL_API_ADDR` (full `host:port`) > `PORT` (host fixed to 0.0.0.0) > default.
+fn bind_addr() -> String {
+    if let Ok(addr) = std::env::var("GUARDRAIL_API_ADDR") {
+        let addr = addr.trim();
+        if !addr.is_empty() {
+            return addr.to_string();
+        }
+    }
+    if let Ok(port) = std::env::var("PORT") {
+        let port = port.trim();
+        if !port.is_empty() {
+            return format!("0.0.0.0:{port}");
+        }
+    }
+    "0.0.0.0:8080".to_string()
 }
