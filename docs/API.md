@@ -11,9 +11,16 @@ authoritative route list is
 Run the server and hit any route:
 
 ```bash
-cargo run -p guardrail-api                       # binds 127.0.0.1:8080
+cargo run -p guardrail-api                       # binds 0.0.0.0:8080
 curl -fsS http://127.0.0.1:8080/health
+
+# Override the listen address when :8080 is taken (e.g. a stray Docker proxy):
+PORT=8091 cargo run -p guardrail-api             # binds 0.0.0.0:8091
+GUARDRAIL_API_ADDR=127.0.0.1:9000 cargo run -p guardrail-api
 ```
+
+Address resolution precedence: `GUARDRAIL_API_ADDR` (full `host:port`) >
+`PORT` (host fixed to `0.0.0.0`) > default `0.0.0.0:8080`.
 
 There are **77 routes**. Everything is offline-safe (paper mode, deterministic
 mocks). The dashboard, web-lite cockpit, and the TS/Python/Go SDKs are all

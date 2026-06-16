@@ -15,7 +15,7 @@ fails=0
 check() {
   local name="$1" path="$2"
   local body
-  body="$(curl -fsS "${API}${path}" 2>/dev/null)"
+  body="$(curl -fsS --max-time 8 "${API}${path}" 2>/dev/null)"
   if [ -z "$body" ]; then
     printf '  [FAIL] %-22s (no response)\n' "$name"; fails=$((fails + 1)); return
   fi
