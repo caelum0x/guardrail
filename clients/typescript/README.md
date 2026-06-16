@@ -165,12 +165,28 @@ cd clients/typescript && pnpm install && pnpm run example
 | `wellKnownAgentCard()` | `/.well-known/agent-card.json` | well-known agent card |
 | `compilePolicy(m)` | `/policy/compile` | compiled policy + hash |
 
+### Quant tools
+
+| Method | Route | Description |
+|---|---|---|
+| `ta(p)` | `/ta` | technical indicator over a close-price series |
+| `fees(p)` | `/fees` | all-in swap-cost estimate |
+| `sizer(p)` | `/sizer` | position size by method (kelly / vol-target / fixed) |
+| `orderbook(spec?)` | `/orderbook` | run the matching engine over an order spec |
+| `pnl(fills?, marks?)` | `/pnl` | average-cost PnL attribution |
+| `correlation(series?)` | `/correlation` | pairwise correlation matrix |
+| `equityIndicators(ind?, period?)` | `/equity/indicators` | indicator over the live NAV curve |
+| `portfolioRisk()` | `/portfolio/risk` | concentration metrics (HHI, effective-N) |
+| `cmcCapabilities()` | `/cmc/capabilities` | CMC capability lineage descriptor |
+
 ## CLI (`guardrail`)
 
 A dependency-free operator CLI ships in `src/cli.ts`, mirroring the Go
 `guardrailctl`. It uses only Node built-ins plus the SDK client, and is
-**offline-safe**: every subcommand prints a notice and exits `0` when the API is
-unreachable, so it is harmless in CI or against a stopped backend.
+**offline-safe** (except `smoke`): every subcommand prints a notice and exits
+`0` when the API is unreachable, so it is harmless in CI or against a stopped
+backend. The lone exception is `smoke`, a deliberate pre-ship gate that exits
+non-zero on failure.
 
 Build it to `dist/` and run the compiled entrypoint:
 
@@ -200,6 +216,7 @@ npx guardrail status             # via the "bin" entry once installed
 | `verify` | `/proof/verify` | server-side proof pass/fail table |
 | `snapshots` | `/snapshots` | latest run summary + per-asset prices |
 | `watch` | `/regime` + `/compete` | refreshing one-line status, polled on an interval |
+| `smoke` | all 9 quant endpoints | PASS/FAIL/WARN table; **non-zero exit on failure** |
 | `help` | — | usage |
 
 ### Flags
@@ -235,6 +252,22 @@ node dist/cli.js watch                      # refresh every 5s until Ctrl-C
 node dist/cli.js watch --interval 2         # refresh every 2s
 node dist/cli.js watch --once               # single tick, then exit 0
 node dist/cli.js watch --json --interval 10 # one JSON object every 10s
+```
+
+### `smoke`
+
+`smoke` is the typed, cross-platform sibling of `scripts/smoke_quant.sh`: it
+exercises every quant endpoint through the SDK and prints a `PASS`/`WARN`/`FAIL`
+line per endpoint. A throw is `FAIL`, an `error` field in the response is `WARN`
+(reachable but needs a prior agent run), otherwise `PASS`.
+
+Unlike every other subcommand, `smoke` is a **gate**: it exits non-zero when any
+endpoint fails to respond, so it is safe to wire into a pre-ship check.
+
+```bash
+node dist/cli.js smoke                       # against $GUARDRAIL_BASE_URL or :8080
+node dist/cli.js smoke --base http://127.0.0.1:8091
+node dist/cli.js smoke --json                # { base, fails, results: [...] }
 ```
 
 The CLI is backed by these new typed SDK methods on `GuardrailClient`:

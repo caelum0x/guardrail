@@ -583,6 +583,17 @@ func (c *Client) PortfolioRisk(ctx context.Context) (map[string]any, error) {
 	return c.getMapQuery(ctx, "/portfolio/risk", nil)
 }
 
+// Orderbook runs the matching engine over a compact order spec (/orderbook).
+// orders is a ";"-separated list of "side,kind,price,qty" entries, e.g.
+// "b,limit,100,5;s,market,,3" (empty -> the server's demo book).
+func (c *Client) Orderbook(ctx context.Context, orders string) (map[string]any, error) {
+	q := url.Values{}
+	if orders != "" {
+		q.Set("orders", orders)
+	}
+	return c.getMapQuery(ctx, "/orderbook", q)
+}
+
 func joinInts(values []int) string {
 	parts := make([]string, len(values))
 	for i, v := range values {
