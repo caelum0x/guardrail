@@ -27,6 +27,7 @@ mod journal;
 mod liquidity;
 mod mandates;
 mod optimize;
+mod orderbook;
 mod playbook;
 mod presets;
 mod prizes;

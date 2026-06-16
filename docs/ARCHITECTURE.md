@@ -64,7 +64,7 @@ The three newer crates are deliberately decoupled:
 | Binary | Role | Trades? |
 |--------|------|---------|
 | `guardrail-agent`    | Runs `agent-runtime` — the live trading loop | Yes (only one) |
-| `guardrail-api`      | axum read API over the event store + run report (72 routes) | No |
+| `guardrail-api`      | axum read API over the event store + run report (73 routes) | No |
 | `guardrail-cli`      | Dev/admin CLI: backtest, compare, score, quote, walk-forward, markets, indicators, experiments, register, identity, policy hash/compile, kill-switch, report, submission | No |
 | `guardrail-tui`      | Terminal cockpit: polls the run report + event totals and renders to the terminal; refreshes a fixed number of times then exits cleanly | No |
 | `guardrail-monitor`  | Watchdog: polls run report, raises staleness / drawdown / kill-switch alerts, dispatches via `notifier` | No |
@@ -146,7 +146,7 @@ exposes gauges such as `guardrail_events_total`, `guardrail_trades_total`,
 
 ## API endpoint inventory (`apps/guardrail-api`)
 
-The 72 read-only `GET` routes over the event store and run report are listed in
+The 73 read-only `GET` routes over the event store and run report are listed in
 full in [API.md](API.md); a representative subset is shown below. Source of
 truth: `apps/guardrail-api/src/server.rs::build_app`.
 
@@ -185,7 +185,7 @@ truth: `apps/guardrail-api/src/server.rs::build_app`.
 ## Dashboard page inventory (`dashboard/`)
 
 The dashboard is **read-only** — it has no trading path and only renders
-`guardrail-api` responses. 70 pages (`dashboard/src/app/*`, routed via
+`guardrail-api` responses. 71 pages (`dashboard/src/app/*`, routed via
 `components/Layout.tsx`):
 
 | Page | Page | Page |
