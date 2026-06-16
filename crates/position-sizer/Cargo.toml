@@ -1,0 +1,10 @@
+[package]
+name = "position-sizer"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Pure-Rust position sizing algorithms: fixed-fractional, volatility-target, Kelly, and equal-risk-contribution."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rust_decimal = "1"

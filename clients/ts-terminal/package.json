@@ -1,0 +1,18 @@
+{
+  "name": "guardrail-term",
+  "version": "0.1.0",
+  "description": "Typed, dependency-free terminal client for the read-only Guardrail API.",
+  "type": "module",
+  "bin": {
+    "guardrail-term": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "start": "node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

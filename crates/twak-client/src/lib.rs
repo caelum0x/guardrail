@@ -30,6 +30,21 @@ use async_trait::async_trait;
 use common::{Address, OrderIntent};
 use risk_engine::ApprovedOrder;
 
+/// Default request timeout for the TWAK HTTP transports. Swaps can take longer
+/// than data reads, so this is generous, but it bounds a hung endpoint rather
+/// than relying on reqwest's no-timeout default.
+pub(crate) const HTTP_TIMEOUT_SECS: u64 = 20;
+
+/// A reqwest client with a bounded request timeout. Used by the REST and MCP
+/// transports so a slow/hung TWAK endpoint cannot stall the trading loop
+/// indefinitely. Falls back to the default client if the builder fails.
+pub(crate) fn http_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(HTTP_TIMEOUT_SECS))
+        .build()
+        .unwrap_or_default()
+}
+
 #[async_trait]
 pub trait TwakExecutor: Send + Sync {
     async fn wallet_address(&self) -> Result<Address, TwakError>;

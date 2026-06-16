@@ -105,6 +105,9 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
             "/cmc/capabilities",
             get(crate::cmc_capabilities::cmc_capabilities),
         )
+        .route("/ta", get(crate::ta::ta))
+        .route("/fees", get(crate::fees::fees))
+        .route("/sizer", get(crate::sizer::sizer))
         .route("/version", get(crate::version::version))
         .with_state(state)
 }

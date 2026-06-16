@@ -75,8 +75,15 @@ impl AgentRuntime {
         })?;
         let policy = RiskPolicy::from_json_str(&policy_raw)?;
 
-        let data_source = build_data_source(s);
-        let executor = build_executor(s);
+        let (data_source, cmc_transport) = build_data_source(s)?;
+        let (executor, twak_transport) = build_executor(s)?;
+        // Surface the resolved transports so operators can see at a glance which
+        // data source and executor are live vs mock for this run.
+        tracing::info!(
+            cmc_transport,
+            twak_transport,
+            "transports resolved"
+        );
         // Size positions just under the risk cap so targets are not rejected.
         let position_cap = (to_f64(policy.max_position_pct) - 1.0).max(1.0);
         let strategy = StrategyEngine::new(build_strategy_config(s, position_cap));
@@ -108,7 +115,7 @@ impl AgentRuntime {
         events.append(
             &run_id,
             AgentEvent::AgentStarted,
-            json!({ "mode": s.app.mode, "agent_id": agent_id, "wallet": wallet, "policy_hash": policy_hash }),
+            json!({ "mode": s.app.mode, "agent_id": agent_id, "wallet": wallet, "policy_hash": policy_hash, "cmc_transport": cmc_transport, "twak_transport": twak_transport }),
         );
 
         // Track 1: register the competition wallet before trading.
@@ -663,15 +670,21 @@ fn sqlite_path(database_url: &str) -> Option<std::path::PathBuf> {
 /// - `cmc.use_mock` -> offline [`CmcTransport::Mock`].
 /// - else `cmc.use_mcp` with `cmc.mcp_url` present -> [`CmcTransport::Mcp`].
 /// - else `CMC_API_KEY` set -> [`CmcTransport::Rest`].
-/// - else fall back to the mock (logging a note).
+/// - else (paper only) fall back to the mock.
 ///
-/// On any construction error the source degrades to the offline mock so the
-/// trading loop always has a working data source.
-fn build_data_source(s: &Settings) -> Box<dyn CmcDataSource> {
+/// **Live mode never silently uses the mock.** If a live run cannot resolve a
+/// real CMC transport (missing `CMC_API_KEY`/`mcp_url`, or `use_mock = true`),
+/// or construction fails, this returns an error so the agent refuses to trade on
+/// fake data. In paper mode it degrades to the offline mock as before.
+fn build_data_source(s: &Settings) -> anyhow::Result<(Box<dyn CmcDataSource>, &'static str)> {
     let api_key = std::env::var("CMC_API_KEY").unwrap_or_default();
     let mcp_url = s.cmc.mcp_url.clone().unwrap_or_default();
+    let live = s.app.is_live();
 
     let transport = if s.cmc.use_mock {
+        if live {
+            anyhow::bail!("live mode requires a real CMC source, but cmc.use_mock = true");
+        }
         CmcTransport::Mock
     } else if s.cmc.use_mcp && !mcp_url.is_empty() {
         tracing::info!("using live CMC MCP data source");
@@ -679,19 +692,34 @@ fn build_data_source(s: &Settings) -> Box<dyn CmcDataSource> {
     } else if !api_key.is_empty() {
         tracing::info!("using live CMC REST data source");
         CmcTransport::Rest
-    } else {
-        tracing::warn!(
-            "no CMC transport configured (CMC_API_KEY unset, MCP disabled); using mock data source"
+    } else if live {
+        anyhow::bail!(
+            "live mode requires CMC_API_KEY (REST) or cmc.mcp_url (MCP); none configured"
         );
+    } else {
+        tracing::warn!("no CMC transport configured; using mock data source (paper)");
         CmcTransport::Mock
     };
 
+    let label = cmc_transport_label(transport);
+
     match cmc_client::source_from(transport, api_key, mcp_url, s.cmc.request_timeout_ms) {
-        Ok(source) => source,
+        Ok(source) => Ok((source, label)),
+        Err(e) if live => Err(anyhow::anyhow!("failed to init live CMC data source: {e}")),
         Err(e) => {
-            tracing::warn!(error = %e, "failed to init CMC data source; using mock");
-            Box::new(MockCmcClient::new())
+            tracing::warn!(error = %e, "failed to init CMC data source; using mock (paper)");
+            Ok((Box::new(MockCmcClient::new()), "mock"))
         }
+    }
+}
+
+/// Stable operator-facing label for a CMC transport, used in startup logging and
+/// the `AgentStarted` event so it's visible which source is live vs mock.
+fn cmc_transport_label(transport: CmcTransport) -> &'static str {
+    match transport {
+        CmcTransport::Mock => "mock",
+        CmcTransport::Mcp => "mcp",
+        CmcTransport::Rest => "rest",
     }
 }
 
@@ -699,16 +727,26 @@ fn build_data_source(s: &Settings) -> Box<dyn CmcDataSource> {
 /// [`TwakExecutor`].
 ///
 /// `base_url` is taken from `twak.base_url`, falling back to the `TWAK_BASE_URL`
-/// environment variable. Unknown modes degrade to the offline mock so paper
-/// mode always has a working executor.
-fn build_executor(s: &Settings) -> Box<dyn TwakExecutor> {
+/// environment variable.
+///
+/// **Live mode never silently uses the mock.** A live run with `twak.mode =
+/// "mock"`, an unknown mode, or a network transport without a `base_url` returns
+/// an error rather than executing fake swaps. Paper mode degrades to the mock.
+fn build_executor(s: &Settings) -> anyhow::Result<(Box<dyn TwakExecutor>, &'static str)> {
+    let live = s.app.is_live();
     let transport = match s.twak.mode.as_str() {
         "rest" => TwakTransport::Rest,
         "mcp" => TwakTransport::Mcp,
         "cli" => TwakTransport::Cli,
+        "mock" if live => {
+            anyhow::bail!("live mode requires a real TWAK transport, but twak.mode = \"mock\"");
+        }
         "mock" => TwakTransport::Mock,
+        other if live => {
+            anyhow::bail!("live mode: unknown twak.mode '{other}'");
+        }
         other => {
-            tracing::warn!(mode = %other, "unknown twak.mode; using mock executor");
+            tracing::warn!(mode = %other, "unknown twak.mode; using mock executor (paper)");
             TwakTransport::Mock
         }
     };
@@ -716,7 +754,31 @@ fn build_executor(s: &Settings) -> Box<dyn TwakExecutor> {
     let env_base_url = std::env::var("TWAK_BASE_URL").ok();
     let base_url = s.twak.base_url.as_deref().or(env_base_url.as_deref());
 
-    twak_client::executor_from(transport, base_url, s.twak.autonomous)
+    // A network transport in live mode must have a base_url, else executor_from
+    // would silently hand back a mock.
+    if live && matches!(transport, TwakTransport::Rest | TwakTransport::Mcp) && base_url.is_none() {
+        anyhow::bail!(
+            "live mode: twak.mode = \"{}\" requires twak.base_url or TWAK_BASE_URL",
+            s.twak.mode
+        );
+    }
+
+    let label = twak_transport_label(transport);
+    Ok((
+        twak_client::executor_from(transport, base_url, s.twak.autonomous),
+        label,
+    ))
+}
+
+/// Stable operator-facing label for a TWAK transport, used in startup logging
+/// and the `AgentStarted` event so it's visible which executor is live vs mock.
+fn twak_transport_label(transport: TwakTransport) -> &'static str {
+    match transport {
+        TwakTransport::Mock => "mock",
+        TwakTransport::Rest => "rest",
+        TwakTransport::Mcp => "mcp",
+        TwakTransport::Cli => "cli",
+    }
 }
 
 /// Immutable per-run metadata shared with each cycle's run-report write.
@@ -829,7 +891,9 @@ fn write_run_report(
 
     let path = std::env::var("GUARDRAIL_REPORT").unwrap_or_else(|_| "data/run_report.json".into());
     if let Some(parent) = std::path::Path::new(&path).parent() {
-        let _ = std::fs::create_dir_all(parent);
+        if let Err(e) = std::fs::create_dir_all(parent) {
+            tracing::warn!(dir = %parent.display(), error = %e, "failed to create run-report dir; report may be lost");
+        }
     }
     match serde_json::to_string_pretty(&report) {
         Ok(json) => {
@@ -1004,7 +1068,16 @@ fn build_fill(
 
 #[cfg(test)]
 mod tests {
-    use super::sqlite_path;
+    use super::{build_data_source, build_executor, sqlite_path};
+
+    /// Load a committed config, resolving its path from the crate manifest dir so
+    /// the test does not depend on the runner's working directory.
+    fn cfg(rel: &str) -> common::Settings {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../..")
+            .join(rel);
+        common::Settings::load(path.to_str().unwrap()).expect("load config")
+    }
 
     #[test]
     fn parses_sqlite_database_url() {
@@ -1017,5 +1090,35 @@ mod tests {
     #[test]
     fn ignores_non_sqlite_database_url() {
         assert!(sqlite_path("postgres://localhost/db").is_none());
+    }
+
+    #[test]
+    fn live_mode_refuses_mock_cmc() {
+        // These bail before any env read, so the test is deterministic.
+        let mut s = cfg("configs/production.toml");
+        assert!(s.app.is_live(), "production config must be live mode");
+        s.cmc.use_mock = true;
+        assert!(
+            build_data_source(&s).is_err(),
+            "live mode must refuse a mock CMC source"
+        );
+    }
+
+    #[test]
+    fn live_mode_refuses_mock_twak() {
+        let mut s = cfg("configs/production.toml");
+        s.twak.mode = "mock".into();
+        assert!(
+            build_executor(&s).is_err(),
+            "live mode must refuse a mock TWAK executor"
+        );
+    }
+
+    #[test]
+    fn paper_mode_allows_mock() {
+        let s = cfg("configs/paper.toml");
+        assert!(!s.app.is_live());
+        assert!(build_data_source(&s).is_ok());
+        assert!(build_executor(&s).is_ok());
     }
 }

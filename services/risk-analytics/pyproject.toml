@@ -1,0 +1,18 @@
+[project]
+name = "guardrail-risk-analytics"
+version = "0.1.0"
+description = "Portfolio risk/performance metrics over the Guardrail agent's NAV curve."
+requires-python = ">=3.10"
+# The metrics engine and CLI are pure stdlib. FastAPI/uvicorn are only needed to
+# serve the HTTP API (risk_analytics.api); install them to run the server.
+dependencies = []
+
+[project.optional-dependencies]
+serve = ["fastapi>=0.110", "uvicorn>=0.29", "pydantic>=2"]
+
+[project.scripts]
+risk-analytics = "risk_analytics.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

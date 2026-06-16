@@ -11,6 +11,9 @@ const links = [
   "/watchlist",
   "/liquidity",
   "/indicators",
+  "/ta-studio",
+  "/fees",
+  "/sizer",
   "/trending",
   "/quotes",
   "/costs",
@@ -65,6 +68,9 @@ const links = [
   "/compete",
   "/submission",
   "/reports",
+  "/market-oracle",
+  "/transports",
+  "/journal-pro",
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {

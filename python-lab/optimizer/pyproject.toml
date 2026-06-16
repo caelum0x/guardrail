@@ -1,0 +1,14 @@
+[project]
+name = "guardrail-optimizer"
+version = "0.1.0"
+description = "Grid/random search optimizer for Guardrail strategy parameters."
+requires-python = ">=3.10"
+# Pure standard library — the API scorer uses urllib, no third-party deps.
+dependencies = []
+
+[project.scripts]
+guardrail-optimizer = "optimizer.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"

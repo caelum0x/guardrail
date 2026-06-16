@@ -44,7 +44,7 @@ impl TwakRestClient {
     pub fn new(base_url: impl Into<String>, autonomous: bool) -> Self {
         TwakRestClient {
             base_url: base_url.into().trim_end_matches('/').to_string(),
-            http: reqwest::Client::new(),
+            http: crate::http_client(),
             autonomous,
         }
     }

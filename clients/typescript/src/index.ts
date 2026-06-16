@@ -84,6 +84,34 @@ export interface SnapshotsParams {
   limit?: number;
 }
 
+/** Params for the `/ta` technical-analysis compute endpoint. */
+export interface TaParams {
+  indicator: "sma" | "ema" | "rsi" | "macd" | "bollinger";
+  /** Close-price series. */
+  series: number[];
+  period?: number;
+  mult?: number;
+}
+
+/** Params for the `/fees` swap-cost endpoint. */
+export interface FeesParams {
+  notionalUsd?: number;
+  quantity?: number;
+  side?: "buy" | "sell";
+  gasUnits?: number;
+  gasPriceGwei?: number;
+  nativeUsd?: number;
+  poolLiquidityUsd?: number;
+  linearSlippageBps?: number;
+  protocolFeeBps?: number;
+}
+
+/** Params for the `/sizer` position-sizing endpoint. */
+export interface SizerParams {
+  method: "fixed_fractional" | "vol_target" | "kelly";
+  [param: string]: string | number;
+}
+
 const DEFAULT_BASE_URL = "http://localhost:8080";
 
 export class GuardrailClient {
@@ -366,6 +394,50 @@ export class GuardrailClient {
     return this.getJson<CompiledPolicyResponse>(
       `/policy/compile?mandate=${encodeURIComponent(mandate)}`,
     );
+  }
+
+  // --- Quant tools ----------------------------------------------------------
+  /** Compute a technical indicator over a close-price series (``/ta``). */
+  ta(params: TaParams): Promise<Record<string, unknown>> {
+    const q = new URLSearchParams({ indicator: params.indicator, series: params.series.join(",") });
+    if (params.period != null) q.set("period", String(params.period));
+    if (params.mult != null) q.set("mult", String(params.mult));
+    return this.getJson(`/ta?${q.toString()}`);
+  }
+
+  /** Estimate the all-in cost of a swap (``/fees``). */
+  fees(params: FeesParams = {}): Promise<Record<string, unknown>> {
+    const map: Record<string, unknown> = {
+      notional_usd: params.notionalUsd,
+      quantity: params.quantity,
+      side: params.side,
+      gas_units: params.gasUnits,
+      gas_price_gwei: params.gasPriceGwei,
+      native_usd: params.nativeUsd,
+      pool_liquidity_usd: params.poolLiquidityUsd,
+      linear_slippage_bps: params.linearSlippageBps,
+      protocol_fee_bps: params.protocolFeeBps,
+    };
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(map)) {
+      if (v != null) q.set(k, String(v));
+    }
+    const qs = q.toString();
+    return this.getJson(qs ? `/fees?${qs}` : "/fees");
+  }
+
+  /** Compute a position size by method (``/sizer``). */
+  sizer(params: SizerParams): Promise<Record<string, unknown>> {
+    const q = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v != null) q.set(k, String(v));
+    }
+    return this.getJson(`/sizer?${q.toString()}`);
+  }
+
+  /** CMC data -> capability lineage descriptor (``/cmc/capabilities``). */
+  cmcCapabilities(): Promise<Record<string, unknown>> {
+    return this.getJson("/cmc/capabilities");
   }
 }
 
