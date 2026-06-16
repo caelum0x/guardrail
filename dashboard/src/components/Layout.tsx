@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { AutoRefresh } from "./AutoRefresh";
 
 const links = [
@@ -82,7 +83,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
     <div>
       <AutoRefresh intervalMs={5000} />
       <nav className="nav">
-        <strong>Guardrail Alpha</strong>
+        <Link href="/" className="brand" aria-label="Guardrail Alpha — home">
+          <Image
+            src="/logo.png"
+            alt="Guardrail Alpha"
+            width={124}
+            height={68}
+            priority
+          />
+        </Link>
         <div>
           {links.map((href) => (
             <Link key={href} href={href}>

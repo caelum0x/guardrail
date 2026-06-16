@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/logo.png" alt="Guardrail Alpha" width="420" />
+</p>
+
 # Guardrail Alpha
 
 **A Rust-native autonomous trading agent for BNB Smart Chain (chain id `56`).** A
