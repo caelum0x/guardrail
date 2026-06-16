@@ -111,6 +111,10 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/orderbook", get(crate::orderbook::orderbook))
         .route("/pnl", get(crate::pnl::pnl))
         .route("/correlation", get(crate::correlation::correlation))
+        .route(
+            "/equity/indicators",
+            get(crate::equity_ta::equity_indicators),
+        )
         .route("/version", get(crate::version::version))
         .with_state(state)
 }
