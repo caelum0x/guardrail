@@ -110,6 +110,7 @@ pub fn build_app(state: crate::routes::AppState) -> Router {
         .route("/sizer", get(crate::sizer::sizer))
         .route("/orderbook", get(crate::orderbook::orderbook))
         .route("/pnl", get(crate::pnl::pnl))
+        .route("/portfolio/risk", get(crate::portfolio_risk::portfolio_risk))
         .route("/correlation", get(crate::correlation::correlation))
         .route(
             "/equity/indicators",

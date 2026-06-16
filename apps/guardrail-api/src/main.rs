@@ -32,6 +32,7 @@ mod optimize;
 mod orderbook;
 mod playbook;
 mod pnl;
+mod portfolio_risk;
 mod presets;
 mod prizes;
 mod quotes;
