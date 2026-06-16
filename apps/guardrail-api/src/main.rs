@@ -10,6 +10,7 @@ mod cmc_capabilities;
 mod commerce;
 mod compete;
 mod compile;
+mod correlation;
 mod costs;
 mod drift;
 mod ensemble;
