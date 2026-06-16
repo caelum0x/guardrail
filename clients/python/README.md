@@ -187,7 +187,40 @@ except GuardrailApiError as exc:
 | `well_known_agent_card()` | `/.well-known/agent-card.json` | well-known agent card |
 | `compile_policy(mandate)` | `/policy/compile` | compiled policy + hash |
 
+### Quant tools
+
+| Method | Route | Returns |
+|---|---|---|
+| `ta(indicator, series, period=None, mult=None)` | `/ta` | technical indicator over a price series |
+| `fees(**params)` | `/fees` | all-in swap-cost estimate |
+| `sizer(method, **params)` | `/sizer` | position size by method |
+| `orderbook(orders=None)` | `/orderbook` | matching engine over an order spec |
+| `pnl(fills=None, marks=None)` | `/pnl` | average-cost PnL attribution |
+| `correlation(series=None)` | `/correlation` | pairwise correlation matrix |
+| `equity_indicators(indicator=None, period=None)` | `/equity/indicators` | indicator over the live NAV curve |
+| `portfolio_risk()` | `/portfolio/risk` | concentration metrics (HHI, effective-N) |
+| `cmc_capabilities()` | `/cmc/capabilities` | CMC capability lineage descriptor |
+
 All JSON methods return parsed `dict` objects; `metrics()` returns text.
+
+## Command-line tool
+
+A stdlib-only operator CLI ships in the package, mirroring the TypeScript
+`guardrail` CLI and the Go `guardrailctl`. Run it as a module:
+
+```bash
+python -m guardrail_client status                       # /health + /readiness + /regime
+python -m guardrail_client regime --json
+python -m guardrail_client smoke --base http://127.0.0.1:8091
+```
+
+Subcommands: `status`, `regime`, `smoke`, `help`. Common flags: `--base URL`
+(default `$GUARDRAIL_BASE_URL` or `http://localhost:8080`) and `--json`.
+
+Every subcommand except `smoke` is **offline-safe**: it prints a notice and
+exits `0` when the API is unreachable. `smoke` is the lone exception — a
+pre-ship gate that exercises all 9 quant endpoints and exits non-zero when any
+fails to respond (the Python sibling of `scripts/smoke_quant.sh`).
 
 ## Quickstart
 
