@@ -136,8 +136,10 @@ cd example && go run .
 ## Command-line tool: `guardrailctl`
 
 A small operator CLI lives in [`cmd/guardrailctl/`](./cmd/guardrailctl). Every
-subcommand is **offline-safe**: it prints a notice and exits `0` when the API is
-unreachable, so it is harmless to run in CI or against a stopped backend.
+subcommand except `smoke` is **offline-safe**: it prints a notice and exits `0`
+when the API is unreachable, so it is harmless to run in CI or against a stopped
+backend. The lone exception is `smoke`, a deliberate pre-ship gate that exits
+non-zero on failure.
 
 ```bash
 # Build a binary, or run directly with `go run`.
@@ -230,6 +232,24 @@ BscScan URL, registration tx), plus the recomputed policy hashes. For a fully
 ```bash
 guardrailctl verify
 guardrailctl verify --json
+```
+
+### `smoke`
+
+Exercises every quant endpoint (`/ta`, `/fees`, `/sizer`, `/orderbook`, `/pnl`,
+`/correlation`, `/equity/indicators`, `/portfolio/risk`, `/cmc/capabilities`)
+through the SDK and prints a `PASS`/`WARN`/`FAIL` line per endpoint. A transport
+or decode error is `FAIL`, an `error` field in the response is `WARN` (reachable
+but needs a prior agent run), otherwise `PASS`.
+
+This is the Go-native sibling of `scripts/smoke_quant.sh` and the TS CLI
+`smoke`. Unlike every other subcommand it is a **gate**: it exits non-zero when
+any endpoint fails to respond, so it is safe to wire into a pre-ship check.
+
+```bash
+guardrailctl smoke                              # against --base or :8080
+guardrailctl smoke --base http://127.0.0.1:8091
+guardrailctl smoke --json                       # { base, fails, results: [...] }
 ```
 
 ## Proof verification
