@@ -37,7 +37,7 @@ Authority flows one way; nothing downstream can reach TWAK.
               ┌───────────────────┬──────────────┴───────┬──────────────────┐
               ▼                   ▼                       ▼                  ▼
         event-store         data/run_report.json    guardrail-api      guardrail-
-        (SQLite)            (NAV, drawdown,          (76 GET routes,    exporter /
+        (SQLite)            (NAV, drawdown,          (77 GET routes,    exporter /
                             kill switch)             read-only)         metrics:9100
                                                           │
         ┌─────────────┬──────────────┬──────────────┬────┴──────┬──────────────┐
@@ -66,7 +66,7 @@ All counts verified against the repo:
 |---|---:|---|
 | Rust crates (live engine) | **28** | `crates/` |
 | Binaries (apps) | **9** | `apps/` |
-| Read-only API routes (`GET`) | **76** | `apps/guardrail-api/src/server.rs` |
+| Read-only API routes (`GET`) | **77** | `apps/guardrail-api/src/server.rs` |
 | Track-2 strategy skills (registered) | **7** | `skills/INDEX.json` (7 skill dirs on disk) |
 | Dashboard pages (Next.js) | **74** | `dashboard/src/app/**/page.tsx` |
 | Ecosystem clients | **11** | `clients/` |
