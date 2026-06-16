@@ -37,7 +37,7 @@ Authority flows one way; nothing downstream can reach TWAK.
               ┌───────────────────┬──────────────┴───────┬──────────────────┐
               ▼                   ▼                       ▼                  ▼
         event-store         data/run_report.json    guardrail-api      guardrail-
-        (SQLite)            (NAV, drawdown,          (73 GET routes,    exporter /
+        (SQLite)            (NAV, drawdown,          (74 GET routes,    exporter /
                             kill switch)             read-only)         metrics:9100
                                                           │
         ┌─────────────┬──────────────┬──────────────┬────┴──────┬──────────────┐
@@ -64,11 +64,11 @@ All counts verified against the repo:
 
 | Surface | Count | Where |
 |---|---:|---|
-| Rust crates (live engine) | **24** | `crates/` |
+| Rust crates (live engine) | **27** | `crates/` |
 | Binaries (apps) | **9** | `apps/` |
-| Read-only API routes (`GET`) | **73** | `apps/guardrail-api/src/server.rs` |
+| Read-only API routes (`GET`) | **74** | `apps/guardrail-api/src/server.rs` |
 | Track-2 strategy skills (registered) | **7** | `skills/INDEX.json` (7 skill dirs on disk) |
-| Dashboard pages (Next.js) | **71** | `dashboard/src/app/**/page.tsx` |
+| Dashboard pages (Next.js) | **72** | `dashboard/src/app/**/page.tsx` |
 | Ecosystem clients | **11** | `clients/` |
 | Eligible BSC universe | **20** tokens, all `chain_id 56` | `configs/eligible_assets.bsc.json` |
 

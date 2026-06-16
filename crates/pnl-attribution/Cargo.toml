@@ -1,0 +1,13 @@
+[package]
+name = "pnl-attribution"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Average-cost realized/unrealized PnL attribution from a fill stream."
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rust_decimal = { version = "1", features = ["serde"] }
+
+[dev-dependencies]
+rust_decimal_macros = "1"

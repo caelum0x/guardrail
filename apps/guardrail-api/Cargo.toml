@@ -20,6 +20,7 @@ ta-signals = { path = "../../crates/ta-signals" }
 fee-model = { path = "../../crates/fee-model" }
 position-sizer = { path = "../../crates/position-sizer" }
 orderbook = { path = "../../crates/orderbook" }
+pnl-attribution = { path = "../../crates/pnl-attribution" }
 indicators = { path = "../../crates/indicators" }
 portfolio-optimizer = { path = "../../crates/portfolio-optimizer" }
 skill-loader = { path = "../../crates/skill-loader" }

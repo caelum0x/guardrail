@@ -121,6 +121,56 @@ pub fn run_size(
     Ok(())
 }
 
+/// `pnl` — average-cost realized/unrealized PnL attribution from a fill spec.
+/// fills: `symbol,side,qty,price[,fee];…`  marks: `SYM:price,SYM2:price2`.
+pub fn run_pnl(fills: &str, marks: &str) -> anyhow::Result<()> {
+    use pnl_attribution::{Attributor, Fill, Side};
+    use std::collections::BTreeMap;
+
+    let mut attr = Attributor::new();
+    for (i, raw) in fills.split(';').filter(|s| !s.trim().is_empty()).enumerate() {
+        let p: Vec<&str> = raw.split(',').map(str::trim).collect();
+        if p.len() < 4 {
+            anyhow::bail!("fill {i}: expected 'symbol,side,qty,price[,fee]'");
+        }
+        let side = match p[1].to_lowercase().as_str() {
+            "buy" | "b" => Side::Buy,
+            "sell" | "s" => Side::Sell,
+            o => anyhow::bail!("fill {i}: bad side '{o}'"),
+        };
+        let fee = p.get(4).and_then(|s| Decimal::from_str(s).ok()).unwrap_or_default();
+        attr.apply(&Fill::new(
+            p[0],
+            side,
+            Decimal::from_str(p[2])?,
+            Decimal::from_str(p[3])?,
+            fee,
+        ));
+    }
+    let mut mark_map: BTreeMap<String, Decimal> = BTreeMap::new();
+    for pair in marks.split(',').filter(|s| !s.trim().is_empty()) {
+        if let Some((s, px)) = pair.split_once(':') {
+            if let Ok(p) = Decimal::from_str(px.trim()) {
+                mark_map.insert(s.trim().to_string(), p);
+            }
+        }
+    }
+    let report = attr.report(&mark_map);
+    println!("PnL attribution:");
+    for r in &report.by_symbol {
+        println!(
+            "  {:<6} pos {} @ {}  realized {}  unrealized {}  fees {}  total {}",
+            r.symbol, r.position, r.avg_cost, r.realized, r.unrealized, r.fees, r.total
+        );
+    }
+    let t = &report.total;
+    println!(
+        "  TOTAL  realized {}  unrealized {}  fees {}  total {}",
+        t.realized, t.unrealized, t.fees, t.total
+    );
+    Ok(())
+}
+
 /// `book` — run the matching engine over a compact order spec.
 pub fn run_book(orders: &str) -> anyhow::Result<()> {
     use orderbook::{Order, OrderBook, Side};

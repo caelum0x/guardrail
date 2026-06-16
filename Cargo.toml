@@ -28,6 +28,7 @@ members = [
   "crates/ta-signals",
   "crates/position-sizer",
   "crates/fee-model",
+  "crates/pnl-attribution",
   "apps/guardrail-agent",
   "apps/guardrail-api",
   "apps/guardrail-cli",
