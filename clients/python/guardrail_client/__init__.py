@@ -301,6 +301,35 @@ class GuardrailClient:
         """Stress scenarios (``/scenarios``)."""
         return self._get_json("/scenarios")
 
+    # --- Operator views ------------------------------------------------------
+    def journal(self) -> Dict[str, Any]:
+        """Compact per-cycle decision journal (``/journal``)."""
+        return self._get_json("/journal")
+
+    def ensemble(self) -> Dict[str, Any]:
+        """Current regime + per-skill ensemble weight matrix (``/ensemble``)."""
+        return self._get_json("/ensemble")
+
+    def ensemble_live(self) -> Dict[str, Any]:
+        """Live ensemble weights blended with the current regime (``/ensemble/live``)."""
+        return self._get_json("/ensemble/live")
+
+    def snapshots(self) -> Dict[str, Any]:
+        """Persisted market-snapshot run history + latest summary (``/snapshots``)."""
+        return self._get_json("/snapshots")
+
+    def skills(self) -> Dict[str, Any]:
+        """Skill catalog (``/skills``)."""
+        return self._get_json("/skills")
+
+    def skill_detail(self, skill_id: str) -> Dict[str, Any]:
+        """Detail for a single skill by id (``/skills/{id}``)."""
+        return self._get_json(f"/skills/{urllib.parse.quote(skill_id, safe='')}")
+
+    def proof_verify(self) -> Dict[str, Any]:
+        """Server-side proof verification pass/fail table (``/proof/verify``)."""
+        return self._get_json("/proof/verify")
+
     # --- Market & research ---------------------------------------------------
     def assets(self) -> Dict[str, Any]:
         """Tracked assets (``/assets``)."""

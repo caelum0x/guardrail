@@ -14,10 +14,15 @@ Run it as a module::
     python -m guardrail_client regime --json
 
 Subcommands:
-    status   /health + /readiness + /regime summary lines
-    regime   current market regime and its inputs
-    smoke    exercise every quant endpoint; PASS/WARN/FAIL table (gate)
-    help     show usage
+    status     /health + /readiness + /regime summary lines
+    regime     current market regime and its inputs
+    journal    compact per-cycle decision journal
+    ensemble   current regime + per-skill ensemble weights
+    snapshots  latest run summary + per-asset latest-price sample
+    skills     skill catalog, or one skill's detail (skills <id>)
+    verify     server-side proof per-check pass/fail table
+    smoke      exercise every quant endpoint; PASS/WARN/FAIL table (gate)
+    help       show usage
 """
 
 from __future__ import annotations
@@ -123,6 +128,140 @@ def cmd_regime(client: GuardrailClient, as_json: bool) -> int:
     return EXIT_OK
 
 
+def cmd_journal(client: GuardrailClient, as_json: bool) -> int:
+    try:
+        journal = client.journal()
+    except GuardrailApiError as error:
+        print(_unavailable("journal", error))
+        return EXIT_OK
+
+    if as_json:
+        _print_json(journal)
+        return EXIT_OK
+
+    print(
+        f"journal: {journal.get('total_cycles', 0)} cycles, "
+        f"{journal.get('confirmed_trades_total', 0)} confirmed trades, "
+        f"{journal.get('total_events', 0)} events"
+    )
+    cycles = journal.get("cycles", [])
+    if isinstance(cycles, list):
+        for c in cycles[-10:]:
+            if not isinstance(c, dict):
+                continue
+            print(
+                f"  #{c.get('index', '?')} [{c.get('regime', '?')}] "
+                f"nav={c.get('ending_nav', '?')}  {c.get('headline', '')}"
+            )
+    return EXIT_OK
+
+
+def cmd_ensemble(client: GuardrailClient, as_json: bool) -> int:
+    try:
+        ens = client.ensemble()
+    except GuardrailApiError as error:
+        print(_unavailable("ensemble", error))
+        return EXIT_OK
+
+    if as_json:
+        _print_json(ens)
+        return EXIT_OK
+
+    print(
+        f"ensemble: {ens.get('name', '?')} v{ens.get('version', '?')}  "
+        f"regime={ens.get('current_regime', '?')}"
+    )
+    weights = ens.get("active_weights", {})
+    if isinstance(weights, dict):
+        for skill, weight in sorted(weights.items(), key=lambda kv: kv[1], reverse=True):
+            print(f"  {str(skill).ljust(28)} {weight}")
+    return EXIT_OK
+
+
+def cmd_snapshots(client: GuardrailClient, as_json: bool) -> int:
+    try:
+        snaps = client.snapshots()
+    except GuardrailApiError as error:
+        print(_unavailable("snapshots", error))
+        return EXIT_OK
+
+    if as_json:
+        _print_json(snaps)
+        return EXIT_OK
+
+    runs = snaps.get("runs", [])
+    print(f"snapshots: {len(runs) if isinstance(runs, list) else 0} run(s) "
+          f"in {snaps.get('directory', '?')}")
+    latest = snaps.get("latest")
+    if isinstance(latest, dict):
+        print(
+            f"  latest run {latest.get('run_id', '?')}: "
+            f"{latest.get('cycle_count', '?')} cycles, "
+            f"{latest.get('skipped_lines', 0)} skipped"
+        )
+        prices = latest.get("latest_prices", {})
+        if isinstance(prices, dict) and prices:
+            sample = ", ".join(f"{k}={v}" for k, v in list(prices.items())[:6])
+            print(f"  prices: {sample}")
+    return EXIT_OK
+
+
+def cmd_skills(client: GuardrailClient, as_json: bool, skill_id: Optional[str]) -> int:
+    try:
+        data = client.skill_detail(skill_id) if skill_id else client.skills()
+    except GuardrailApiError as error:
+        print(_unavailable("skills", error))
+        return EXIT_OK
+
+    if as_json:
+        _print_json(data)
+        return EXIT_OK
+
+    if skill_id:
+        print(f"{data.get('id', skill_id)} — {data.get('name', '?')}")
+        regimes = data.get("regimes", [])
+        if isinstance(regimes, list) and regimes:
+            print(f"  regimes: {', '.join(str(r) for r in regimes)}")
+        summary = data.get("summary")
+        if summary:
+            print(f"  {summary}")
+        return EXIT_OK
+
+    skills = data.get("skills", [])
+    print(f"skills: {data.get('count', len(skills) if isinstance(skills, list) else 0)}")
+    if isinstance(skills, list):
+        for s in skills:
+            if isinstance(s, dict):
+                print(f"  {str(s.get('id', '?')).ljust(28)} {s.get('name', '')}")
+    return EXIT_OK
+
+
+def cmd_verify(client: GuardrailClient, as_json: bool) -> int:
+    try:
+        result = client.proof_verify()
+    except GuardrailApiError as error:
+        print(_unavailable("verify", error))
+        return EXIT_OK
+
+    if as_json:
+        _print_json(result)
+        return EXIT_OK
+
+    checks = result.get("checks", [])
+    passed = sum(1 for c in checks if isinstance(c, dict) and c.get("status") == "pass")
+    failed = (len(checks) if isinstance(checks, list) else 0) - passed
+    overall = "PASS" if result.get("passed") else "FAIL"
+    print(f"proof verification: {overall}  ({passed} passed, {failed} failed)")
+    if result.get("report_path"):
+        print(f"report: {result['report_path']}")
+    if isinstance(checks, list):
+        for c in checks:
+            if isinstance(c, dict):
+                tag = str(c.get("status", "?")).upper().ljust(4)
+                print(f"  [{tag}] {str(c.get('name', '?')).ljust(20)} {c.get('detail', '')}")
+    return EXIT_OK
+
+
 # --- Smoke gate (NOT offline-safe) -------------------------------------------
 # Mirrors scripts/smoke_quant.sh, the TS CLI `smoke`, and guardrailctl `smoke`:
 # the same nine read-only quant endpoints with inputs that produce a real
@@ -207,8 +346,24 @@ def build_parser() -> argparse.ArgumentParser:
         "command",
         nargs="?",
         default="help",
-        choices=["status", "regime", "smoke", "help"],
+        choices=[
+            "status",
+            "regime",
+            "journal",
+            "ensemble",
+            "snapshots",
+            "skills",
+            "verify",
+            "smoke",
+            "help",
+        ],
         help="subcommand to run",
+    )
+    parser.add_argument(
+        "arg",
+        nargs="?",
+        default=None,
+        help="optional positional (e.g. a skill id for `skills <id>`)",
     )
     return parser
 
@@ -231,6 +386,16 @@ def main(argv: Optional[List[str]] = None) -> int:
         return cmd_status(client, args.json)
     if args.command == "regime":
         return cmd_regime(client, args.json)
+    if args.command == "journal":
+        return cmd_journal(client, args.json)
+    if args.command == "ensemble":
+        return cmd_ensemble(client, args.json)
+    if args.command == "snapshots":
+        return cmd_snapshots(client, args.json)
+    if args.command == "skills":
+        return cmd_skills(client, args.json, args.arg)
+    if args.command == "verify":
+        return cmd_verify(client, args.json)
     if args.command == "smoke":
         return cmd_smoke(client, args.json, base)
 
