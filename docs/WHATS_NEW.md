@@ -5,9 +5,34 @@ Every entry cites the real file path(s) so a judge can read the source of truth
 directly. Everything below is **offline-safe** — no API keys or chain access are
 required to run or verify it.
 
-Companion docs: [PRIZE_MAP.md](PRIZE_MAP.md) · [JUDGE_DEMO.md](JUDGE_DEMO.md) ·
-[PITCH.md](PITCH.md) · [HACKATHON.md](HACKATHON.md) · [CLI.md](CLI.md) ·
-[API.md](API.md) · [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
+Companion docs: [PRODUCT_OVERVIEW.md](PRODUCT_OVERVIEW.md) ·
+[ARCHITECTURE.md](ARCHITECTURE.md) · [CLI.md](CLI.md) · [API.md](API.md) ·
+[LIVE_RUNBOOK.md](LIVE_RUNBOOK.md) · [VERCEL_DEPLOY.md](VERCEL_DEPLOY.md).
+(Earlier competition writeups are archived under `archive/hackathon/`.)
+
+---
+
+## Phase 3 — product expansion (newest)
+
+New real, self-contained product components across Rust/Go/Python/TS — new
+directories, no mocks. All build green; the Rust crates carry unit tests.
+
+- **`crates/orderbook`** — in-memory limit order book + price-time-priority
+  matching engine (limit/market, partial fills, multi-level sweeps, cancel,
+  depth). 8 tests.
+- **`crates/ta-signals`** — technical-analysis library (SMA/EMA/RSI/MACD/
+  Bollinger/ATR/Stochastic/OBV/ADX/VWAP), input-aligned with NaN warmup. 24
+  tests. Exposed at **`GET /ta`** (compute an indicator over a supplied series).
+- **`services/price-oracle`** (Go) — live cached USD prices from the free
+  CoinGecko API; `GET /prices`, `/prices/{symbol}`, `/prices/refresh`, `/health`.
+- **`services/risk-analytics`** (Python) — Sharpe/Sortino/Calmar/VaR/correlation
+  over the NAV curve; pure-stdlib engine + CLI, optional FastAPI surface.
+- **`python-lab/optimizer`** (Python) — grid/random strategy-parameter search
+  (Calmar/Sharpe), offline synthetic objective or live `/skills/{id}/backtest`.
+- **`clients/go-cli`** (`grctl`, Go) and **`clients/ts-terminal`**
+  (`guardrail-term`, TypeScript) — dependency-free read-only operator CLIs.
+- **Dashboard** — new pages `/market-oracle` (CMC lineage), `/transports`
+  (live-vs-mock), `/journal-pro` (filterable event journal).
 
 ---
 
