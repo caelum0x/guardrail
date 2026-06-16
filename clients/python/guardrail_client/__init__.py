@@ -454,3 +454,40 @@ class GuardrailClient:
         """
         params = {"mandate": mandate}
         return self._get_json(self._build_path("/policy/compile", params))
+
+    # --- Quant tools ---------------------------------------------------------
+    def ta(
+        self,
+        indicator: str,
+        series: List[float],
+        period: Optional[int] = None,
+        mult: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Compute a technical indicator over a close-price series (``/ta``)."""
+        params: Dict[str, Any] = {
+            "indicator": indicator,
+            "series": ",".join(str(x) for x in series),
+        }
+        if period is not None:
+            params["period"] = period
+        if mult is not None:
+            params["mult"] = mult
+        return self._get_json(self._build_path("/ta", params))
+
+    def fees(self, **params: Any) -> Dict[str, Any]:
+        """Estimate the all-in cost of a swap (``/fees``).
+
+        Accepts notional_usd, quantity, side, gas_units, gas_price_gwei,
+        native_usd, pool_liquidity_usd, linear_slippage_bps, protocol_fee_bps.
+        """
+        clean = {k: v for k, v in params.items() if v is not None}
+        return self._get_json(self._build_path("/fees", clean) if clean else "/fees")
+
+    def sizer(self, method: str, **params: Any) -> Dict[str, Any]:
+        """Compute a position size by method (``/sizer``)."""
+        clean = {"method": method, **{k: v for k, v in params.items() if v is not None}}
+        return self._get_json(self._build_path("/sizer", clean))
+
+    def cmc_capabilities(self) -> Dict[str, Any]:
+        """CMC data -> capability lineage descriptor (``/cmc/capabilities``)."""
+        return self._get_json("/cmc/capabilities")
