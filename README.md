@@ -33,7 +33,7 @@ mocks — no API keys or chain access required — and flips to live with creden
 
 | | URL |
 |---|---|
-| **Dashboard** (Vercel, read-only) | https://dashboard-neon-beta-80.vercel.app |
+| **Dashboard** (Vercel, read-only) | https://guardrail-eight.vercel.app |
 | **API** (Render, read-only) | https://guardrail-rlzb.onrender.com — [`/health`](https://guardrail-rlzb.onrender.com/health) · [`/proof`](https://guardrail-rlzb.onrender.com/proof) · [`/cockpit`](https://guardrail-rlzb.onrender.com/cockpit) |
 | **Track 1 agent wallet** | [`0x0c2cC53a…f83E`](https://bscscan.com/address/0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E) (BSC, chain 56) |
 
