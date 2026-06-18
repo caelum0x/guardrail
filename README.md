@@ -243,7 +243,8 @@ alpha. A regime **ensemble** meta-allocator blends them by regime confidence
 | What | Address (BSC, chain `56`) |
 |---|---|
 | **Agent wallet** (Track 1 submission) | [`0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E`](https://bscscan.com/address/0x0c2cC53a2F8368e8FFF9D277DEEAddD08Be6f83E) — created via `twak wallet create`; keys stay on-device |
-| **Competition contract** | [`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`](https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5) — register with `twak compete register` |
+| **Competition contract** | [`0x212c61b9b72c95d95bf29cf032f5e5635629aed5`](https://bsctrace.com/address/0x212c61b9b72c95d95bf29cf032f5e5635629aed5) — registered via `twak compete register` |
+| **Registration tx** ✅ | [`0x1836c5c1…dc595`](https://bscscan.com/tx/0x1836c5c1c86540ba3295c6159a10f7b7e40d7df5f361ffa6cc1d786edb2dc595) — agent registered on-chain (window open, deadline 2026-06-25) |
 
 **BNB AI Agent SDK — identity & commerce (mainnet `56` / testnet `97`):**
 
