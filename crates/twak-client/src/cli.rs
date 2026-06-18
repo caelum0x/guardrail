@@ -231,36 +231,36 @@ impl TwakExecutor for TwakCliClient {
     }
 
     async fn execute_swap(&self, approved: &ApprovedOrder) -> Result<TxReceipt, TwakError> {
-        // Money action: refuse unless explicitly autonomous AND a password is
-        // available. The order is already risk-approved upstream; this is the
-        // final self-custody spend gate.
+        // Money action. The single live-spend gate is autonomous mode (default
+        // off → paper is always safe); the order is already risk-approved
+        // upstream. The wallet password is sourced from `$TWAK_WALLET_PASSWORD`
+        // when set, otherwise `twak` falls back to the OS keychain — so the key
+        // never needs to live in the environment.
         if !self.autonomous {
             return Err(TwakError::Rejected(
                 "CLI execute refused: order approved but client is not in autonomous mode".into(),
             ));
         }
-        let Some(password) = self.password() else {
-            return Err(TwakError::Rejected(format!(
-                "CLI execute refused: no wallet password in ${} (live signing gated)",
-                self.password_env
-            )));
-        };
 
         let amount = approved.approved_amount_usd.normalize().to_string();
-        let v = self.run_json(&[
-            "swap",
-            &approved.intent.from_symbol,
-            &approved.intent.to_symbol,
-            "--usd",
-            &amount,
-            "--chain",
-            &self.chain,
-            "--slippage",
-            &self.slippage_pct,
-            "--password",
-            &password,
-            "--json",
-        ])?;
+        let mut args: Vec<String> = vec![
+            "swap".into(),
+            approved.intent.from_symbol.clone(),
+            approved.intent.to_symbol.clone(),
+            "--usd".into(),
+            amount,
+            "--chain".into(),
+            self.chain.clone(),
+            "--slippage".into(),
+            self.slippage_pct.clone(),
+        ];
+        if let Some(pw) = self.password() {
+            args.push("--password".into());
+            args.push(pw);
+        }
+        args.push("--json".into());
+        let arg_refs: Vec<&str> = args.iter().map(String::as_str).collect();
+        let v = self.run_json(&arg_refs)?;
         Ok(parse::tx_receipt(&v))
     }
 
