@@ -29,3 +29,28 @@ services:
       name: guardrail-data
       mountPath: /app/data
       sizeGB: 1
+
+  # Track-1 autonomous trader — runs once a day during the live window.
+  # NOTE: Render Cron Jobs require a PAID plan (the free tier is web-only).
+  # Set the four env vars below in the Render dashboard (Environment → Secret).
+  # The trader's own window guard (June 22–28 in scripts/daily_trade.py) means
+  # runs outside the window are a safe no-op, so it can be deployed early.
+  - type: cron
+    name: guardrail-trader
+    runtime: docker
+    repo: https://github.com/caelum0x/guardrail
+    branch: main
+    dockerfilePath: ./deploy/trader/Dockerfile
+    dockerContext: .
+    schedule: "0 12 * * *"   # 12:00 UTC daily
+    plan: starter
+    autoDeploy: true
+    envVars:
+      - key: TWAK_ACCESS_ID
+        sync: false
+      - key: TWAK_HMAC_SECRET
+        sync: false
+      - key: TWAK_WALLET_PASSWORD
+        sync: false
+      - key: TWAK_WALLET_JSON_B64
+        sync: false
