@@ -1,0 +1,67 @@
+name: Daily Track-1 Trade
+
+# Cloud autopilot for the live trading window. Runs once a day; the script's
+# own window guard (WINDOW_START..WINDOW_END in scripts/daily_trade.py) means
+# it only places a LIVE trade June 22–28 and no-ops on every other day, so this
+# is safe to enable now. Manual runs via the "Run workflow" button are dry by
+# default (set live=true to force a real trade inside the window).
+#
+# Required repo secrets (Settings → Secrets and variables → Actions):
+#   TWAK_ACCESS_ID        - Agent-scoped Access ID (portal.trustwallet.com)
+#   TWAK_HMAC_SECRET      - Agent-scoped HMAC Secret
+#   TWAK_WALLET_PASSWORD  - wallet keystore password (no OS keychain in CI)
+#   TWAK_WALLET_JSON_B64  - base64 of ~/.twak/wallet.json  (`base64 -i ~/.twak/wallet.json`)
+
+on:
+  schedule:
+    - cron: "0 12 * * *"   # 12:00 UTC daily
+  workflow_dispatch:
+    inputs:
+      live:
+        description: "Execute a real trade (otherwise dry-run)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-trade
+  cancel-in-progress: false
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npm install -g @trustwallet/cli
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      # Persist the EMA baseline / trade log across daily runs.
+      - uses: actions/cache@v4
+        with:
+          path: data/daily_trade_state.json
+          key: daily-trade-state-${{ github.run_id }}
+          restore-keys: daily-trade-state-
+
+      - name: Restore wallet keystore from secret
+        run: |
+          mkdir -p "$HOME/.twak"
+          echo "${{ secrets.TWAK_WALLET_JSON_B64 }}" | base64 -d > "$HOME/.twak/wallet.json"
+          chmod 600 "$HOME/.twak/wallet.json"
+
+      - name: Run daily trade
+        env:
+          TWAK_ACCESS_ID: ${{ secrets.TWAK_ACCESS_ID }}
+          TWAK_HMAC_SECRET: ${{ secrets.TWAK_HMAC_SECRET }}
+          TWAK_WALLET_PASSWORD: ${{ secrets.TWAK_WALLET_PASSWORD }}
+        run: |
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ inputs.live }}" = "true" ]; then
+            python3 scripts/daily_trade.py --live
+          else
+            python3 scripts/daily_trade.py
+          fi
